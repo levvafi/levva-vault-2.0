@@ -18,9 +18,12 @@ contract LevvaVaultTest is Test {
     MintableERC20 public asset = new MintableERC20("USDTest", "USDTest", 6);
     MintableERC20 public trackedAsset = new MintableERC20("wstUSDTest", "wstUSDTest", 18);
 
+    string lpName = "lpName";
+    string lpSymbol = "lpSymbol";
+
     function setUp() public {
         levvaVaultImplementation = new LevvaVault();
-        bytes memory data = abi.encodeWithSelector(LevvaVault.initialize.selector, IERC20(asset));
+        bytes memory data = abi.encodeWithSelector(LevvaVault.initialize.selector, IERC20(asset), lpName, lpSymbol);
         levvaVaultProxy = new ERC1967Proxy(address(levvaVaultImplementation), data);
         levvaVault = LevvaVault(address(levvaVaultProxy));
     }
@@ -28,9 +31,11 @@ contract LevvaVaultTest is Test {
     function testInitialize() public view {
         assertEq(address(levvaVault.asset()), address(asset));
         assertEq(levvaVault.owner(), address(this));
+        assertEq(levvaVault.name(), lpName);
+        assertEq(levvaVault.symbol(), lpSymbol);
     }
 
-     function testAddNewAsset() public {
+    function testAddNewAsset() public {
         assertEq(levvaVault.trackedAssetIndex(address(trackedAsset)), 0);
         levvaVault.addTrackedAsset(address(trackedAsset));
         assertEq(levvaVault.trackedAssetIndex(address(trackedAsset)), 1);

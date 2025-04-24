@@ -6,11 +6,10 @@ import {ERC4626Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC2
 import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 
 abstract contract MultiAssetVaultBase is ERC4626Upgradeable, Ownable2StepUpgradeable {
-
     /// @custom:storage-location erc7201:levva.storage.MultiAssetVaultBase
     struct MultiAssetVaultBaseStorage {
         IERC20[] trackedAssets;
-        mapping (address asset => uint256) trackedAssetIndex;
+        mapping(address asset => uint256) trackedAssetIndex;
     }
 
     // keccak256(abi.encode(uint256(keccak256("levva.storage.MultiAssetVaultBase")) - 1)) & ~bytes32(uint256(0xff))
@@ -27,8 +26,12 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, Ownable2StepUpgrade
 
     event NewTrackedAssetAdded(address indexed newTrackedAsset);
 
-    function __MultiAssetVaultBase_init(IERC20 asset) internal onlyInitializing {
+    function __MultiAssetVaultBase_init(IERC20 asset, string calldata lpName, string calldata lpSymbol)
+        internal
+        onlyInitializing
+    {
         __ERC4626_init(asset);
+        __ERC20_init(lpName, lpSymbol);
     }
 
     function addTrackedAsset(address newTrackedAsset) external onlyOwner {

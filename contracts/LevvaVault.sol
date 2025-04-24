@@ -12,10 +12,10 @@ contract LevvaVault is UUPSUpgradeable, MultiAssetVaultBase {
         _disableInitializers();
     }
 
-    function initialize(IERC20 asset) external initializer {
+    function initialize(IERC20 asset, string calldata lpName, string calldata lpSymbol) external initializer {
         __UUPSUpgradeable_init();
         __Ownable_init(msg.sender);
-        __MultiAssetVaultBase_init(asset);
+        __MultiAssetVaultBase_init(asset, lpName, lpSymbol);
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
