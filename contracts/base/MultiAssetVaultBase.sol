@@ -44,7 +44,7 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable {
     }
 
     // TODO: make virtual later, must be implemented in 'OracleInteractor' or something
-    function convert(address /*fromAsset*/, address /*toAsset*/, uint256 amount) internal pure returns (uint256) {
+    function convert(address, /*fromAsset*/ address, /*toAsset*/ uint256 amount) internal pure returns (uint256) {
         return amount;
     }
 }
