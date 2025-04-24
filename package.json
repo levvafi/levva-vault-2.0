@@ -5,7 +5,8 @@
   "license": "GPL-3.0",
   "scripts": {
     "compile": "hardhat compile --config ./hardhat.common.ts",
-    "test": "hardhat test ./test/*.spec.ts --config ./hardhat.common.ts"
+    "test": "hardhat test ./test/*.spec.ts --config ./hardhat.common.ts",
+    "lint": "prettier --write ./contracts ./test hardhat.config.ts"
   },
   "devDependencies": {
     "@ethersproject/abi": "^5.7.0",
