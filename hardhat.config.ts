@@ -1,9 +1,21 @@
-import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
-import "@nomicfoundation/hardhat-foundry";
+import "hardhat-contract-sizer";
+import * as defaultConfig from "./hardhat.common";
+import { config as dotEnvConfig } from "dotenv";
+import "./tasks/deploy";
 
-const config: HardhatUserConfig = {
-  solidity: "0.8.28",
+dotEnvConfig();
+
+const config = {
+  ...defaultConfig.default,
+  networks: {
+    ethereum: {
+      url: process.env.ETH_RPC_URL,
+    },
+    sepolia: {
+      url: process.env.SEPOLIA_RPC_URL,
+    },
+  },
 };
 
 export default config;
