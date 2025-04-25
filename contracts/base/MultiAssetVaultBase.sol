@@ -71,8 +71,9 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, Ownable2StepUpgrade
         if (currentBalance != 0) revert NotZeroBalance(currentBalance);
 
         address replacement;
-        if (position != $.trackedAssets.length) {
-            replacement = address($.trackedAssets[$.trackedAssets.length - 1]);
+        uint256 trackedAssetsCount = $.trackedAssets.length;
+        if (position != trackedAssetsCount) {
+            replacement = address($.trackedAssets[trackedAssetsCount - 1]);
             $.trackedAssets[position - 1] = IERC20(replacement);
             $.trackedAssetPosition[replacement] = position;
         }
