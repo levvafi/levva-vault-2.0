@@ -5,11 +5,16 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC4626Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgradeable.sol";
 import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 
+import {Asserts} from "../libraries/Asserts.sol";
+
 abstract contract MultiAssetVaultBase is ERC4626Upgradeable, Ownable2StepUpgradeable {
+    using Asserts for address;
+
     /// @custom:storage-location erc7201:levva.storage.MultiAssetVaultBase
     struct MultiAssetVaultBaseStorage {
         IERC20[] trackedAssets;
-        mapping(address asset => uint256) trackedAssetIndex;
+        // if 0, then token is not tracked, otherwise 'trackedAssetsArrayIndex = trackedAssetPosition - 1'
+        mapping(address asset => uint256) trackedAssetPosition;
     }
 
     // keccak256(abi.encode(uint256(keccak256("levva.storage.MultiAssetVaultBase")) - 1)) & ~bytes32(uint256(0xff))
@@ -23,8 +28,13 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, Ownable2StepUpgrade
     }
 
     error AlreadyTracked(uint256 index);
+    error NotTrackedAsset();
+    error NotZeroBalance(uint256 balance);
 
-    event NewTrackedAssetAdded(address indexed newTrackedAsset);
+    event NewTrackedAssetAdded(address indexed newTrackedAsset, uint256 indexed position);
+    event TrackedAssetRemoved(
+        address indexed trackedAssetRemoved, uint256 indexed position, address indexed replacement
+    );
 
     function __MultiAssetVaultBase_init(IERC20 asset, string calldata lpName, string calldata lpSymbol)
         internal
@@ -35,12 +45,42 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, Ownable2StepUpgrade
     }
 
     function addTrackedAsset(address newTrackedAsset) external onlyOwner {
+        newTrackedAsset.assertNotZeroAddress();
+
         MultiAssetVaultBaseStorage storage $ = _getMultiAssetVaultBaseStorage();
-        if ($.trackedAssetIndex[newTrackedAsset] != 0) revert AlreadyTracked($.trackedAssetIndex[newTrackedAsset]);
+
+        if ($.trackedAssetPosition[newTrackedAsset] != 0) {
+            revert AlreadyTracked($.trackedAssetPosition[newTrackedAsset]);
+        }
 
         $.trackedAssets.push(IERC20(newTrackedAsset));
-        $.trackedAssetIndex[newTrackedAsset] = $.trackedAssets.length;
-        emit NewTrackedAssetAdded(newTrackedAsset);
+
+        uint256 position = $.trackedAssets.length;
+        $.trackedAssetPosition[newTrackedAsset] = position;
+
+        emit NewTrackedAssetAdded(newTrackedAsset, position);
+    }
+
+    function removeTrackedAsset(address trackedAsset) external onlyOwner {
+        MultiAssetVaultBaseStorage storage $ = _getMultiAssetVaultBaseStorage();
+
+        uint256 position = $.trackedAssetPosition[trackedAsset];
+        if (position == 0) revert NotTrackedAsset();
+
+        uint256 currentBalance = IERC20(trackedAsset).balanceOf(address(this));
+        if (currentBalance != 0) revert NotZeroBalance(currentBalance);
+
+        address replacement;
+        if (position != $.trackedAssets.length) {
+            replacement = address($.trackedAssets[$.trackedAssets.length - 1]);
+            $.trackedAssets[position - 1] = IERC20(replacement);
+            $.trackedAssetPosition[replacement] = position;
+        }
+
+        $.trackedAssets.pop();
+        delete $.trackedAssetPosition[trackedAsset];
+
+        emit TrackedAssetRemoved(trackedAsset, position, replacement);
     }
 
     function totalAssets() public view override returns (uint256) {
@@ -62,8 +102,8 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, Ownable2StepUpgrade
         }
     }
 
-    function trackedAssetIndex(address trackedAsset) external view returns (uint256) {
-        return _getMultiAssetVaultBaseStorage().trackedAssetIndex[trackedAsset];
+    function trackedAssetPosition(address trackedAsset) external view returns (uint256) {
+        return _getMultiAssetVaultBaseStorage().trackedAssetPosition[trackedAsset];
     }
 
     // TODO: make virtual later, must be implemented in 'OracleInteractor' or something
