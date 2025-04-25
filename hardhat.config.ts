@@ -2,7 +2,6 @@ import "@nomicfoundation/hardhat-toolbox";
 import "hardhat-contract-sizer";
 import * as defaultConfig from "./hardhat.common";
 import { config as dotEnvConfig } from "dotenv";
-import "./tasks/deploy";
 
 dotEnvConfig();
 
