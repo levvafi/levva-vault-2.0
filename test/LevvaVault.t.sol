@@ -11,7 +11,7 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 import {LevvaVault} from "../contracts/LevvaVault.sol";
 import {Asserts} from "../contracts/libraries/Asserts.sol";
 import {MultiAssetVaultBase} from "../contracts/base/MultiAssetVaultBase.sol";
-import {MintableERC20} from "./MintableERC20.t.sol";
+import {MintableERC20} from "./mocks/MintableERC20.t.sol";
 
 contract LevvaVaultTest is Test {
     LevvaVault public levvaVaultImplementation;
