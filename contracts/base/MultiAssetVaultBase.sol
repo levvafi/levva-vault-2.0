@@ -48,21 +48,6 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, Ownable2StepUpgrade
         __ERC20_init(lpName, lpSymbol);
     }
 
-    /// @inheritdoc ERC4626Upgradeable
-    function deposit(uint256 assets, address receiver) public override returns (uint256) {
-        uint256 minDeposit = _getMultiAssetVaultBaseStorage().minDeposit;
-        if (minDeposit == 0) {
-            assets.assertNotZeroAmount();
-        } else if (assets < minDeposit) {
-            revert LessThanMinDeposit(minDeposit);
-        }
-
-        uint256 shares = previewDeposit(assets);
-        _deposit(_msgSender(), receiver, assets, shares);
-
-        return shares;
-    }
-
     function addTrackedAsset(address newTrackedAsset) external onlyOwner {
         newTrackedAsset.assertNotZeroAddress();
 
@@ -142,5 +127,17 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, Ownable2StepUpgrade
     // TODO: make virtual later, must be implemented in 'OracleInteractor' or something
     function convert(address, /*fromAsset*/ address, /*toAsset*/ uint256 amount) internal pure returns (uint256) {
         return amount;
+    }
+
+    /// @inheritdoc ERC4626Upgradeable
+    function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override {
+        uint256 minDeposit = _getMultiAssetVaultBaseStorage().minDeposit;
+        if (minDeposit == 0) {
+            assets.assertNotZeroAmount();
+        } else if (assets < minDeposit) {
+            revert LessThanMinDeposit(minDeposit);
+        }
+
+        super._deposit(caller, receiver, assets, shares);
     }
 }

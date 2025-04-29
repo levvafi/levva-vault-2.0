@@ -61,4 +61,29 @@ contract LevvaVaultUserActionsTest is Test {
         vm.expectRevert(abi.encodeWithSelector(Asserts.ZeroAmount.selector));
         levvaVault.deposit(0, user);
     }
+
+    function testMint() public {
+        vm.prank(user);
+        asset.approve(address(levvaVault), minDeposit);
+
+        vm.prank(user);
+        levvaVault.mint(minDeposit, user);
+    }
+
+    function testLessThanMinDepositMint() public {
+        vm.prank(user);
+        asset.approve(address(levvaVault), minDeposit - 1);
+
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSelector(MultiAssetVaultBase.LessThanMinDeposit.selector, minDeposit));
+        levvaVault.mint(minDeposit - 1, user);
+    }
+
+    function testZeroAmountMint() public {
+        levvaVault.setMinimalDeposit(0);
+
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSelector(Asserts.ZeroAmount.selector));
+        levvaVault.mint(0, user);
+    }
 }
