@@ -137,4 +137,29 @@ contract LevvaVaultTest is Test {
         uint256 expectedTotalAssets = trackedAssetAmount + depositAmount;
         assertEq(levvaVault.totalAssets(), expectedTotalAssets);
     }
+
+    function testSetMinDeposit() public {
+        uint256 newMinDeposit = levvaVault.minimalDeposit() + 1;
+
+        vm.expectEmit(address(levvaVault));
+        emit MultiAssetVaultBase.MinimalDepositSet(newMinDeposit);
+        levvaVault.setMinimalDeposit(newMinDeposit);
+
+        assertEq(levvaVault.minimalDeposit(), newMinDeposit);
+    }
+
+    function testSetMinDepositOnlyOwner() public {
+        uint256 newMinDeposit = levvaVault.minimalDeposit() + 1;
+
+        vm.prank(nonOwner);
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, nonOwner));
+        levvaVault.setMinimalDeposit(newMinDeposit);
+    }
+
+    function testSetMinDepositSameValue() public {
+        uint256 newMinDeposit = levvaVault.minimalDeposit();
+
+        vm.expectRevert(abi.encodeWithSelector(Asserts.SameValue.selector));
+        levvaVault.setMinimalDeposit(newMinDeposit);
+    }
 }

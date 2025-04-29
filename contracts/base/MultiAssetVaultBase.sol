@@ -9,9 +9,11 @@ import {Asserts} from "../libraries/Asserts.sol";
 
 abstract contract MultiAssetVaultBase is ERC4626Upgradeable, Ownable2StepUpgradeable {
     using Asserts for address;
+    using Asserts for uint256;
 
     /// @custom:storage-location erc7201:levva.storage.MultiAssetVaultBase
     struct MultiAssetVaultBaseStorage {
+        uint256 minDeposit;
         IERC20[] trackedAssets;
         // if 0, then token is not tracked, otherwise 'trackedAssetsArrayIndex = trackedAssetPosition - 1'
         mapping(address asset => uint256) trackedAssetPosition;
@@ -30,11 +32,13 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, Ownable2StepUpgrade
     error AlreadyTracked(uint256 index);
     error NotTrackedAsset();
     error NotZeroBalance(uint256 balance);
+    error LessThanMinDeposit(uint256 minDeposit);
 
     event NewTrackedAssetAdded(address indexed newTrackedAsset, uint256 indexed position);
     event TrackedAssetRemoved(
         address indexed trackedAssetRemoved, uint256 indexed position, address indexed replacement
     );
+    event MinimalDepositSet(uint256 minDeposit);
 
     function __MultiAssetVaultBase_init(IERC20 asset, string calldata lpName, string calldata lpSymbol)
         internal
@@ -42,6 +46,21 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, Ownable2StepUpgrade
     {
         __ERC4626_init(asset);
         __ERC20_init(lpName, lpSymbol);
+    }
+
+    /// @inheritdoc ERC4626Upgradeable
+    function deposit(uint256 assets, address receiver) public override returns (uint256) {
+        uint256 minDeposit = _getMultiAssetVaultBaseStorage().minDeposit;
+        if (minDeposit == 0) {
+            assets.assertNotZeroAmount();
+        } else if (assets < minDeposit) {
+            revert LessThanMinDeposit(minDeposit);
+        }
+
+        uint256 shares = previewDeposit(assets);
+        _deposit(_msgSender(), receiver, assets, shares);
+
+        return shares;
     }
 
     function addTrackedAsset(address newTrackedAsset) external onlyOwner {
@@ -84,6 +103,15 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, Ownable2StepUpgrade
         emit TrackedAssetRemoved(trackedAsset, position, replacement);
     }
 
+    function setMinimalDeposit(uint256 minDeposit) external onlyOwner {
+        MultiAssetVaultBaseStorage storage $ = _getMultiAssetVaultBaseStorage();
+        minDeposit.assertNotSameValue($.minDeposit);
+
+        $.minDeposit = minDeposit;
+        emit MinimalDepositSet(minDeposit);
+    }
+
+    /// @inheritdoc ERC4626Upgradeable
     function totalAssets() public view override returns (uint256) {
         unchecked {
             address asset = asset();
@@ -105,6 +133,10 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, Ownable2StepUpgrade
 
     function trackedAssetPosition(address trackedAsset) external view returns (uint256) {
         return _getMultiAssetVaultBaseStorage().trackedAssetPosition[trackedAsset];
+    }
+
+    function minimalDeposit() external view returns (uint256) {
+        return _getMultiAssetVaultBaseStorage().minDeposit;
     }
 
     // TODO: make virtual later, must be implemented in 'OracleInteractor' or something
