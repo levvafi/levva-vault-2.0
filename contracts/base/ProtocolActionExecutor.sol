@@ -37,6 +37,7 @@ abstract contract ProtocolActionExecutor is AccessControlUpgradeable {
     error WrongAddress();
     error WrongMethod();
     error UnknownExternalPositionAdapter();
+    error AdapterAlreadyExists(address adapter);
 
     event ProtocolActionExecuted(bytes4 indexed protocolId, bytes data, bytes result);
     event NewAdapterAdded(bytes4 indexed adapterId, address indexed adapter);
@@ -73,7 +74,7 @@ abstract contract ProtocolActionExecutor is AccessControlUpgradeable {
         if (!IERC165(adapter).supportsInterface(type(IAdapter).interfaceId)) revert WrongAddress();
         // Filtering out 'IExternalPositionAdapter' since they require other method to be added
         if (IERC165(adapter).supportsInterface(type(IExternalPositionAdapter).interfaceId)) revert WrongMethod();
-        
+
         _addAdapter(IAdapter(adapter));
     }
 
@@ -87,7 +88,7 @@ abstract contract ProtocolActionExecutor is AccessControlUpgradeable {
     function removeAdapter(address adapter) external onlyRole(VAULT_MANAGER_ROLE) {
         // Filtering out 'IExternalPositionAdapter' since they require other method to be removed
         if (IERC165(adapter).supportsInterface(type(IExternalPositionAdapter).interfaceId)) revert WrongMethod();
-        
+
         _removeAdapter(IAdapter(adapter));
     }
 
@@ -98,10 +99,18 @@ abstract contract ProtocolActionExecutor is AccessControlUpgradeable {
         _removeExternalPositionAdapter(adapter);
     }
 
+    function getAdapter(bytes4 adapterId) external view returns (IAdapter) {
+        return _getProtocolActionExecutorStorage().adapters[adapterId];
+    }
+
+    function externalPositionAdapterPosition(address adapter) external view returns (uint256) {
+        return _getProtocolActionExecutorStorage().externalPositionAdapterPosition[adapter];
+    }
 
     function _addAdapter(IAdapter adapter) private {
         ProtocolActionExecutorStorage storage $ = _getProtocolActionExecutorStorage();
         bytes4 adapterId = adapter.getAdapterId();
+        if (address($.adapters[adapterId]) != address(0)) revert AdapterAlreadyExists(address($.adapters[adapterId]));
         $.adapters[adapterId] = adapter;
 
         emit NewAdapterAdded(adapterId, address(adapter));
@@ -110,7 +119,7 @@ abstract contract ProtocolActionExecutor is AccessControlUpgradeable {
     function _removeAdapter(IAdapter adapter) private {
         ProtocolActionExecutorStorage storage $ = _getProtocolActionExecutorStorage();
         bytes4 adapterId = adapter.getAdapterId();
-        if (address($.adapters[adapterId]) != address(0)) revert UnknownProtocol(adapterId);
+        if (address($.adapters[adapterId]) == address(0)) revert UnknownProtocol(adapterId);
         delete $.adapters[adapterId];
 
         emit AdapterRemoved(adapterId);
