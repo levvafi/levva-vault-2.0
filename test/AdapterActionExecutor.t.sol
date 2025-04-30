@@ -10,13 +10,13 @@ import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol"
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import {LevvaVault} from "../contracts/LevvaVault.sol";
-import {ProtocolActionExecutor} from "../contracts/base/ProtocolActionExecutor.sol";
+import {AdapterActionExecutor} from "../contracts/base/AdapterActionExecutor.sol";
 import {Asserts} from "../contracts/libraries/Asserts.sol";
 import {MintableERC20} from "./mocks/MintableERC20.t.sol";
 import {AdapterMock} from "./mocks/AdapterMock.t.sol";
 import {ExternalPositionAdapterMock} from "./mocks/ExternalPositionAdapterMock.t.sol";
 
-contract ProtocolActionExecutorTest is Test {
+contract AdapterActionExecutorTest is Test {
     LevvaVault public levvaVaultImplementation;
     ERC1967Proxy public levvaVaultProxy;
     LevvaVault public levvaVault;
@@ -46,7 +46,7 @@ contract ProtocolActionExecutorTest is Test {
 
     function testAddAdapter() public {
         vm.expectEmit(address(levvaVault));
-        emit ProtocolActionExecutor.NewAdapterAdded(adapter.getAdapterId(), address(adapter));
+        emit AdapterActionExecutor.NewAdapterAdded(adapter.getAdapterId(), address(adapter));
 
         levvaVault.addAdapter(address(adapter));
         assertEq(address(levvaVault.getAdapter(adapter.getAdapterId())), address(adapter));
@@ -55,12 +55,12 @@ contract ProtocolActionExecutorTest is Test {
 
     function testAddExternalPositionAdapter() public {
         vm.expectEmit(address(levvaVault));
-        emit ProtocolActionExecutor.NewAdapterAdded(
+        emit AdapterActionExecutor.NewAdapterAdded(
             externalPositionAdapter.getAdapterId(), address(externalPositionAdapter)
         );
 
         vm.expectEmit(address(levvaVault));
-        emit ProtocolActionExecutor.NewExternalPositionAdapterAdded(address(externalPositionAdapter), 1);
+        emit AdapterActionExecutor.NewExternalPositionAdapterAdded(address(externalPositionAdapter), 1);
 
         levvaVault.addAdapter(address(externalPositionAdapter));
 
@@ -79,12 +79,12 @@ contract ProtocolActionExecutorTest is Test {
     function testAddAdapterAlreadyExists() public {
         levvaVault.addAdapter(address(adapter));
 
-        vm.expectRevert(abi.encodeWithSelector(ProtocolActionExecutor.AdapterAlreadyExists.selector, address(adapter)));
+        vm.expectRevert(abi.encodeWithSelector(AdapterActionExecutor.AdapterAlreadyExists.selector, address(adapter)));
         levvaVault.addAdapter(address(adapter));
     }
 
     function testAddAdapterWrongAddress() public {
-        vm.expectRevert(abi.encodeWithSelector(ProtocolActionExecutor.WrongAddress.selector));
+        vm.expectRevert(abi.encodeWithSelector(AdapterActionExecutor.WrongAddress.selector));
         levvaVault.addAdapter(address(asset));
     }
 
@@ -92,7 +92,7 @@ contract ProtocolActionExecutorTest is Test {
         levvaVault.addAdapter(address(adapter));
 
         vm.expectEmit(address(levvaVault));
-        emit ProtocolActionExecutor.AdapterRemoved(adapter.getAdapterId());
+        emit AdapterActionExecutor.AdapterRemoved(adapter.getAdapterId());
 
         levvaVault.removeAdapter(address(adapter));
         assertEq(address(levvaVault.getAdapter(adapter.getAdapterId())), address(0));
@@ -102,10 +102,10 @@ contract ProtocolActionExecutorTest is Test {
         levvaVault.addAdapter(address(externalPositionAdapter));
 
         vm.expectEmit(address(levvaVault));
-        emit ProtocolActionExecutor.AdapterRemoved(externalPositionAdapter.getAdapterId());
+        emit AdapterActionExecutor.AdapterRemoved(externalPositionAdapter.getAdapterId());
 
         vm.expectEmit(address(levvaVault));
-        emit ProtocolActionExecutor.ExternalPositionAdapterRemoved(address(externalPositionAdapter), 1, address(0));
+        emit AdapterActionExecutor.ExternalPositionAdapterRemoved(address(externalPositionAdapter), 1, address(0));
 
         levvaVault.removeAdapter(address(externalPositionAdapter));
 
@@ -125,10 +125,10 @@ contract ProtocolActionExecutorTest is Test {
         assertEq(levvaVault.externalPositionAdapterPosition(address(secondExternalPositionAdapter)), 2);
 
         vm.expectEmit(address(levvaVault));
-        emit ProtocolActionExecutor.AdapterRemoved(externalPositionAdapter.getAdapterId());
+        emit AdapterActionExecutor.AdapterRemoved(externalPositionAdapter.getAdapterId());
 
         vm.expectEmit(address(levvaVault));
-        emit ProtocolActionExecutor.ExternalPositionAdapterRemoved(
+        emit AdapterActionExecutor.ExternalPositionAdapterRemoved(
             address(externalPositionAdapter), 1, address(secondExternalPositionAdapter)
         );
 
@@ -146,20 +146,20 @@ contract ProtocolActionExecutorTest is Test {
         levvaVault.removeAdapter(address(adapter));
     }
 
-    function testRemoveAdapterUnknownProtocol() public {
-        vm.expectRevert(abi.encodeWithSelector(ProtocolActionExecutor.UnknownProtocol.selector, adapter.getAdapterId()));
+    function testRemoveAdapterUnknownAdapter() public {
+        vm.expectRevert(abi.encodeWithSelector(AdapterActionExecutor.UnknownAdapter.selector, adapter.getAdapterId()));
         levvaVault.removeAdapter(address(adapter));
     }
 
-    function testExecuteProtocolAction() public {
+    function testExecuteAdapterAction() public {
         levvaVault.addAdapter(address(adapter));
         levvaVault.addAdapter(address(externalPositionAdapter));
 
-        ProtocolActionExecutor.ProtocolActionArg[] memory args = new ProtocolActionExecutor.ProtocolActionArg[](2);
+        AdapterActionExecutor.AdapterActionArg[] memory args = new AdapterActionExecutor.AdapterActionArg[](2);
 
         bytes memory adapterCalldata = "adapterData";
         bytes memory adapterCalldataWithSelector = abi.encodeWithSelector(adapter.testAction.selector, adapterCalldata);
-        args[0] = ProtocolActionExecutor.ProtocolActionArg({
+        args[0] = AdapterActionExecutor.AdapterActionArg({
             adapterId: adapter.getAdapterId(),
             data: adapterCalldataWithSelector
         });
@@ -167,23 +167,23 @@ contract ProtocolActionExecutorTest is Test {
         bytes memory externalPositionAdapterCalldata = "externalPositionAdapterData";
         bytes memory externalPositionAdapterCalldataWithSelector =
             abi.encodeWithSelector(externalPositionAdapter.testAction.selector, externalPositionAdapterCalldata);
-        args[1] = ProtocolActionExecutor.ProtocolActionArg({
+        args[1] = AdapterActionExecutor.AdapterActionArg({
             adapterId: externalPositionAdapter.getAdapterId(),
             data: externalPositionAdapterCalldataWithSelector
         });
 
         vm.expectEmit(address(levvaVault));
-        emit ProtocolActionExecutor.ProtocolActionExecuted(
+        emit AdapterActionExecutor.AdapterActionExecuted(
             adapter.getAdapterId(), adapterCalldataWithSelector, abi.encode(uint256(1))
         );
 
         vm.expectEmit(address(levvaVault));
-        emit ProtocolActionExecutor.ProtocolActionExecuted(
+        emit AdapterActionExecutor.AdapterActionExecuted(
             externalPositionAdapter.getAdapterId(), externalPositionAdapterCalldataWithSelector, abi.encode(uint256(1))
         );
 
         vm.prank(vaultManager);
-        levvaVault.executeProtocolAction(args);
+        levvaVault.executeAdapterAction(args);
 
         assertEq(adapter.actionsExecuted(), 1);
         assertEq(adapter.recentCalldata(), adapterCalldata);
@@ -192,15 +192,15 @@ contract ProtocolActionExecutorTest is Test {
         assertEq(externalPositionAdapter.recentCalldata(), externalPositionAdapterCalldata);
     }
 
-    function testExecuteProtocolActionOnlyRole() public {
+    function testExecuteAdapterActionOnlyRole() public {
         levvaVault.addAdapter(address(adapter));
         levvaVault.addAdapter(address(externalPositionAdapter));
 
-        ProtocolActionExecutor.ProtocolActionArg[] memory args = new ProtocolActionExecutor.ProtocolActionArg[](2);
+        AdapterActionExecutor.AdapterActionArg[] memory args = new AdapterActionExecutor.AdapterActionArg[](2);
 
         bytes memory adapterCalldata = "adapterData";
         bytes memory adapterCalldataWithSelector = abi.encodeWithSelector(adapter.testAction.selector, adapterCalldata);
-        args[0] = ProtocolActionExecutor.ProtocolActionArg({
+        args[0] = AdapterActionExecutor.AdapterActionArg({
             adapterId: adapter.getAdapterId(),
             data: adapterCalldataWithSelector
         });
@@ -208,7 +208,7 @@ contract ProtocolActionExecutorTest is Test {
         bytes memory externalPositionAdapterCalldata = "externalPositionAdapterData";
         bytes memory externalPositionAdapterCalldataWithSelector =
             abi.encodeWithSelector(externalPositionAdapter.testAction.selector, externalPositionAdapterCalldata);
-        args[1] = ProtocolActionExecutor.ProtocolActionArg({
+        args[1] = AdapterActionExecutor.AdapterActionArg({
             adapterId: externalPositionAdapter.getAdapterId(),
             data: externalPositionAdapterCalldataWithSelector
         });
@@ -219,21 +219,21 @@ contract ProtocolActionExecutorTest is Test {
             )
         );
         vm.prank(noAccess);
-        levvaVault.executeProtocolAction(args);
+        levvaVault.executeAdapterAction(args);
     }
 
-    function testExecuteProtocolActionUnknownProtocol() public {
-        ProtocolActionExecutor.ProtocolActionArg[] memory args = new ProtocolActionExecutor.ProtocolActionArg[](1);
+    function testExecuteAdapterActionUnknownAdapter() public {
+        AdapterActionExecutor.AdapterActionArg[] memory args = new AdapterActionExecutor.AdapterActionArg[](1);
 
         bytes memory adapterCalldata = "adapterData";
         bytes memory adapterCalldataWithSelector = abi.encodeWithSelector(adapter.testAction.selector, adapterCalldata);
-        args[0] = ProtocolActionExecutor.ProtocolActionArg({
+        args[0] = AdapterActionExecutor.AdapterActionArg({
             adapterId: adapter.getAdapterId(),
             data: adapterCalldataWithSelector
         });
 
-        vm.expectRevert(abi.encodeWithSelector(ProtocolActionExecutor.UnknownProtocol.selector, adapter.getAdapterId()));
+        vm.expectRevert(abi.encodeWithSelector(AdapterActionExecutor.UnknownAdapter.selector, adapter.getAdapterId()));
         vm.prank(vaultManager);
-        levvaVault.executeProtocolAction(args);
+        levvaVault.executeAdapterAction(args);
     }
 }
