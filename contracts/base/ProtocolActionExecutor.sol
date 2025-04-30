@@ -44,7 +44,6 @@ abstract contract ProtocolActionExecutor is AccessControlUpgradeable, Ownable2St
 
     error UnknownProtocol(bytes4 adapterId);
     error WrongAddress();
-    error WrongMethod();
     error UnknownExternalPositionAdapter();
     error AdapterAlreadyExists(address adapter);
 
@@ -73,31 +72,19 @@ abstract contract ProtocolActionExecutor is AccessControlUpgradeable, Ownable2St
 
     function addAdapter(address adapter) external onlyOwner {
         if (!_isAdapter(adapter)) revert WrongAddress();
-        // Filtering out 'IExternalPositionAdapter' since they require other method to be added
-        if (_isExternalPositionAdapter(adapter)) revert WrongMethod();
-
         _addAdapter(IAdapter(adapter));
-    }
 
-    function addExternalPositionAdapter(address adapter) external onlyOwner {
-        if (!_isExternalPositionAdapter(adapter)) revert WrongAddress();
-
-        _addAdapter(IAdapter(adapter));
-        _addExternalPositionAdapter(IExternalPositionAdapter(adapter));
+        if (_isExternalPositionAdapter(adapter)) {
+            _addExternalPositionAdapter(IExternalPositionAdapter(adapter));
+        }
     }
 
     function removeAdapter(address adapter) external onlyOwner {
-        // Filtering out 'IExternalPositionAdapter' since they require other method to be removed
-        if (_isExternalPositionAdapter(adapter)) revert WrongMethod();
-
         _removeAdapter(IAdapter(adapter));
-    }
 
-    function removeExternalPositionAdapter(address adapter) external onlyOwner {
-        if (!_isExternalPositionAdapter(adapter)) revert WrongAddress();
-
-        _removeAdapter(IAdapter(adapter));
-        _removeExternalPositionAdapter(adapter);
+        if (_isExternalPositionAdapter(adapter)) {
+            _removeExternalPositionAdapter(adapter);
+        }
     }
 
     function getAdapter(bytes4 adapterId) external view returns (IAdapter) {
