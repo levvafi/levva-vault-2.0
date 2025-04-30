@@ -26,10 +26,12 @@ contract LevvaVaultUserActionsTest is Test {
 
     address nonOwner = address(0xDEAD);
     address user = address(0x987654321);
+    address feeCollector = address(0xFEE);
     uint256 minDeposit = 1_000_000;
 
     function setUp() public {
-        bytes memory data = abi.encodeWithSelector(LevvaVault.initialize.selector, IERC20(asset), lpName, lpSymbol);
+        bytes memory data =
+            abi.encodeWithSelector(LevvaVault.initialize.selector, IERC20(asset), lpName, lpSymbol, feeCollector);
         levvaVaultProxy = new ERC1967Proxy(address(levvaVaultImplementation), data);
         levvaVault = LevvaVault(address(levvaVaultProxy));
 
