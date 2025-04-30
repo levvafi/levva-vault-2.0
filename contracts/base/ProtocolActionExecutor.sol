@@ -4,14 +4,15 @@ pragma solidity 0.8.28;
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {IERC165} from "@openzeppelin/contracts/interfaces/IERC165.sol";
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 
 import {IAdapter} from "../interfaces/IAdapter.sol";
 import {IExternalPositionAdapter} from "../interfaces/IExternalPositionAdapter.sol";
 
-abstract contract ProtocolActionExecutor is AccessControlUpgradeable {
+abstract contract ProtocolActionExecutor is AccessControlUpgradeable, Ownable2StepUpgradeable {
     /// @custom:storage-location erc7201:levva.storage.MultiAssetVaultBase
     struct ProtocolActionExecutorStorage {
-        mapping(bytes4 protocolId => IAdapter) adapters;
+        mapping(bytes4 adapterId => IAdapter) adapters;
         IExternalPositionAdapter[] externalPositionAdapters;
         mapping(address adapter => uint256) externalPositionAdapterPosition;
     }
@@ -27,25 +28,25 @@ abstract contract ProtocolActionExecutor is AccessControlUpgradeable {
     }
 
     struct ProtocolActionArg {
-        bytes4 protocolId;
+        bytes4 adapterId;
         bytes data;
     }
 
     bytes32 public constant VAULT_MANAGER_ROLE = keccak256("VAULT_MANAGER_ROLE");
 
-    error UnknownProtocol(bytes4 protocolId);
-    error WrongAddress();
-    error WrongMethod();
-    error UnknownExternalPositionAdapter();
-    error AdapterAlreadyExists(address adapter);
-
-    event ProtocolActionExecuted(bytes4 indexed protocolId, bytes data, bytes result);
+    event ProtocolActionExecuted(bytes4 indexed adapterId, bytes data, bytes result);
     event NewAdapterAdded(bytes4 indexed adapterId, address indexed adapter);
     event NewExternalPositionAdapterAdded(address indexed adapter, uint256 indexed position);
     event AdapterRemoved(bytes4 indexed adapterId);
     event ExternalPositionAdapterRemoved(
         address indexed adapter, uint256 indexed position, address indexed replacement
     );
+
+    error UnknownProtocol(bytes4 adapterId);
+    error WrongAddress();
+    error WrongMethod();
+    error UnknownExternalPositionAdapter();
+    error AdapterAlreadyExists(address adapter);
 
     function executeProtocolAction(ProtocolActionArg[] calldata actionArgs)
         external
@@ -58,11 +59,11 @@ abstract contract ProtocolActionExecutor is AccessControlUpgradeable {
         for (; i < length;) {
             ProtocolActionArg memory actionArg = actionArgs[i];
 
-            address adapter = _getAdapterSafe(actionArg.protocolId);
+            address adapter = _getAdapterSafe(actionArg.adapterId);
             bytes memory result = Address.functionCall(adapter, actionArg.data);
             returnData[i] = result;
 
-            emit ProtocolActionExecuted(actionArg.protocolId, actionArg.data, result);
+            emit ProtocolActionExecuted(actionArg.adapterId, actionArg.data, result);
 
             unchecked {
                 ++i;
@@ -70,30 +71,30 @@ abstract contract ProtocolActionExecutor is AccessControlUpgradeable {
         }
     }
 
-    function addAdapter(address adapter) external onlyRole(VAULT_MANAGER_ROLE) {
-        if (!IERC165(adapter).supportsInterface(type(IAdapter).interfaceId)) revert WrongAddress();
+    function addAdapter(address adapter) external onlyOwner {
+        if (!_isAdapter(adapter)) revert WrongAddress();
         // Filtering out 'IExternalPositionAdapter' since they require other method to be added
-        if (IERC165(adapter).supportsInterface(type(IExternalPositionAdapter).interfaceId)) revert WrongMethod();
+        if (_isExternalPositionAdapter(adapter)) revert WrongMethod();
 
         _addAdapter(IAdapter(adapter));
     }
 
-    function addExternalPositionAdapter(address adapter) external onlyRole(VAULT_MANAGER_ROLE) {
-        if (!IERC165(adapter).supportsInterface(type(IExternalPositionAdapter).interfaceId)) revert WrongAddress();
+    function addExternalPositionAdapter(address adapter) external onlyOwner {
+        if (!_isExternalPositionAdapter(adapter)) revert WrongAddress();
 
         _addAdapter(IAdapter(adapter));
         _addExternalPositionAdapter(IExternalPositionAdapter(adapter));
     }
 
-    function removeAdapter(address adapter) external onlyRole(VAULT_MANAGER_ROLE) {
+    function removeAdapter(address adapter) external onlyOwner {
         // Filtering out 'IExternalPositionAdapter' since they require other method to be removed
-        if (IERC165(adapter).supportsInterface(type(IExternalPositionAdapter).interfaceId)) revert WrongMethod();
+        if (_isExternalPositionAdapter(adapter)) revert WrongMethod();
 
         _removeAdapter(IAdapter(adapter));
     }
 
-    function removeExternalPositionAdapter(address adapter) external onlyRole(VAULT_MANAGER_ROLE) {
-        if (!IERC165(adapter).supportsInterface(type(IExternalPositionAdapter).interfaceId)) revert WrongAddress();
+    function removeExternalPositionAdapter(address adapter) external onlyOwner {
+        if (!_isExternalPositionAdapter(adapter)) revert WrongAddress();
 
         _removeAdapter(IAdapter(adapter));
         _removeExternalPositionAdapter(adapter);
@@ -154,8 +155,16 @@ abstract contract ProtocolActionExecutor is AccessControlUpgradeable {
         emit ExternalPositionAdapterRemoved(adapter, position, replacement);
     }
 
-    function _getAdapterSafe(bytes4 protocolId) private view returns (address adapter) {
-        adapter = address(_getProtocolActionExecutorStorage().adapters[protocolId]);
-        if (adapter == address(0)) revert UnknownProtocol(protocolId);
+    function _getAdapterSafe(bytes4 adapterId) private view returns (address adapter) {
+        adapter = address(_getProtocolActionExecutorStorage().adapters[adapterId]);
+        if (adapter == address(0)) revert UnknownProtocol(adapterId);
+    }
+
+    function _isAdapter(address adapter) private view returns (bool) {
+        return IERC165(adapter).supportsInterface(type(IAdapter).interfaceId);
+    }
+
+    function _isExternalPositionAdapter(address adapter) private view returns (bool) {
+        return IERC165(adapter).supportsInterface(type(IExternalPositionAdapter).interfaceId);
     }
 }
