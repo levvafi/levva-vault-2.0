@@ -16,7 +16,7 @@ const config: HardhatUserConfig & { contractSizer: any } = {
           viaIR: true,
           optimizer: {
             enabled: true,
-            runs: 1000000,
+            runs: 1_000_000,
           },
         },
       },

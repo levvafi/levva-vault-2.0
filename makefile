@@ -11,3 +11,5 @@ help:
 build :; forge build --sizes
 
 test :; forge test -vvv
+
+coverage :; forge coverage
