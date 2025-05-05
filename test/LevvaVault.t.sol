@@ -40,6 +40,8 @@ contract LevvaVaultTest is Test {
         assertEq(levvaVault.owner(), address(this));
         assertEq(levvaVault.name(), lpName);
         assertEq(levvaVault.symbol(), lpSymbol);
+        assertEq(levvaVault.getFeeCollectorStorage().feeCollector, feeCollector);
+        assertEq(levvaVault.getFeeCollectorStorage().highWaterMarkPerShare, 10 ** levvaVault.decimals());
     }
 
     function testAddNewAsset() public {
