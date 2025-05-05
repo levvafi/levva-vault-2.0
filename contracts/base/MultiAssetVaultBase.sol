@@ -193,7 +193,7 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, Ownable2StepUpgrade
     }
 
     function setFeeCollector(address newFeeCollector) external onlyOwner {
-       _setFeeCollector(newFeeCollector);
+        _setFeeCollector(newFeeCollector);
     }
 
     function setManagementFeeIR(uint48 newManagementFeeIR) external onlyOwner {

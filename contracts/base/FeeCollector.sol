@@ -43,8 +43,11 @@ abstract contract FeeCollector is Initializable, ERC4626Upgradeable {
     function __FeeCollector_init(address feeCollector) internal onlyInitializing {
         FeeCollectorStorage storage $ = _getFeeCollectorStorage();
         $.lastFeeTimestamp = block.timestamp;
-        $.highWaterMarkPerShare = 1e18;
         $.feeCollector = feeCollector;
+
+        uint256 oneToken = 10 ** decimals();
+        uint256 oneTokenOffset = 10 ** _decimalsOffset();
+        $.highWaterMarkPerShare = oneToken.mulDiv(1, oneTokenOffset, Math.Rounding.Floor);
     }
 
     function _collectFees(uint256 totalAssets, uint256 totalSupply) internal {
@@ -55,8 +58,7 @@ abstract contract FeeCollector is Initializable, ERC4626Upgradeable {
 
         uint256 oneToken = 10 ** decimals();
         uint256 oneTokenOffset = 10 ** _decimalsOffset();
-        uint256 currentNavPerShare =
-            oneToken.mulDiv(totalAssets + 1, totalSupply + oneTokenOffset, Math.Rounding.Floor);
+        uint256 currentNavPerShare = oneToken.mulDiv(totalAssets + 1, totalSupply + oneTokenOffset, Math.Rounding.Floor);
 
         uint256 highWaterMarkPerShare = $.highWaterMarkPerShare;
         uint256 performanceFee;
