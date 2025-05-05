@@ -4,10 +4,11 @@ pragma solidity 0.8.28;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {ERC4626Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgradeable.sol";
 
 import {Asserts} from "../libraries/Asserts.sol";
 
-abstract contract FeeCollector is Initializable {
+abstract contract FeeCollector is Initializable, ERC4626Upgradeable {
     using Asserts for address;
     using Asserts for uint256;
     using Math for uint256;
@@ -46,30 +47,28 @@ abstract contract FeeCollector is Initializable {
         uint256 timeElapsed = block.timestamp - $.lastFeeTimestamp;
         uint256 managementFee = totalAssets.mulDiv(timeElapsed * $.managementFeeIR, 365 days * ONE, Math.Rounding.Floor);
 
-        // TODO: reorg code to take this values from ERC4626
-        uint256 decimals = 18;
-        uint256 oneToken = 10 ** decimals;
-        uint256 decimalsOffset = 0;
-        // TODO: floor or ceil? Seems like shouldn't matter
-        uint256 currentNavPerShare = oneToken.mulDiv(totalAssets + 1, totalSupply + 10 ** decimalsOffset);
+        uint256 oneToken = 10 ** decimals();
+        uint256 oneTokenOffset = 10 ** _decimalsOffset();
+        uint256 currentNavPerShare =
+            oneToken.mulDiv(totalAssets + 1, totalSupply + oneTokenOffset, Math.Rounding.Floor);
 
         uint256 highWaterMarkPerShare = $.highWaterMarkPerShare;
         uint256 performanceFee;
         if (currentNavPerShare > highWaterMarkPerShare) {
-            uint256 gain = currentNavPerShare - highWaterMarkPerShare;
-            performanceFee = totalSupply.mulDiv(gain * $.performanceFeeRatio, oneToken * ONE, Math.Rounding.Floor);
+            uint256 gainPerShare = currentNavPerShare - highWaterMarkPerShare;
+            uint256 gain = totalSupply.mulDiv(gainPerShare, oneToken, Math.Rounding.Floor);
+            performanceFee = gain.mulDiv($.performanceFeeRatio, ONE, Math.Rounding.Floor);
             $.highWaterMarkPerShare = currentNavPerShare;
         }
 
-        if (managementFee + performanceFee != 0) {
-            _transferUnderlyingAsset($.feeCollector, managementFee + performanceFee);
+        uint256 totalFees = managementFee + performanceFee;
+        if (totalFees != 0) {
+            // Underlying asset transfer fails in case of liquidity distribution to other tracked tokens or protocols
+            // Because of that we're minting an equivalent amount of lp tokens to feeCollector
+            uint256 sharesToMint = totalFees.mulDiv(totalSupply + oneTokenOffset, totalAssets + 1);
+            _mint($.feeCollector, sharesToMint);
         }
 
         $.lastFeeTimestamp = block.timestamp;
-    }
-
-    function _transferUnderlyingAsset(address feeCollector, uint256 fees) private {
-        // TODO: not an actual transfer (fails in case of fully zero asset balance)
-        // seems like it's required to mint tokens to feeCollector
     }
 }
