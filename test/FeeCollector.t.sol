@@ -42,9 +42,9 @@ contract FeeCollectorTest is Test {
         levvaVaultProxy = new ERC1967Proxy(address(levvaVaultImplementation), data);
         levvaVault = LevvaVault(address(levvaVaultProxy));
 
-        asset.mint(user, depositAmount);
+        asset.mint(user, 2 * depositAmount);
         vm.prank(user);
-        asset.approve(address(levvaVault), depositAmount);
+        asset.approve(address(levvaVault), 2 * depositAmount);
         vm.prank(user);
         levvaVault.deposit(depositAmount, user);
     }
@@ -59,8 +59,25 @@ contract FeeCollectorTest is Test {
         vm.prank(user);
         levvaVault.redeem(toRedeem, user, user);
 
-        assertEq(levvaVault.totalAssets(), totalAssetsBefore.mulDiv(fee, ONE));
+        uint256 feeCollectorAssets = totalAssetsBefore.mulDiv(fee, ONE);
+
         assertEq(levvaVault.getFeeCollectorStorage().lastFeeTimestamp, block.timestamp);
+        assertEq(levvaVault.totalAssets(), feeCollectorAssets);
+        assertEq(levvaVault.maxWithdraw(feeCollector), feeCollectorAssets);
+
+        vm.prank(user);
+        levvaVault.deposit(depositAmount, user);
+        skip(365 days);
+
+        toRedeem = levvaVault.maxRedeem(user);
+        vm.prank(user);
+        levvaVault.redeem(toRedeem, user, user);
+
+        feeCollectorAssets += depositAmount.mulDiv(fee, ONE);
+
+        assertEq(levvaVault.getFeeCollectorStorage().lastFeeTimestamp, block.timestamp);
+        assertEq(levvaVault.totalAssets(), feeCollectorAssets);
+        assertEq(levvaVault.maxWithdraw(feeCollector), feeCollectorAssets);
     }
 
     function testPerformanceFeeIncrease() public {
