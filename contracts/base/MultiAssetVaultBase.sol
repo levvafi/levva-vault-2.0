@@ -192,6 +192,18 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, Ownable2StepUpgrade
         return _getMultiAssetVaultBaseStorage().minDeposit;
     }
 
+    function setFeeCollector(address newFeeCollector) external onlyOwner {
+       _setFeeCollector(newFeeCollector);
+    }
+
+    function setManagementFeeIR(uint48 newManagementFeeIR) external onlyOwner {
+        _setManagementFeeIR(newManagementFeeIR);
+    }
+
+    function setPerformanceFeeRatio(uint48 newPerformanceFeeRatio) external onlyOwner {
+        _setPerformanceFeeRatio(newPerformanceFeeRatio);
+    }
+
     // TODO: make virtual later, must be implemented in 'OracleInteractor' or something
     function convert(address, /*fromAsset*/ address, /*toAsset*/ uint256 amount) internal pure returns (uint256) {
         return amount;

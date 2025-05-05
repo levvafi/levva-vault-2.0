@@ -5,12 +5,14 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {ERC4626Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgradeable.sol";
+import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 
 import {Asserts} from "../libraries/Asserts.sol";
 
 abstract contract FeeCollector is Initializable, ERC4626Upgradeable {
     using Asserts for address;
     using Asserts for uint256;
+    using Asserts for uint48;
     using Math for uint256;
 
     uint48 private constant ONE = 1_000_000;
@@ -33,6 +35,10 @@ abstract contract FeeCollector is Initializable, ERC4626Upgradeable {
             $.slot := FeeCollectorStorageLocation
         }
     }
+
+    event FeeCollectorSet(address indexed newFeeCollector);
+    event ManagementFeeIRSet(uint48 newManagementFeeIR);
+    event PerformanceFeeRatioSet(uint48 newPerformanceFeeRatio);
 
     function __FeeCollector_init(address feeCollector) internal onlyInitializing {
         FeeCollectorStorage storage $ = _getFeeCollectorStorage();
@@ -70,5 +76,31 @@ abstract contract FeeCollector is Initializable, ERC4626Upgradeable {
         }
 
         $.lastFeeTimestamp = block.timestamp;
+    }
+
+    function _setFeeCollector(address newFeeCollector) internal {
+        newFeeCollector.assertNotZeroAddress();
+
+        FeeCollectorStorage storage $ = _getFeeCollectorStorage();
+        newFeeCollector.assertNotSameValue($.feeCollector);
+
+        $.feeCollector = newFeeCollector;
+        emit FeeCollectorSet(newFeeCollector);
+    }
+
+    function _setManagementFeeIR(uint48 newManagementFeeIR) internal {
+        FeeCollectorStorage storage $ = _getFeeCollectorStorage();
+        newManagementFeeIR.assertNotSameValue($.managementFeeIR);
+
+        $.managementFeeIR = newManagementFeeIR;
+        emit ManagementFeeIRSet(newManagementFeeIR);
+    }
+
+    function _setPerformanceFeeRatio(uint48 newPerformanceFeeRatio) internal {
+        FeeCollectorStorage storage $ = _getFeeCollectorStorage();
+        newPerformanceFeeRatio.assertNotSameValue($.performanceFeeRatio);
+
+        $.performanceFeeRatio = newPerformanceFeeRatio;
+        emit PerformanceFeeRatioSet(newPerformanceFeeRatio);
     }
 }

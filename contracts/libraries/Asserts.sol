@@ -30,4 +30,8 @@ library Asserts {
     function assertNotSameValue(uint256 left, uint256 right) internal pure {
         if (left == right) revert SameValue();
     }
+
+    function assertNotSameValue(address left, address right) internal pure {
+        if (left == right) revert SameValue();
+    }
 }
