@@ -57,11 +57,10 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, Ownable2StepUpgrade
     /// @inheritdoc ERC4626Upgradeable
     function deposit(uint256 assets, address receiver) public override returns (uint256) {
         uint256 _totalAssets = totalAssets();
-        uint256 _totalSupply = totalSupply();
 
-        _collectFees(_totalAssets, _totalSupply);
+        _collectFees(_totalAssets);
 
-        uint256 shares = _convertToShares(assets, _totalAssets, _totalSupply, Math.Rounding.Floor);
+        uint256 shares = _convertToShares(assets, _totalAssets, totalSupply(), Math.Rounding.Floor);
         _deposit(_msgSender(), receiver, assets, shares);
 
         return shares;
@@ -70,11 +69,10 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, Ownable2StepUpgrade
     /// @inheritdoc ERC4626Upgradeable
     function mint(uint256 shares, address receiver) public override returns (uint256) {
         uint256 _totalAssets = totalAssets();
-        uint256 _totalSupply = totalSupply();
 
-        _collectFees(_totalAssets, _totalSupply);
+        _collectFees(_totalAssets);
 
-        uint256 assets = _convertToAssets(shares, _totalAssets, _totalSupply, Math.Rounding.Ceil);
+        uint256 assets = _convertToAssets(shares, _totalAssets, totalSupply(), Math.Rounding.Ceil);
         _deposit(_msgSender(), receiver, assets, shares);
 
         return assets;
@@ -88,11 +86,10 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, Ownable2StepUpgrade
         // }
 
         uint256 _totalAssets = totalAssets();
-        uint256 _totalSupply = totalSupply();
 
-        _collectFees(_totalAssets, _totalSupply);
+        _collectFees(_totalAssets);
 
-        uint256 shares = _convertToShares(assets, _totalAssets, _totalSupply, Math.Rounding.Ceil);
+        uint256 shares = _convertToShares(assets, _totalAssets, totalSupply(), Math.Rounding.Ceil);
         _withdraw(_msgSender(), receiver, owner, assets, shares);
 
         return shares;
@@ -106,11 +103,10 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, Ownable2StepUpgrade
         // }
 
         uint256 _totalAssets = totalAssets();
-        uint256 _totalSupply = totalSupply();
 
-        _collectFees(_totalAssets, _totalSupply);
+        _collectFees(_totalAssets);
 
-        uint256 assets = _convertToAssets(shares, _totalAssets, _totalSupply, Math.Rounding.Floor);
+        uint256 assets = _convertToAssets(shares, _totalAssets, totalSupply(), Math.Rounding.Floor);
         _withdraw(_msgSender(), receiver, owner, assets, shares);
 
         return assets;

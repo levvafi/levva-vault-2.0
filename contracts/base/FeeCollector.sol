@@ -50,10 +50,16 @@ abstract contract FeeCollector is Initializable, ERC4626Upgradeable {
         $.highWaterMarkPerShare = oneToken.mulDiv(1, oneTokenOffset, Math.Rounding.Floor);
     }
 
-    function _collectFees(uint256 totalAssets, uint256 totalSupply) internal {
+    function getFeeCollectorStorage() external pure returns (FeeCollectorStorage memory) {
+        return _getFeeCollectorStorage();
+    }
+
+    function _collectFees(uint256 totalAssets) internal {
+        uint256 totalSupply = totalSupply();
         FeeCollectorStorage storage $ = _getFeeCollectorStorage();
 
         uint256 timeElapsed = block.timestamp - $.lastFeeTimestamp;
+        // TODO: subtract feeCollector balance from totalAssets?
         uint256 managementFee = totalAssets.mulDiv(timeElapsed * $.managementFeeIR, 365 days * ONE, Math.Rounding.Floor);
 
         uint256 oneToken = 10 ** decimals();
@@ -71,9 +77,14 @@ abstract contract FeeCollector is Initializable, ERC4626Upgradeable {
 
         uint256 totalFees = managementFee + performanceFee;
         if (totalFees != 0) {
-            // Underlying asset transfer fails in case of liquidity distribution to other tracked tokens or protocols
-            // Because of that we're minting an equivalent amount of lp tokens to feeCollector
-            uint256 sharesToMint = totalFees.mulDiv(totalSupply + oneTokenOffset, totalAssets + 1);
+            /* Underlying asset transfer fails in case of liquidity distribution to other tracked tokens or protocols
+             * Because of that we're minting an equivalent amount of lp tokens to feeCollector
+             *
+             * sharesToMint / (totalSupply + sharesToMint) = totalFees / totalAssets
+             * sharesToMint = totalFees * totalSupply / (totalAssets - totalFees)
+             */
+            uint256 sharesToMint =
+                totalFees.mulDiv(totalSupply + oneTokenOffset, totalAssets - totalFees + 1, Math.Rounding.Floor);
             _mint($.feeCollector, sharesToMint);
         }
 
