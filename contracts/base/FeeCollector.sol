@@ -56,10 +56,10 @@ abstract contract FeeCollector is Initializable, ERC4626Upgradeable {
 
     function _collectFees(uint256 totalAssets) internal {
         uint256 totalSupply = totalSupply();
+
         FeeCollectorStorage storage $ = _getFeeCollectorStorage();
 
         uint256 timeElapsed = block.timestamp - $.lastFeeTimestamp;
-        // TODO: subtract feeCollector balance from totalAssets?
         uint256 managementFee = totalAssets.mulDiv(timeElapsed * $.managementFeeIR, 365 days * ONE, Math.Rounding.Floor);
 
         uint256 oneToken = 10 ** decimals();
