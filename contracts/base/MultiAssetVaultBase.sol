@@ -32,16 +32,16 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, Ownable2StepUpgrade
         }
     }
 
-    error AlreadyTracked(uint256 index);
-    error NotTrackedAsset();
-    error NotZeroBalance(uint256 balance);
-    error LessThanMinDeposit(uint256 minDeposit);
-
     event NewTrackedAssetAdded(address indexed newTrackedAsset, uint256 indexed position);
     event TrackedAssetRemoved(
         address indexed trackedAssetRemoved, uint256 indexed position, address indexed replacement
     );
     event MinimalDepositSet(uint256 minDeposit);
+
+    error AlreadyTracked(uint256 index);
+    error NotTrackedAsset();
+    error NotZeroBalance(uint256 balance);
+    error LessThanMinDeposit(uint256 minDeposit);
 
     function __MultiAssetVaultBase_init(
         IERC20 asset,
@@ -60,7 +60,7 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, Ownable2StepUpgrade
 
         _collectFees(_totalAssets);
 
-        uint256 shares = _convertToShares(assets, _totalAssets, totalSupply(), Math.Rounding.Floor);
+        uint256 shares = _convertToShares(assets, _totalAssets, Math.Rounding.Floor);
         _deposit(_msgSender(), receiver, assets, shares);
 
         return shares;
@@ -72,7 +72,7 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, Ownable2StepUpgrade
 
         _collectFees(_totalAssets);
 
-        uint256 assets = _convertToAssets(shares, _totalAssets, totalSupply(), Math.Rounding.Ceil);
+        uint256 assets = _convertToAssets(shares, _totalAssets, Math.Rounding.Ceil);
         _deposit(_msgSender(), receiver, assets, shares);
 
         return assets;
@@ -80,16 +80,16 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, Ownable2StepUpgrade
 
     /// @inheritdoc ERC4626Upgradeable
     function withdraw(uint256 assets, address receiver, address owner) public override returns (uint256) {
-        // uint256 maxAssets = maxWithdraw(owner);
-        // if (assets > maxAssets) {
-        //     revert ERC4626ExceededMaxWithdraw(owner, assets, maxAssets);
-        // }
-
         uint256 _totalAssets = totalAssets();
+
+        uint256 maxAssets = _convertToAssets(balanceOf(owner), _totalAssets, Math.Rounding.Floor);
+        if (assets > maxAssets) {
+            revert ERC4626ExceededMaxWithdraw(owner, assets, maxAssets);
+        }
 
         _collectFees(_totalAssets);
 
-        uint256 shares = _convertToShares(assets, _totalAssets, totalSupply(), Math.Rounding.Ceil);
+        uint256 shares = _convertToShares(assets, _totalAssets, Math.Rounding.Ceil);
         _withdraw(_msgSender(), receiver, owner, assets, shares);
 
         return shares;
@@ -97,16 +97,16 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, Ownable2StepUpgrade
 
     /// @inheritdoc ERC4626Upgradeable
     function redeem(uint256 shares, address receiver, address owner) public override returns (uint256) {
-        // uint256 maxShares = maxRedeem(owner);
-        // if (shares > maxShares) {
-        //     revert ERC4626ExceededMaxRedeem(owner, shares, maxShares);
-        // }
+        uint256 maxShares = maxRedeem(owner);
+        if (shares > maxShares) {
+            revert ERC4626ExceededMaxRedeem(owner, shares, maxShares);
+        }
 
         uint256 _totalAssets = totalAssets();
 
         _collectFees(_totalAssets);
 
-        uint256 assets = _convertToAssets(shares, _totalAssets, totalSupply(), Math.Rounding.Floor);
+        uint256 assets = _convertToAssets(shares, _totalAssets, Math.Rounding.Floor);
         _withdraw(_msgSender(), receiver, owner, assets, shares);
 
         return assets;
@@ -160,6 +160,18 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, Ownable2StepUpgrade
         emit MinimalDepositSet(minDeposit);
     }
 
+    function setFeeCollector(address newFeeCollector) external onlyOwner {
+        _setFeeCollector(newFeeCollector);
+    }
+
+    function setManagementFeeIR(uint48 newManagementFeeIR) external onlyOwner {
+        _setManagementFeeIR(newManagementFeeIR);
+    }
+
+    function setPerformanceFeeRatio(uint48 newPerformanceFeeRatio) external onlyOwner {
+        _setPerformanceFeeRatio(newPerformanceFeeRatio);
+    }
+
     /// @inheritdoc ERC4626Upgradeable
     function totalAssets() public view override returns (uint256) {
         unchecked {
@@ -188,18 +200,6 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, Ownable2StepUpgrade
         return _getMultiAssetVaultBaseStorage().minDeposit;
     }
 
-    function setFeeCollector(address newFeeCollector) external onlyOwner {
-        _setFeeCollector(newFeeCollector);
-    }
-
-    function setManagementFeeIR(uint48 newManagementFeeIR) external onlyOwner {
-        _setManagementFeeIR(newManagementFeeIR);
-    }
-
-    function setPerformanceFeeRatio(uint48 newPerformanceFeeRatio) external onlyOwner {
-        _setPerformanceFeeRatio(newPerformanceFeeRatio);
-    }
-
     // TODO: make virtual later, must be implemented in 'OracleInteractor' or something
     function convert(address, /*fromAsset*/ address, /*toAsset*/ uint256 amount) internal pure returns (uint256) {
         return amount;
@@ -217,19 +217,19 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, Ownable2StepUpgrade
         super._deposit(caller, receiver, assets, shares);
     }
 
-    function _convertToShares(uint256 assets, uint256 _totalAssets, uint256 _totalSupply, Math.Rounding rounding)
+    function _convertToShares(uint256 assets, uint256 _totalAssets, Math.Rounding rounding)
         private
         view
         returns (uint256)
     {
-        return assets.mulDiv(_totalSupply + 10 ** _decimalsOffset(), _totalAssets + 1, rounding);
+        return assets.mulDiv(totalSupply() + 10 ** _decimalsOffset(), _totalAssets + 1, rounding);
     }
 
-    function _convertToAssets(uint256 shares, uint256 _totalAssets, uint256 _totalSupply, Math.Rounding rounding)
+    function _convertToAssets(uint256 shares, uint256 _totalAssets, Math.Rounding rounding)
         private
         view
         returns (uint256)
     {
-        return shares.mulDiv(_totalAssets + 1, _totalSupply + 10 ** _decimalsOffset(), rounding);
+        return shares.mulDiv(_totalAssets + 1, totalSupply() + 10 ** _decimalsOffset(), rounding);
     }
 }
