@@ -18,6 +18,24 @@ contract LevvaVaultUserActionsTest is TestSetUp {
         asset.mint(USER, 10 * MIN_DEPOSIT);
     }
 
+    function testTotalAssets() public {
+        levvaVault.addTrackedAsset(address(trackedAsset));
+
+        uint256 depositAmount = 10 ** 12;
+        asset.mint(address(this), depositAmount);
+        asset.approve(address(levvaVault), depositAmount);
+        levvaVault.deposit(depositAmount, address(this));
+
+        assertEq(levvaVault.totalAssets(), depositAmount);
+
+        uint256 trackedAssetAmount = 1_000 * 10 ** 18;
+        trackedAsset.mint(address(levvaVault), trackedAssetAmount);
+
+        uint256 expectedTotalAssets =
+            depositAmount + oracle.getQuote(trackedAssetAmount, address(trackedAsset), address(asset));
+        assertEq(levvaVault.totalAssets(), expectedTotalAssets);
+    }
+
     function testDeposit() public {
         vm.prank(USER);
         asset.approve(address(levvaVault), MIN_DEPOSIT);
