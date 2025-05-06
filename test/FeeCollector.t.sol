@@ -1,111 +1,86 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {Test} from "lib/forge-std/src/Test.sol";
 import {Vm} from "lib/forge-std/src/Vm.sol";
-import {console} from "lib/forge-std/src/console.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import {LevvaVault} from "../contracts/LevvaVault.sol";
+import {TestSetUp} from "./TestSetUp.t.sol";
 import {Asserts} from "../contracts/libraries/Asserts.sol";
 import {FeeCollector} from "../contracts/base/FeeCollector.sol";
-import {MintableERC20} from "./mocks/MintableERC20.t.sol";
-import {EulerRouterMock} from "./mocks/EulerRouterMock.t.sol";
 
-contract FeeCollectorTest is Test {
+contract FeeCollectorTest is TestSetUp {
     using Math for uint256;
 
     uint256 constant ONE = 1_000_000;
 
-    LevvaVault public levvaVaultImplementation;
-    ERC1967Proxy public levvaVaultProxy;
-    LevvaVault public levvaVault;
+    uint48 constant FEE = 100_000; // 10%
+    uint256 constant DEPOSIT_AMOUNT = 10_000_000;
 
-    MintableERC20 public asset = new MintableERC20("USDTest", "USDTest", 6);
+    function setUp() public override {
+        super.setUp();
 
-    EulerRouterMock oracle = new EulerRouterMock();
-
-    string lpName = "lpName";
-    string lpSymbol = "lpSymbol";
-
-    address noAccess = address(0xDEAD);
-    address feeCollector = address(0xFEE);
-    address user = address(0x987654321);
-
-    uint48 fee = 100_000; // 10%
-    uint256 depositAmount = 10_000_000;
-
-    function setUp() public {
-        levvaVaultImplementation = new LevvaVault();
-        bytes memory data =
-            abi.encodeWithSelector(LevvaVault.initialize.selector, IERC20(asset), lpName, lpSymbol, feeCollector, address(oracle));
-        levvaVaultProxy = new ERC1967Proxy(address(levvaVaultImplementation), data);
-        levvaVault = LevvaVault(address(levvaVaultProxy));
-
-        asset.mint(user, 2 * depositAmount);
-        vm.prank(user);
-        asset.approve(address(levvaVault), 2 * depositAmount);
-        vm.prank(user);
-        levvaVault.deposit(depositAmount, user);
+        asset.mint(USER, 2 * DEPOSIT_AMOUNT);
+        vm.prank(USER);
+        asset.approve(address(levvaVault), 2 * DEPOSIT_AMOUNT);
+        vm.prank(USER);
+        levvaVault.deposit(DEPOSIT_AMOUNT, USER);
     }
 
     function testManagementFee() public {
-        levvaVault.setManagementFeeIR(fee);
+        levvaVault.setManagementFeeIR(FEE);
 
         uint256 totalAssetsBefore = levvaVault.totalAssets();
         skip(365 days);
 
-        uint256 toRedeem = levvaVault.maxRedeem(user);
-        vm.prank(user);
-        levvaVault.redeem(toRedeem, user, user);
+        uint256 toRedeem = levvaVault.maxRedeem(USER);
+        vm.prank(USER);
+        levvaVault.redeem(toRedeem, USER, USER);
 
-        uint256 feeCollectorAssets = totalAssetsBefore.mulDiv(fee, ONE);
+        uint256 feeCollectorAssets = totalAssetsBefore.mulDiv(FEE, ONE);
 
         assertEq(levvaVault.getFeeCollectorStorage().lastFeeTimestamp, block.timestamp);
         assertEq(levvaVault.totalAssets(), feeCollectorAssets);
-        assertEq(levvaVault.maxWithdraw(feeCollector), feeCollectorAssets);
+        assertEq(levvaVault.maxWithdraw(FEE_COLLECTOR), feeCollectorAssets);
 
-        vm.prank(user);
-        levvaVault.deposit(depositAmount, user);
+        vm.prank(USER);
+        levvaVault.deposit(DEPOSIT_AMOUNT, USER);
         skip(365 days);
 
-        toRedeem = levvaVault.maxRedeem(user);
-        vm.prank(user);
-        levvaVault.redeem(toRedeem, user, user);
+        toRedeem = levvaVault.maxRedeem(USER);
+        vm.prank(USER);
+        levvaVault.redeem(toRedeem, USER, USER);
 
-        feeCollectorAssets += depositAmount.mulDiv(fee, ONE);
+        feeCollectorAssets += DEPOSIT_AMOUNT.mulDiv(FEE, ONE);
 
         assertEq(levvaVault.getFeeCollectorStorage().lastFeeTimestamp, block.timestamp);
         assertEq(levvaVault.totalAssets(), feeCollectorAssets);
-        assertEq(levvaVault.maxWithdraw(feeCollector), feeCollectorAssets);
+        assertEq(levvaVault.maxWithdraw(FEE_COLLECTOR), feeCollectorAssets);
     }
 
     function testPerformanceFeeIncrease() public {
-        levvaVault.setPerformanceFeeRatio(fee);
+        levvaVault.setPerformanceFeeRatio(FEE);
 
         uint256 totalAssetsBefore = levvaVault.totalAssets();
         asset.mint(address(levvaVault), totalAssetsBefore);
 
-        uint256 toRedeem = levvaVault.maxRedeem(user);
-        vm.prank(user);
-        levvaVault.redeem(toRedeem, user, user);
+        uint256 toRedeem = levvaVault.maxRedeem(USER);
+        vm.prank(USER);
+        levvaVault.redeem(toRedeem, USER, USER);
 
-        assertEq(levvaVault.totalAssets(), totalAssetsBefore.mulDiv(fee, ONE));
+        assertEq(levvaVault.totalAssets(), totalAssetsBefore.mulDiv(FEE, ONE));
         assertApproxEqAbs(levvaVault.getFeeCollectorStorage().highWaterMarkPerShare, 2 * 10 ** levvaVault.decimals(), 1);
     }
 
     function testPerformanceFeeDecrease() public {
-        levvaVault.setPerformanceFeeRatio(fee);
+        levvaVault.setPerformanceFeeRatio(FEE);
 
         uint256 totalAssetsBefore = levvaVault.totalAssets();
         asset.burn(address(levvaVault), totalAssetsBefore / 2);
 
-        uint256 toRedeem = levvaVault.maxRedeem(user);
-        vm.prank(user);
-        levvaVault.redeem(toRedeem, user, user);
+        uint256 toRedeem = levvaVault.maxRedeem(USER);
+        vm.prank(USER);
+        levvaVault.redeem(toRedeem, USER, USER);
 
         assertEq(levvaVault.totalAssets(), 0);
     }
@@ -120,14 +95,14 @@ contract FeeCollectorTest is Test {
     }
 
     function testSetFeeCollectorOnlyOwner() public {
-        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, noAccess));
-        vm.prank(noAccess);
-        levvaVault.setFeeCollector(noAccess);
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, NO_ACCESS));
+        vm.prank(NO_ACCESS);
+        levvaVault.setFeeCollector(NO_ACCESS);
     }
 
     function testSetFeeCollectorSameValue() public {
         vm.expectRevert(abi.encodeWithSelector(Asserts.SameValue.selector));
-        levvaVault.setFeeCollector(feeCollector);
+        levvaVault.setFeeCollector(FEE_COLLECTOR);
     }
 
     function testSetFeeCollectorZeroAddress() public {
@@ -137,41 +112,41 @@ contract FeeCollectorTest is Test {
 
     function testSetManagementFeeIR() public {
         vm.expectEmit(address(levvaVault));
-        emit FeeCollector.ManagementFeeIRSet(fee);
+        emit FeeCollector.ManagementFeeIRSet(FEE);
 
-        levvaVault.setManagementFeeIR(fee);
-        assertEq(levvaVault.getFeeCollectorStorage().managementFeeIR, fee);
+        levvaVault.setManagementFeeIR(FEE);
+        assertEq(levvaVault.getFeeCollectorStorage().managementFeeIR, FEE);
     }
 
     function testSetManagementFeeIROnlyOwner() public {
-        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, noAccess));
-        vm.prank(noAccess);
-        levvaVault.setManagementFeeIR(fee);
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, NO_ACCESS));
+        vm.prank(NO_ACCESS);
+        levvaVault.setManagementFeeIR(FEE);
     }
 
     function testSetManagementFeeIRSameValue() public {
-        levvaVault.setManagementFeeIR(fee);
+        levvaVault.setManagementFeeIR(FEE);
         vm.expectRevert(abi.encodeWithSelector(Asserts.SameValue.selector));
-        levvaVault.setManagementFeeIR(fee);
+        levvaVault.setManagementFeeIR(FEE);
     }
 
     function testSetPerformanceFeeRatio() public {
         vm.expectEmit(address(levvaVault));
-        emit FeeCollector.PerformanceFeeRatioSet(fee);
+        emit FeeCollector.PerformanceFeeRatioSet(FEE);
 
-        levvaVault.setPerformanceFeeRatio(fee);
-        assertEq(levvaVault.getFeeCollectorStorage().performanceFeeRatio, fee);
+        levvaVault.setPerformanceFeeRatio(FEE);
+        assertEq(levvaVault.getFeeCollectorStorage().performanceFeeRatio, FEE);
     }
 
     function testSetPerformanceFeeRatioOnlyOwner() public {
-        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, noAccess));
-        vm.prank(noAccess);
-        levvaVault.setPerformanceFeeRatio(fee);
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, NO_ACCESS));
+        vm.prank(NO_ACCESS);
+        levvaVault.setPerformanceFeeRatio(FEE);
     }
 
     function testSetPerformanceFeeRatioSameValue() public {
-        levvaVault.setPerformanceFeeRatio(fee);
+        levvaVault.setPerformanceFeeRatio(FEE);
         vm.expectRevert(abi.encodeWithSelector(Asserts.SameValue.selector));
-        levvaVault.setPerformanceFeeRatio(fee);
+        levvaVault.setPerformanceFeeRatio(FEE);
     }
 }
