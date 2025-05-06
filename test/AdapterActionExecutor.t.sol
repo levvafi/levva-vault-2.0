@@ -14,6 +14,7 @@ import {AdapterActionExecutor} from "../contracts/base/AdapterActionExecutor.sol
 import {Asserts} from "../contracts/libraries/Asserts.sol";
 import {MintableERC20} from "./mocks/MintableERC20.t.sol";
 import {AdapterMock} from "./mocks/AdapterMock.t.sol";
+import {EulerRouterMock} from "./mocks/EulerRouterMock.t.sol";
 import {ExternalPositionAdapterMock} from "./mocks/ExternalPositionAdapterMock.t.sol";
 
 contract AdapterActionExecutorTest is Test {
@@ -29,6 +30,8 @@ contract AdapterActionExecutorTest is Test {
     ExternalPositionAdapterMock externalPositionAdapter =
         new ExternalPositionAdapterMock(address(externalPositionManagedAsset), address(externalPositionDebtAsset));
 
+    EulerRouterMock oracle = new EulerRouterMock();
+
     string lpName = "lpName";
     string lpSymbol = "lpSymbol";
 
@@ -39,7 +42,7 @@ contract AdapterActionExecutorTest is Test {
     function setUp() public {
         levvaVaultImplementation = new LevvaVault();
         bytes memory data =
-            abi.encodeWithSelector(LevvaVault.initialize.selector, IERC20(asset), lpName, lpSymbol, feeCollector);
+            abi.encodeWithSelector(LevvaVault.initialize.selector, IERC20(asset), lpName, lpSymbol, feeCollector, address(oracle));
         levvaVaultProxy = new ERC1967Proxy(address(levvaVaultImplementation), data);
         levvaVault = LevvaVault(address(levvaVaultProxy));
 

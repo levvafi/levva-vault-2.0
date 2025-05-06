@@ -12,6 +12,7 @@ import {LevvaVault} from "../contracts/LevvaVault.sol";
 import {Asserts} from "../contracts/libraries/Asserts.sol";
 import {MultiAssetVaultBase} from "../contracts/base/MultiAssetVaultBase.sol";
 import {MintableERC20} from "./mocks/MintableERC20.t.sol";
+import {EulerRouterMock} from "./mocks/EulerRouterMock.t.sol";
 
 contract LevvaVaultTest is Test {
     LevvaVault public levvaVaultImplementation;
@@ -20,6 +21,8 @@ contract LevvaVaultTest is Test {
 
     MintableERC20 public asset = new MintableERC20("USDTest", "USDTest", 6);
     MintableERC20 public trackedAsset = new MintableERC20("wstUSDTest", "wstUSDTest", 18);
+
+    EulerRouterMock oracle = new EulerRouterMock();
 
     string lpName = "lpName";
     string lpSymbol = "lpSymbol";
@@ -30,7 +33,7 @@ contract LevvaVaultTest is Test {
     function setUp() public {
         levvaVaultImplementation = new LevvaVault();
         bytes memory data =
-            abi.encodeWithSelector(LevvaVault.initialize.selector, IERC20(asset), lpName, lpSymbol, feeCollector);
+            abi.encodeWithSelector(LevvaVault.initialize.selector, IERC20(asset), lpName, lpSymbol, feeCollector, address(oracle));
         levvaVaultProxy = new ERC1967Proxy(address(levvaVaultImplementation), data);
         levvaVault = LevvaVault(address(levvaVaultProxy));
     }

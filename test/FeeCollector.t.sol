@@ -13,6 +13,7 @@ import {LevvaVault} from "../contracts/LevvaVault.sol";
 import {Asserts} from "../contracts/libraries/Asserts.sol";
 import {FeeCollector} from "../contracts/base/FeeCollector.sol";
 import {MintableERC20} from "./mocks/MintableERC20.t.sol";
+import {EulerRouterMock} from "./mocks/EulerRouterMock.t.sol";
 
 contract FeeCollectorTest is Test {
     using Math for uint256;
@@ -24,6 +25,8 @@ contract FeeCollectorTest is Test {
     LevvaVault public levvaVault;
 
     MintableERC20 public asset = new MintableERC20("USDTest", "USDTest", 6);
+
+    EulerRouterMock oracle = new EulerRouterMock();
 
     string lpName = "lpName";
     string lpSymbol = "lpSymbol";
@@ -38,7 +41,7 @@ contract FeeCollectorTest is Test {
     function setUp() public {
         levvaVaultImplementation = new LevvaVault();
         bytes memory data =
-            abi.encodeWithSelector(LevvaVault.initialize.selector, IERC20(asset), lpName, lpSymbol, feeCollector);
+            abi.encodeWithSelector(LevvaVault.initialize.selector, IERC20(asset), lpName, lpSymbol, feeCollector, address(oracle));
         levvaVaultProxy = new ERC1967Proxy(address(levvaVaultImplementation), data);
         levvaVault = LevvaVault(address(levvaVaultProxy));
 
