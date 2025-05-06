@@ -183,7 +183,7 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, Ownable2StepUpgrade
 
             for (uint256 i; i < length; ++i) {
                 IERC20 trackedAsset = trackedAssets[i];
-                balance += convert(address(trackedAsset), asset, trackedAsset.balanceOf(address(this)));
+                balance += _getQuote(trackedAsset.balanceOf(address(this)), address(trackedAsset), asset);
             }
 
             // TODO: take lending protocols into account
@@ -200,10 +200,7 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, Ownable2StepUpgrade
         return _getMultiAssetVaultBaseStorage().minDeposit;
     }
 
-    // TODO: make virtual later, must be implemented in 'OracleInteractor' or something
-    function convert(address, /*fromAsset*/ address, /*toAsset*/ uint256 amount) internal pure returns (uint256) {
-        return amount;
-    }
+    function _getQuote(uint256 inAmount, address base, address quote) internal view virtual returns (uint256) {}
 
     /// @inheritdoc ERC4626Upgradeable
     function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override {
