@@ -8,8 +8,14 @@ import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/acces
 
 import {Asserts} from "../libraries/Asserts.sol";
 import {FeeCollector} from "./FeeCollector.sol";
+import {WithdrawalRequestQueue} from "./WithdrawalRequestQueue.sol";
 
-abstract contract MultiAssetVaultBase is ERC4626Upgradeable, Ownable2StepUpgradeable, FeeCollector {
+abstract contract MultiAssetVaultBase is
+    ERC4626Upgradeable,
+    Ownable2StepUpgradeable,
+    FeeCollector,
+    WithdrawalRequestQueue
+{
     using Asserts for address;
     using Asserts for uint256;
     using Math for uint256;
@@ -56,10 +62,7 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, Ownable2StepUpgrade
 
     /// @inheritdoc ERC4626Upgradeable
     function deposit(uint256 assets, address receiver) public override returns (uint256) {
-        uint256 _totalAssets = totalAssets();
-
-        _collectFees(_totalAssets);
-
+        uint256 _totalAssets = _totalAssetsWithFeeCollection();
         uint256 shares = _convertToShares(assets, _totalAssets, Math.Rounding.Floor);
         _deposit(_msgSender(), receiver, assets, shares);
 
@@ -68,10 +71,7 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, Ownable2StepUpgrade
 
     /// @inheritdoc ERC4626Upgradeable
     function mint(uint256 shares, address receiver) public override returns (uint256) {
-        uint256 _totalAssets = totalAssets();
-
-        _collectFees(_totalAssets);
-
+        uint256 _totalAssets = _totalAssetsWithFeeCollection();
         uint256 assets = _convertToAssets(shares, _totalAssets, Math.Rounding.Ceil);
         _deposit(_msgSender(), receiver, assets, shares);
 
@@ -80,14 +80,12 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, Ownable2StepUpgrade
 
     /// @inheritdoc ERC4626Upgradeable
     function withdraw(uint256 assets, address receiver, address owner) public override returns (uint256) {
-        uint256 _totalAssets = totalAssets();
+        uint256 _totalAssets = _totalAssetsWithFeeCollection();
 
         uint256 maxAssets = _convertToAssets(balanceOf(owner), _totalAssets, Math.Rounding.Floor);
         if (assets > maxAssets) {
             revert ERC4626ExceededMaxWithdraw(owner, assets, maxAssets);
         }
-
-        _collectFees(_totalAssets);
 
         uint256 shares = _convertToShares(assets, _totalAssets, Math.Rounding.Ceil);
         _withdraw(_msgSender(), receiver, owner, assets, shares);
@@ -102,13 +100,25 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, Ownable2StepUpgrade
             revert ERC4626ExceededMaxRedeem(owner, shares, maxShares);
         }
 
-        uint256 _totalAssets = totalAssets();
-
-        _collectFees(_totalAssets);
-
+        uint256 _totalAssets = _totalAssetsWithFeeCollection();
         uint256 assets = _convertToAssets(shares, _totalAssets, Math.Rounding.Floor);
         _withdraw(_msgSender(), receiver, owner, assets, shares);
 
+        return assets;
+    }
+
+    function finalizeWithdrawRequest() external returns (uint256 assets) {
+        // _enforceSenderIsVaultManager();
+
+        WithdrawalRequest memory request = _getWithdrawalRequest(0);
+
+        uint256 _totalAssets = _totalAssetsWithFeeCollection();
+        assets = _convertToAssets(request.shares, _totalAssets, Math.Rounding.Floor);
+        _withdraw(address(this), request.receiver, address(this), assets, request.shares);
+
+        uint128 requestId = _dequeueWithdraw();
+
+        emit WithdrawalFinalized(requestId, request.receiver, request.shares, assets);
         return assets;
     }
 
@@ -212,6 +222,24 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, Ownable2StepUpgrade
         }
 
         super._deposit(caller, receiver, assets, shares);
+    }
+
+    function _withdraw(address caller, address receiver, address owner, uint256 assets, uint256 shares)
+        internal
+        override
+    {
+        if (IERC20(asset()).balanceOf(address(this)) >= assets) {
+            return super._withdraw(caller, receiver, owner, assets, shares);
+        }
+
+        _transfer(owner, address(this), shares);
+        uint128 requestId = _enqueueWithdraw(receiver, shares);
+        emit WithdrawalRequested(requestId, owner, receiver, shares);
+    }
+
+    function _totalAssetsWithFeeCollection() private returns (uint256 _totalAssets) {
+        _totalAssets = totalAssets();
+        _collectFees(_totalAssets);
     }
 
     function _convertToShares(uint256 assets, uint256 _totalAssets, Math.Rounding rounding)
