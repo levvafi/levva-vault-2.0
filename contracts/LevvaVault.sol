@@ -6,6 +6,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {MultiAssetVaultBase} from "./base/MultiAssetVaultBase.sol";
 import {AdapterActionExecutor} from "./base/AdapterActionExecutor.sol";
 import {OraclePriceProvider} from "./base/OraclePriceProvider.sol";
+import {IEulerPriceOracle} from "./interfaces/IEulerPriceOracle.sol";
 
 /// @custom:oz-upgrades-unsafe-allow constructor
 contract LevvaVault is UUPSUpgradeable, MultiAssetVaultBase, AdapterActionExecutor, OraclePriceProvider {
@@ -29,13 +30,8 @@ contract LevvaVault is UUPSUpgradeable, MultiAssetVaultBase, AdapterActionExecut
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
-    function _getQuote(uint256 amount, address base, address quote)
-        internal
-        view
-        override(MultiAssetVaultBase, OraclePriceProvider)
-        returns (uint256)
-    {
-        return OraclePriceProvider._getQuote(amount, base, quote);
+    function oracle() public view override(MultiAssetVaultBase, OraclePriceProvider) returns (IEulerPriceOracle) {
+        return OraclePriceProvider.oracle();
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
