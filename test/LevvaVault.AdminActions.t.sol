@@ -1,49 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {Test} from "lib/forge-std/src/Test.sol";
 import {Vm} from "lib/forge-std/src/Vm.sol";
-import {console} from "lib/forge-std/src/console.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import {LevvaVault} from "../contracts/LevvaVault.sol";
+import {TestSetUp} from "./TestSetUp.t.sol";
 import {Asserts} from "../contracts/libraries/Asserts.sol";
 import {MultiAssetVaultBase} from "../contracts/base/MultiAssetVaultBase.sol";
+import {OraclePriceProvider} from "../contracts/base/OraclePriceProvider.sol";
 import {MintableERC20} from "./mocks/MintableERC20.t.sol";
+import {EulerRouterMock} from "./mocks/EulerRouterMock.t.sol";
 
-contract LevvaVaultTest is Test {
-    LevvaVault public levvaVaultImplementation;
-    ERC1967Proxy public levvaVaultProxy;
-    LevvaVault public levvaVault;
-
-    MintableERC20 public asset = new MintableERC20("USDTest", "USDTest", 6);
-    MintableERC20 public trackedAsset = new MintableERC20("wstUSDTest", "wstUSDTest", 18);
-
-    string lpName = "lpName";
-    string lpSymbol = "lpSymbol";
-
-    address nonOwner = address(0xDEAD);
-    address feeCollector = address(0xFEE);
-
-    function setUp() public {
-        levvaVaultImplementation = new LevvaVault();
-        bytes memory data =
-            abi.encodeWithSelector(LevvaVault.initialize.selector, IERC20(asset), lpName, lpSymbol, feeCollector);
-        levvaVaultProxy = new ERC1967Proxy(address(levvaVaultImplementation), data);
-        levvaVault = LevvaVault(address(levvaVaultProxy));
-    }
-
-    function testInitialize() public view {
-        assertEq(address(levvaVault.asset()), address(asset));
-        assertEq(levvaVault.owner(), address(this));
-        assertEq(levvaVault.name(), lpName);
-        assertEq(levvaVault.symbol(), lpSymbol);
-        assertEq(levvaVault.getFeeCollectorStorage().feeCollector, feeCollector);
-        assertEq(levvaVault.getFeeCollectorStorage().highWaterMarkPerShare, 10 ** levvaVault.decimals());
-    }
-
+contract LevvaVaultAdminActionsTest is TestSetUp {
     function testAddNewAsset() public {
         assertEq(levvaVault.trackedAssetPosition(address(trackedAsset)), 0);
 
@@ -55,8 +23,8 @@ contract LevvaVaultTest is Test {
     }
 
     function testAddNewAssetOnlyOwner() public {
-        vm.prank(nonOwner);
-        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, nonOwner));
+        vm.prank(NO_ACCESS);
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, NO_ACCESS));
         levvaVault.addTrackedAsset(address(trackedAsset));
     }
 
@@ -88,7 +56,7 @@ contract LevvaVaultTest is Test {
 
     function testRemoveNotLastAsset() public {
         levvaVault.addTrackedAsset(address(trackedAsset));
-        MintableERC20 secondTrackedAsset = new MintableERC20("wstUSDTest2", "wstUSDTest2", 18);
+        MintableERC20 secondTrackedAsset = new MintableERC20("wstUSDTest", "wstUSDTest", 18);
         levvaVault.addTrackedAsset(address(secondTrackedAsset));
 
         assertEq(levvaVault.trackedAssetPosition(address(trackedAsset)), 1);
@@ -105,8 +73,8 @@ contract LevvaVaultTest is Test {
     function testRemoveAssetOnlyOwner() public {
         levvaVault.addTrackedAsset(address(trackedAsset));
 
-        vm.prank(nonOwner);
-        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, nonOwner));
+        vm.prank(NO_ACCESS);
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, NO_ACCESS));
         levvaVault.removeTrackedAsset(address(trackedAsset));
     }
 
@@ -125,23 +93,6 @@ contract LevvaVaultTest is Test {
         levvaVault.removeTrackedAsset(address(trackedAsset));
     }
 
-    function testTotalAssets() public {
-        levvaVault.addTrackedAsset(address(trackedAsset));
-
-        uint256 depositAmount = 10 ** 12;
-        asset.mint(address(this), depositAmount);
-        asset.approve(address(levvaVault), depositAmount);
-        levvaVault.deposit(depositAmount, address(this));
-
-        assertEq(levvaVault.totalAssets(), depositAmount);
-
-        uint256 trackedAssetAmount = 1_000 * 10 ** 18;
-        trackedAsset.mint(address(levvaVault), trackedAssetAmount);
-
-        uint256 expectedTotalAssets = trackedAssetAmount + depositAmount;
-        assertEq(levvaVault.totalAssets(), expectedTotalAssets);
-    }
-
     function testSetMinDeposit() public {
         uint256 newMinDeposit = levvaVault.minimalDeposit() + 1;
 
@@ -155,8 +106,8 @@ contract LevvaVaultTest is Test {
     function testSetMinDepositOnlyOwner() public {
         uint256 newMinDeposit = levvaVault.minimalDeposit() + 1;
 
-        vm.prank(nonOwner);
-        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, nonOwner));
+        vm.prank(NO_ACCESS);
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, NO_ACCESS));
         levvaVault.setMinimalDeposit(newMinDeposit);
     }
 
@@ -165,5 +116,34 @@ contract LevvaVaultTest is Test {
 
         vm.expectRevert(abi.encodeWithSelector(Asserts.SameValue.selector));
         levvaVault.setMinimalDeposit(newMinDeposit);
+    }
+
+    function testSetOracle() public {
+        address newOracle = address(new EulerRouterMock());
+
+        vm.expectEmit(address(levvaVault));
+        emit OraclePriceProvider.OracleSet(newOracle);
+        levvaVault.setOracle(newOracle);
+
+        assertEq(address(levvaVault.oracle()), newOracle);
+    }
+
+    function testSetOracleOnlyOwner() public {
+        address newOracle = address(new EulerRouterMock());
+
+        vm.prank(NO_ACCESS);
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, NO_ACCESS));
+        levvaVault.setOracle(newOracle);
+    }
+
+    function testSetOracleSameValue() public {
+        address sameOracle = address(levvaVault.oracle());
+        vm.expectRevert(abi.encodeWithSelector(Asserts.SameValue.selector));
+        levvaVault.setOracle(sameOracle);
+    }
+
+    function testSetOracleZeroAddress() public {
+        vm.expectRevert(abi.encodeWithSelector(Asserts.ZeroAddress.selector));
+        levvaVault.setOracle(address(0));
     }
 }

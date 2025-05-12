@@ -6,6 +6,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ERC4626Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgradeable.sol";
 
 import {Asserts} from "../libraries/Asserts.sol";
+import {IEulerPriceOracle} from "../interfaces/IEulerPriceOracle.sol";
 import {FeeCollector} from "./FeeCollector.sol";
 
 abstract contract MultiAssetVaultBase is ERC4626Upgradeable, FeeCollector {
@@ -163,6 +164,7 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, FeeCollector {
     function totalAssets() public view override returns (uint256) {
         unchecked {
             address asset = asset();
+            IEulerPriceOracle eulerOracle = oracle();
             uint256 balance = IERC20(asset).balanceOf(address(this));
 
             IERC20[] storage trackedAssets = _getMultiAssetVaultBaseStorage().trackedAssets;
@@ -170,7 +172,7 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, FeeCollector {
 
             for (uint256 i; i < length; ++i) {
                 IERC20 trackedAsset = trackedAssets[i];
-                balance += convert(address(trackedAsset), asset, trackedAsset.balanceOf(address(this)));
+                balance += eulerOracle.getQuote(trackedAsset.balanceOf(address(this)), address(trackedAsset), asset);
             }
 
             // TODO: take lending protocols into account
@@ -187,10 +189,7 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, FeeCollector {
         return _getMultiAssetVaultBaseStorage().minDeposit;
     }
 
-    // TODO: make virtual later, must be implemented in 'OracleInteractor' or something
-    function convert(address, /*fromAsset*/ address, /*toAsset*/ uint256 amount) internal pure returns (uint256) {
-        return amount;
-    }
+    function oracle() public view virtual returns (IEulerPriceOracle) {}
 
     /// @inheritdoc ERC4626Upgradeable
     function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override {

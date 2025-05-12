@@ -5,11 +5,11 @@ import {Test} from "lib/forge-std/src/Test.sol";
 import {IERC165} from "@openzeppelin/contracts/interfaces/IERC165.sol";
 import {IAdapter} from "../../contracts/interfaces/IAdapter.sol";
 
-contract AdapterMock is IERC165, IAdapter {
+contract AdapterMock is IERC165, IAdapter, Test {
     uint256 public actionsExecuted = 0;
     bytes public recentCalldata;
 
-    function testAction(bytes calldata data) external returns (uint256) {
+    function action(bytes calldata data) external returns (uint256) {
         actionsExecuted += 1;
         recentCalldata = data;
         return actionsExecuted;
