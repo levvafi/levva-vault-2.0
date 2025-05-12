@@ -180,8 +180,8 @@ abstract contract AdapterActionExecutor is IAdapterCallback, OraclePriceProvider
                     totalAssets += _getQuote(managedAmounts[i], managedAssets[i], asset);
                 }
 
-                (address[] memory debtAssets, uint256[] memory debtAmounts) = adapter.getManagedAssets();
-                assetsLength = managedAssets.length;
+                (address[] memory debtAssets, uint256[] memory debtAmounts) = adapter.getDebtAssets();
+                assetsLength = debtAssets.length;
                 for (uint256 j; j < assetsLength; ++j) {
                     totalAssets -= _getQuote(debtAmounts[i], debtAssets[i], asset);
                 }

@@ -241,4 +241,21 @@ contract AdapterActionExecutorTest is TestSetUp {
         vm.expectRevert(abi.encodeWithSelector(AdapterActionExecutor.Forbidden.selector));
         fakeAdapter.callback(address(levvaVault), address(asset), 1);
     }
+
+    function testTotalAssets() public {
+        levvaVault.addAdapter(address(externalPositionAdapter));
+
+        uint256 expectedTotalAssets;
+        assertEq(levvaVault.totalAssets(), expectedTotalAssets);
+
+        uint256 externalPositionManagedAssetAmount = 10 ** 15;
+        externalPositionManagedAsset.mint(address(levvaVault), externalPositionManagedAssetAmount);
+        expectedTotalAssets += oracle.getQuote(externalPositionManagedAssetAmount, address(externalPositionManagedAsset), address(asset));
+        assertEq(levvaVault.totalAssets(), expectedTotalAssets);
+
+        uint256 externalPositionDebtAssetAmount = 10 ** 9;
+        externalPositionDebtAsset.mint(address(levvaVault), externalPositionDebtAssetAmount);
+        expectedTotalAssets -= oracle.getQuote(externalPositionDebtAssetAmount, address(externalPositionDebtAsset), address(asset));
+        assertEq(levvaVault.totalAssets(), expectedTotalAssets);
+    }
 }

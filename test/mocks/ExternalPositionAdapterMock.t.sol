@@ -65,7 +65,7 @@ contract ExternalPositionAdapterMock is IERC165, IAdapter, IExternalPositionAdap
         assets[0] = _managedAsset;
 
         amounts = new uint256[](1);
-        amounts[0] = 10_000_000;
+        amounts[0] = IERC20(_managedAsset).balanceOf(msg.sender);
     }
 
     function getDebtAssets() external view override returns (address[] memory assets, uint256[] memory amounts) {
@@ -73,6 +73,6 @@ contract ExternalPositionAdapterMock is IERC165, IAdapter, IExternalPositionAdap
         assets[0] = _debtAsset;
 
         amounts = new uint256[](1);
-        amounts[0] = 1_000_000;
+        amounts[0] = IERC20(_debtAsset).balanceOf(msg.sender);
     }
 }

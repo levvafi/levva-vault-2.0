@@ -104,6 +104,10 @@ contract LevvaVaultUserActionsTest is TestSetUp {
             adapterId: externalPositionAdapter.getAdapterId(),
             data: adapterCalldataWithSelector
         });
+        vm.prank(VAULT_MANAGER);
+        levvaVault.executeAdapterAction(args);
+        assertEq(oracle.getQuote(MIN_DEPOSIT / 2, address(asset), address(externalPositionManagedAsset)), MIN_DEPOSIT / 2);
+        assertEq(levvaVault.totalAssets(), MIN_DEPOSIT);
 
         uint256 assetBalanceBefore = asset.balanceOf(USER);
         uint256 lpBalanceBefore = levvaVault.balanceOf(USER);
