@@ -11,8 +11,9 @@ import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/acces
 import {IAdapter} from "../interfaces/IAdapter.sol";
 import {IExternalPositionAdapter} from "../interfaces/IExternalPositionAdapter.sol";
 import {IAdapterCallback} from "../interfaces/IAdapterCallback.sol";
+import {OraclePriceProvider} from "./OraclePriceProvider.sol";
 
-abstract contract AdapterActionExecutor is IAdapterCallback, AccessControlUpgradeable, Ownable2StepUpgradeable {
+abstract contract AdapterActionExecutor is IAdapterCallback, OraclePriceProvider, AccessControlUpgradeable {
     using SafeERC20 for IERC20;
 
     /// @custom:storage-location erc7201:levva.storage.AdapterActionExecutor
@@ -164,5 +165,27 @@ abstract contract AdapterActionExecutor is IAdapterCallback, AccessControlUpgrad
 
     function _isExternalPositionAdapter(address adapter) private view returns (bool) {
         return IERC165(adapter).supportsInterface(type(IExternalPositionAdapter).interfaceId);
+    }
+
+    function _getExternalPositionAdaptersTotalAssets(address asset) internal view returns (uint256 totalAssets) {
+        unchecked {
+            AdapterActionExecutorStorage storage $ = _getAdapterActionExecutorStorage();
+            uint256 length = $.externalPositionAdapters.length;
+            for (uint256 i; i < length; ++i) {
+                IExternalPositionAdapter adapter = $.externalPositionAdapters[i];
+
+                (address[] memory managedAssets, uint256[] memory managedAmounts) = adapter.getManagedAssets();
+                uint256 assetsLength = managedAssets.length;
+                for (uint256 j; j < assetsLength; ++j) {
+                    totalAssets += _getQuote(managedAmounts[i], managedAssets[i], asset);
+                }
+
+                (address[] memory debtAssets, uint256[] memory debtAmounts) = adapter.getManagedAssets();
+                assetsLength = managedAssets.length;
+                for (uint256 j; j < assetsLength; ++j) {
+                    totalAssets -= _getQuote(debtAmounts[i], debtAssets[i], asset);
+                }
+            }
+        }
     }
 }

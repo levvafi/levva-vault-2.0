@@ -9,12 +9,14 @@ import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/acces
 import {Asserts} from "../libraries/Asserts.sol";
 import {FeeCollector} from "./FeeCollector.sol";
 import {WithdrawalRequestQueue} from "./WithdrawalRequestQueue.sol";
+import {AdapterActionExecutor} from "./AdapterActionExecutor.sol";
 
 abstract contract MultiAssetVaultBase is
     ERC4626Upgradeable,
     Ownable2StepUpgradeable,
     FeeCollector,
-    WithdrawalRequestQueue
+    WithdrawalRequestQueue,
+    AdapterActionExecutor
 {
     using Asserts for address;
     using Asserts for uint256;
@@ -196,7 +198,7 @@ abstract contract MultiAssetVaultBase is
                 balance += _getQuote(trackedAsset.balanceOf(address(this)), address(trackedAsset), asset);
             }
 
-            // TODO: take lending protocols into account
+            balance += _getExternalPositionAdaptersTotalAssets(asset);
 
             return balance;
         }
@@ -209,8 +211,6 @@ abstract contract MultiAssetVaultBase is
     function minimalDeposit() external view returns (uint256) {
         return _getMultiAssetVaultBaseStorage().minDeposit;
     }
-
-    function _getQuote(uint256 inAmount, address base, address quote) internal view virtual returns (uint256) {}
 
     /// @inheritdoc ERC4626Upgradeable
     function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override {
