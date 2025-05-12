@@ -104,6 +104,39 @@ contract LevvaVaultUserActionsTest is TestSetUp {
         levvaVault.withdrawalRequest(0);
     }
 
+    function testFinalizeWithdrawalNotEnoughBalance() public {
+        vm.prank(USER);
+        asset.approve(address(levvaVault), MIN_DEPOSIT);
+
+        vm.prank(USER);
+        levvaVault.deposit(MIN_DEPOSIT, USER);
+        assertEq(levvaVault.balanceOf(USER), MIN_DEPOSIT);
+
+        AdapterActionExecutor.AdapterActionArg[] memory args = new AdapterActionExecutor.AdapterActionArg[](1);
+        bytes memory adapterCalldataWithSelector = abi.encodeWithSelector(
+            externalPositionAdapter.deposit.selector, address(asset), MIN_DEPOSIT / 2, MIN_DEPOSIT / 2, 0
+        );
+        args[0] = AdapterActionExecutor.AdapterActionArg({
+            adapterId: externalPositionAdapter.getAdapterId(),
+            data: adapterCalldataWithSelector
+        });
+        vm.prank(VAULT_MANAGER);
+        levvaVault.executeAdapterAction(args);
+
+        address receiver = address(0x1);
+
+        vm.prank(USER);
+        levvaVault.withdraw(MIN_DEPOSIT, receiver, USER);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                MultiAssetVaultBase.FinalizationError.selector, MIN_DEPOSIT, asset.balanceOf(address(levvaVault))
+            )
+        );
+        vm.prank(VAULT_MANAGER);
+        levvaVault.finalizeWithdrawalRequest();
+    }
+
     function testFinalizeOnlyRole() public {
         vm.expectRevert(
             abi.encodeWithSelector(

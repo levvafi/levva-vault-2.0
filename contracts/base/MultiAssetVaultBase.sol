@@ -49,6 +49,7 @@ abstract contract MultiAssetVaultBase is
     error NotTrackedAsset();
     error NotZeroBalance(uint256 balance);
     error LessThanMinDeposit(uint256 minDeposit);
+    error FinalizationError(uint256 assets, uint256 balance);
 
     function __MultiAssetVaultBase_init(
         IERC20 asset,
@@ -214,9 +215,12 @@ abstract contract MultiAssetVaultBase is
         internal
         override
     {
-        if (IERC20(asset()).balanceOf(address(this)) >= assets) {
+        uint256 balance = IERC20(asset()).balanceOf(address(this));
+        if (balance >= assets) {
             return super._withdraw(caller, receiver, owner, assets, shares);
         }
+
+        if (caller == address(this)) revert FinalizationError(assets, balance);
 
         _transfer(owner, address(this), shares);
         uint128 requestId = _enqueueWithdraw(receiver, shares);
