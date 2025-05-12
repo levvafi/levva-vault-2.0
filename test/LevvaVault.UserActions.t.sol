@@ -6,6 +6,7 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 
 import {TestSetUp} from "./TestSetUp.t.sol";
 import {Asserts} from "../contracts/libraries/Asserts.sol";
+import {AdapterActionExecutor} from "../contracts/base/AdapterActionExecutor.sol";
 import {MultiAssetVaultBase} from "../contracts/base/MultiAssetVaultBase.sol";
 import {WithdrawalRequestQueue} from "../contracts/base/WithdrawalRequestQueue.sol";
 
@@ -15,6 +16,8 @@ contract LevvaVaultUserActionsTest is TestSetUp {
     function setUp() public override {
         super.setUp();
         asset.mint(USER, 10 * MIN_DEPOSIT);
+
+        levvaVault.addAdapter(address(externalPositionAdapter));
     }
 
     function testTotalAssets() public {
@@ -83,5 +86,38 @@ contract LevvaVaultUserActionsTest is TestSetUp {
         vm.prank(USER);
         vm.expectRevert(abi.encodeWithSelector(Asserts.ZeroAmount.selector));
         levvaVault.mint(0, USER);
+    }
+
+    function testEnqueueWithdrawal() public {
+        vm.prank(USER);
+        asset.approve(address(levvaVault), MIN_DEPOSIT);
+
+        vm.prank(USER);
+        levvaVault.deposit(MIN_DEPOSIT, USER);
+        assertEq(levvaVault.balanceOf(USER), MIN_DEPOSIT);
+
+        AdapterActionExecutor.AdapterActionArg[] memory args = new AdapterActionExecutor.AdapterActionArg[](1);
+        bytes memory adapterCalldataWithSelector = abi.encodeWithSelector(
+            externalPositionAdapter.deposit.selector, address(asset), MIN_DEPOSIT / 2, MIN_DEPOSIT / 2, 0
+        );
+        args[0] = AdapterActionExecutor.AdapterActionArg({
+            adapterId: externalPositionAdapter.getAdapterId(),
+            data: adapterCalldataWithSelector
+        });
+
+        uint256 assetBalanceBefore = asset.balanceOf(USER);
+        uint256 lpBalanceBefore = levvaVault.balanceOf(USER);
+        address receiver = address(0x1);
+
+        vm.prank(USER);
+        levvaVault.withdraw(MIN_DEPOSIT, receiver, USER);
+
+        assertEq(asset.balanceOf(USER), assetBalanceBefore);
+        assertEq(levvaVault.balanceOf(USER), 0);
+        assertEq(levvaVault.balanceOf(address(levvaVault)), lpBalanceBefore);
+
+        WithdrawalRequestQueue.WithdrawalRequest memory request = levvaVault.withdrawalRequest(0);
+        assertEq(request.receiver, receiver);
+        assertEq(request.shares, lpBalanceBefore);
     }
 }
