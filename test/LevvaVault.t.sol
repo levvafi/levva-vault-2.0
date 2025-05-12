@@ -25,10 +25,12 @@ contract LevvaVaultTest is Test {
     string lpSymbol = "lpSymbol";
 
     address nonOwner = address(0xDEAD);
+    address feeCollector = address(0xFEE);
 
     function setUp() public {
         levvaVaultImplementation = new LevvaVault();
-        bytes memory data = abi.encodeWithSelector(LevvaVault.initialize.selector, IERC20(asset), lpName, lpSymbol);
+        bytes memory data =
+            abi.encodeWithSelector(LevvaVault.initialize.selector, IERC20(asset), lpName, lpSymbol, feeCollector);
         levvaVaultProxy = new ERC1967Proxy(address(levvaVaultImplementation), data);
         levvaVault = LevvaVault(address(levvaVaultProxy));
     }
@@ -38,6 +40,8 @@ contract LevvaVaultTest is Test {
         assertEq(levvaVault.owner(), address(this));
         assertEq(levvaVault.name(), lpName);
         assertEq(levvaVault.symbol(), lpSymbol);
+        assertEq(levvaVault.getFeeCollectorStorage().feeCollector, feeCollector);
+        assertEq(levvaVault.getFeeCollectorStorage().highWaterMarkPerShare, 10 ** levvaVault.decimals());
     }
 
     function testAddNewAsset() public {
@@ -136,5 +140,30 @@ contract LevvaVaultTest is Test {
 
         uint256 expectedTotalAssets = trackedAssetAmount + depositAmount;
         assertEq(levvaVault.totalAssets(), expectedTotalAssets);
+    }
+
+    function testSetMinDeposit() public {
+        uint256 newMinDeposit = levvaVault.minimalDeposit() + 1;
+
+        vm.expectEmit(address(levvaVault));
+        emit MultiAssetVaultBase.MinimalDepositSet(newMinDeposit);
+        levvaVault.setMinimalDeposit(newMinDeposit);
+
+        assertEq(levvaVault.minimalDeposit(), newMinDeposit);
+    }
+
+    function testSetMinDepositOnlyOwner() public {
+        uint256 newMinDeposit = levvaVault.minimalDeposit() + 1;
+
+        vm.prank(nonOwner);
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, nonOwner));
+        levvaVault.setMinimalDeposit(newMinDeposit);
+    }
+
+    function testSetMinDepositSameValue() public {
+        uint256 newMinDeposit = levvaVault.minimalDeposit();
+
+        vm.expectRevert(abi.encodeWithSelector(Asserts.SameValue.selector));
+        levvaVault.setMinimalDeposit(newMinDeposit);
     }
 }

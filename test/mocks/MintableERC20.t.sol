@@ -17,6 +17,10 @@ contract MintableERC20 is ERC20, IERC165 {
         _mint(account, amount);
     }
 
+    function burn(address account, uint256 amount) external {
+        _burn(account, amount);
+    }
+
     function decimals() public view override returns (uint8) {
         return _decimals;
     }

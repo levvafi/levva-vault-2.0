@@ -7,6 +7,7 @@ library Asserts {
     error ZeroAmount();
     /// @notice Revert reason if `assertNotZeroAddress` assert fails
     error ZeroAddress();
+    error SameValue();
 
     /**
      * @notice Asserts if `input` value is 0
@@ -24,5 +25,13 @@ library Asserts {
      */
     function assertNotZeroAddress(address input) internal pure {
         if (input == address(0)) revert ZeroAddress();
+    }
+
+    function assertNotSameValue(uint256 left, uint256 right) internal pure {
+        if (left == right) revert SameValue();
+    }
+
+    function assertNotSameValue(address left, address right) internal pure {
+        if (left == right) revert SameValue();
     }
 }

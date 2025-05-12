@@ -34,10 +34,12 @@ contract AdapterActionExecutorTest is Test {
 
     address noAccess = address(0xDEAD);
     address vaultManager = address(0x123456789);
+    address feeCollector = address(0xFEE);
 
     function setUp() public {
         levvaVaultImplementation = new LevvaVault();
-        bytes memory data = abi.encodeWithSelector(LevvaVault.initialize.selector, IERC20(asset), lpName, lpSymbol);
+        bytes memory data =
+            abi.encodeWithSelector(LevvaVault.initialize.selector, IERC20(asset), lpName, lpSymbol, feeCollector);
         levvaVaultProxy = new ERC1967Proxy(address(levvaVaultImplementation), data);
         levvaVault = LevvaVault(address(levvaVaultProxy));
 
