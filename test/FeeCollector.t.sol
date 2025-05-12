@@ -13,7 +13,6 @@ contract FeeCollectorTest is TestSetUp {
     using Math for uint256;
 
     uint256 constant ONE = 1_000_000;
-
     uint48 constant FEE = 100_000; // 10%
     uint256 constant DEPOSIT_AMOUNT = 10_000_000;
 

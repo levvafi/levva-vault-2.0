@@ -4,12 +4,11 @@ pragma solidity 0.8.28;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ERC4626Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgradeable.sol";
-import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 
 import {Asserts} from "../libraries/Asserts.sol";
 import {FeeCollector} from "./FeeCollector.sol";
 
-abstract contract MultiAssetVaultBase is ERC4626Upgradeable, Ownable2StepUpgradeable, FeeCollector {
+abstract contract MultiAssetVaultBase is ERC4626Upgradeable, FeeCollector {
     using Asserts for address;
     using Asserts for uint256;
     using Math for uint256;
@@ -158,18 +157,6 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, Ownable2StepUpgrade
 
         $.minDeposit = minDeposit;
         emit MinimalDepositSet(minDeposit);
-    }
-
-    function setFeeCollector(address newFeeCollector) external onlyOwner {
-        _setFeeCollector(newFeeCollector);
-    }
-
-    function setManagementFeeIR(uint48 newManagementFeeIR) external onlyOwner {
-        _setManagementFeeIR(newManagementFeeIR);
-    }
-
-    function setPerformanceFeeRatio(uint48 newPerformanceFeeRatio) external onlyOwner {
-        _setPerformanceFeeRatio(newPerformanceFeeRatio);
     }
 
     /// @inheritdoc ERC4626Upgradeable
