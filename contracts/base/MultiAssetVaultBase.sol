@@ -65,7 +65,7 @@ abstract contract MultiAssetVaultBase is
     function deposit(uint256 assets, address receiver) public override returns (uint256) {
         uint256 _totalAssets = _totalAssetsWithFeeCollection();
         uint256 shares = _convertToShares(assets, _totalAssets, Math.Rounding.Floor);
-        _deposit(_msgSender(), receiver, assets, shares);
+        _deposit(msg.sender, receiver, assets, shares);
 
         return shares;
     }
@@ -74,7 +74,7 @@ abstract contract MultiAssetVaultBase is
     function mint(uint256 shares, address receiver) public override returns (uint256) {
         uint256 _totalAssets = _totalAssetsWithFeeCollection();
         uint256 assets = _convertToAssets(shares, _totalAssets, Math.Rounding.Ceil);
-        _deposit(_msgSender(), receiver, assets, shares);
+        _deposit(msg.sender, receiver, assets, shares);
 
         return assets;
     }
@@ -89,7 +89,7 @@ abstract contract MultiAssetVaultBase is
         }
 
         uint256 shares = _convertToShares(assets, _totalAssets, Math.Rounding.Ceil);
-        _withdraw(_msgSender(), receiver, owner, assets, shares);
+        _withdraw(msg.sender, receiver, owner, assets, shares);
 
         return shares;
     }
@@ -103,7 +103,7 @@ abstract contract MultiAssetVaultBase is
 
         uint256 _totalAssets = _totalAssetsWithFeeCollection();
         uint256 assets = _convertToAssets(shares, _totalAssets, Math.Rounding.Floor);
-        _withdraw(_msgSender(), receiver, owner, assets, shares);
+        _withdraw(msg.sender, receiver, owner, assets, shares);
 
         return assets;
     }
