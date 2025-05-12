@@ -109,9 +109,7 @@ abstract contract MultiAssetVaultBase is
         return assets;
     }
 
-    function finalizeWithdrawRequest() external returns (uint256 assets) {
-        // _enforceSenderIsVaultManager();
-
+    function finalizeWithdrawalRequest() external onlyRole(VAULT_MANAGER_ROLE) returns (uint256 assets) {
         WithdrawalRequest memory request = _getWithdrawalRequest(0);
 
         uint256 _totalAssets = _totalAssetsWithFeeCollection();

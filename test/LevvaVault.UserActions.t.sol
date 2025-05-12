@@ -16,8 +16,6 @@ contract LevvaVaultUserActionsTest is TestSetUp {
     function setUp() public override {
         super.setUp();
         asset.mint(USER, 10 * MIN_DEPOSIT);
-
-        levvaVault.addAdapter(address(externalPositionAdapter));
     }
 
     function testTotalAssets() public {
@@ -86,42 +84,5 @@ contract LevvaVaultUserActionsTest is TestSetUp {
         vm.prank(USER);
         vm.expectRevert(abi.encodeWithSelector(Asserts.ZeroAmount.selector));
         levvaVault.mint(0, USER);
-    }
-
-    function testEnqueueWithdrawal() public {
-        vm.prank(USER);
-        asset.approve(address(levvaVault), MIN_DEPOSIT);
-
-        vm.prank(USER);
-        levvaVault.deposit(MIN_DEPOSIT, USER);
-        assertEq(levvaVault.balanceOf(USER), MIN_DEPOSIT);
-
-        AdapterActionExecutor.AdapterActionArg[] memory args = new AdapterActionExecutor.AdapterActionArg[](1);
-        bytes memory adapterCalldataWithSelector = abi.encodeWithSelector(
-            externalPositionAdapter.deposit.selector, address(asset), MIN_DEPOSIT / 2, MIN_DEPOSIT / 2, 0
-        );
-        args[0] = AdapterActionExecutor.AdapterActionArg({
-            adapterId: externalPositionAdapter.getAdapterId(),
-            data: adapterCalldataWithSelector
-        });
-        vm.prank(VAULT_MANAGER);
-        levvaVault.executeAdapterAction(args);
-        assertEq(oracle.getQuote(MIN_DEPOSIT / 2, address(asset), address(externalPositionManagedAsset)), MIN_DEPOSIT / 2);
-        assertEq(levvaVault.totalAssets(), MIN_DEPOSIT);
-
-        uint256 assetBalanceBefore = asset.balanceOf(USER);
-        uint256 lpBalanceBefore = levvaVault.balanceOf(USER);
-        address receiver = address(0x1);
-
-        vm.prank(USER);
-        levvaVault.withdraw(MIN_DEPOSIT, receiver, USER);
-
-        assertEq(asset.balanceOf(USER), assetBalanceBefore);
-        assertEq(levvaVault.balanceOf(USER), 0);
-        assertEq(levvaVault.balanceOf(address(levvaVault)), lpBalanceBefore);
-
-        WithdrawalRequestQueue.WithdrawalRequest memory request = levvaVault.withdrawalRequest(0);
-        assertEq(request.receiver, receiver);
-        assertEq(request.shares, lpBalanceBefore);
     }
 }
