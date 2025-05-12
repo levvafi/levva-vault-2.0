@@ -3,8 +3,11 @@ pragma solidity ^0.8.28;
 
 import {Test} from "lib/forge-std/src/Test.sol";
 import {IERC165} from "@openzeppelin/contracts/interfaces/IERC165.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IAdapter} from "../../contracts/interfaces/IAdapter.sol";
 import {IExternalPositionAdapter} from "../../contracts/interfaces/IExternalPositionAdapter.sol";
+import {IAdapterCallback} from "../../contracts/interfaces/IAdapterCallback.sol";
+import {MintableERC20} from "./MintableERC20.t.sol";
 
 contract ExternalPositionAdapterMock is IERC165, IAdapter, IExternalPositionAdapter {
     address private immutable _managedAsset;
@@ -23,6 +26,26 @@ contract ExternalPositionAdapterMock is IERC165, IAdapter, IExternalPositionAdap
         actionsExecuted += 1;
         recentCalldata = data;
         return actionsExecuted;
+    }
+
+    function deposit(address asset, uint256 amount, uint256 managedAssetToMint, uint256 debtAssetToMint) external {
+        actionsExecuted += 1;
+
+        IAdapterCallback(msg.sender).adapterCallback(address(this), asset, amount);
+        MintableERC20(_managedAsset).mint(msg.sender, managedAssetToMint);
+        MintableERC20(_debtAsset).mint(msg.sender, debtAssetToMint);
+    }
+
+    function withdraw(address asset, uint256 amount, uint256 managedAssetToBurn, uint256 debtAssetToBurn) external {
+        actionsExecuted += 1;
+
+        IERC20(asset).transfer(msg.sender, amount);
+        MintableERC20(_managedAsset).burn(msg.sender, managedAssetToBurn);
+        MintableERC20(_debtAsset).burn(msg.sender, debtAssetToBurn);
+    }
+
+    function callback(address vault, address asset, uint256 amount) external {
+        IAdapterCallback(vault).adapterCallback(address(this), asset, amount);
     }
 
     function setAdapterId(bytes4 newId) external {

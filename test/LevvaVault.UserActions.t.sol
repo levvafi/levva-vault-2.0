@@ -7,14 +7,13 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 import {TestSetUp} from "./TestSetUp.t.sol";
 import {Asserts} from "../contracts/libraries/Asserts.sol";
 import {MultiAssetVaultBase} from "../contracts/base/MultiAssetVaultBase.sol";
+import {WithdrawalRequestQueue} from "../contracts/base/WithdrawalRequestQueue.sol";
 
 contract LevvaVaultUserActionsTest is TestSetUp {
     uint256 constant MIN_DEPOSIT = 1_000_000;
 
     function setUp() public override {
         super.setUp();
-
-        levvaVault.setMinimalDeposit(MIN_DEPOSIT);
         asset.mint(USER, 10 * MIN_DEPOSIT);
     }
 
@@ -37,6 +36,7 @@ contract LevvaVaultUserActionsTest is TestSetUp {
     }
 
     function testDeposit() public {
+        levvaVault.setMinimalDeposit(MIN_DEPOSIT);
         vm.prank(USER);
         asset.approve(address(levvaVault), MIN_DEPOSIT);
 
@@ -45,6 +45,7 @@ contract LevvaVaultUserActionsTest is TestSetUp {
     }
 
     function testLessThanMinDeposit() public {
+        levvaVault.setMinimalDeposit(MIN_DEPOSIT);
         vm.prank(USER);
         asset.approve(address(levvaVault), MIN_DEPOSIT - 1);
 
@@ -54,14 +55,13 @@ contract LevvaVaultUserActionsTest is TestSetUp {
     }
 
     function testZeroAmount() public {
-        levvaVault.setMinimalDeposit(0);
-
         vm.prank(USER);
         vm.expectRevert(abi.encodeWithSelector(Asserts.ZeroAmount.selector));
         levvaVault.deposit(0, USER);
     }
 
     function testMint() public {
+        levvaVault.setMinimalDeposit(MIN_DEPOSIT);
         vm.prank(USER);
         asset.approve(address(levvaVault), MIN_DEPOSIT);
 
@@ -70,6 +70,7 @@ contract LevvaVaultUserActionsTest is TestSetUp {
     }
 
     function testLessThanMinDepositMint() public {
+        levvaVault.setMinimalDeposit(MIN_DEPOSIT);
         vm.prank(USER);
         asset.approve(address(levvaVault), MIN_DEPOSIT - 1);
 
@@ -79,8 +80,6 @@ contract LevvaVaultUserActionsTest is TestSetUp {
     }
 
     function testZeroAmountMint() public {
-        levvaVault.setMinimalDeposit(0);
-
         vm.prank(USER);
         vm.expectRevert(abi.encodeWithSelector(Asserts.ZeroAmount.selector));
         levvaVault.mint(0, USER);

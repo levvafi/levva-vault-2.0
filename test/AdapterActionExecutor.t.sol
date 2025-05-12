@@ -203,4 +203,42 @@ contract AdapterActionExecutorTest is TestSetUp {
         vm.prank(VAULT_MANAGER);
         levvaVault.executeAdapterAction(args);
     }
+
+    function testAdapterCallback() public {
+        levvaVault.addAdapter(address(externalPositionAdapter));
+
+        uint256 amount = 10 ** 18;
+        uint256 managedAssetAmount = amount * 3 / 2;
+        uint256 debtAssetAmount = amount / 2;
+        asset.mint(address(levvaVault), amount);
+
+        AdapterActionExecutor.AdapterActionArg[] memory args = new AdapterActionExecutor.AdapterActionArg[](1);
+        bytes memory adapterCalldataWithSelector = abi.encodeWithSelector(
+            externalPositionAdapter.deposit.selector, address(asset), amount, managedAssetAmount, debtAssetAmount
+        );
+        args[0] = AdapterActionExecutor.AdapterActionArg({
+            adapterId: externalPositionAdapter.getAdapterId(),
+            data: adapterCalldataWithSelector
+        });
+
+        vm.prank(VAULT_MANAGER);
+        levvaVault.executeAdapterAction(args);
+
+        assertEq(asset.balanceOf(address(levvaVault)), 0);
+        assertEq(externalPositionManagedAsset.balanceOf(address(levvaVault)), managedAssetAmount);
+        assertEq(externalPositionDebtAsset.balanceOf(address(levvaVault)), debtAssetAmount);
+    }
+
+    function testAdapterCallbackForbidden() public {
+        levvaVault.addAdapter(address(externalPositionAdapter));
+
+        ExternalPositionAdapterMock fakeAdapter =
+            new ExternalPositionAdapterMock(address(externalPositionManagedAsset), address(externalPositionDebtAsset));
+
+        assertNotEq(address(levvaVault.getAdapter(fakeAdapter.getAdapterId())), address(0));
+        assertNotEq(address(levvaVault.getAdapter(fakeAdapter.getAdapterId())), address(fakeAdapter));
+
+        vm.expectRevert(abi.encodeWithSelector(AdapterActionExecutor.Forbidden.selector));
+        fakeAdapter.callback(address(levvaVault), address(asset), 1);
+    }
 }

@@ -63,12 +63,4 @@ abstract contract WithdrawalRequestQueue {
         }
         delete queue.items[requestId];
     }
-
-    function _getWithdrawalQueueStartIndex() internal view returns (uint128) {
-        return _getWithdrawalQueueStorageData().start;
-    }
-
-    function _getWithdrawalQueueEndIndex() internal view returns (uint128) {
-        return _getWithdrawalQueueStorageData().end;
-    }
 }

@@ -3,13 +3,18 @@ pragma solidity 0.8.28;
 
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {IERC165} from "@openzeppelin/contracts/interfaces/IERC165.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 
 import {IAdapter} from "../interfaces/IAdapter.sol";
 import {IExternalPositionAdapter} from "../interfaces/IExternalPositionAdapter.sol";
+import {IAdapterCallback} from "../interfaces/IAdapterCallback.sol";
 
-abstract contract AdapterActionExecutor is AccessControlUpgradeable, Ownable2StepUpgradeable {
+abstract contract AdapterActionExecutor is IAdapterCallback, AccessControlUpgradeable, Ownable2StepUpgradeable {
+    using SafeERC20 for IERC20;
+
     /// @custom:storage-location erc7201:levva.storage.AdapterActionExecutor
     struct AdapterActionExecutorStorage {
         mapping(bytes4 adapterId => IAdapter) adapters;
@@ -46,6 +51,12 @@ abstract contract AdapterActionExecutor is AccessControlUpgradeable, Ownable2Ste
     error WrongAddress();
     error UnknownExternalPositionAdapter();
     error AdapterAlreadyExists(address adapter);
+    error Forbidden();
+
+    function adapterCallback(address receiver, address token, uint256 amount) external {
+        if (msg.sender != _getAdapterSafe(IAdapter(msg.sender).getAdapterId())) revert Forbidden();
+        IERC20(token).safeTransfer(receiver, amount);
+    }
 
     function executeAdapterAction(AdapterActionArg[] calldata actionArgs)
         external
