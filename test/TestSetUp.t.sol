@@ -50,7 +50,7 @@ contract TestSetUp is Test {
         assertEq(levvaVault.symbol(), LP_SYMBOL);
         assertEq(levvaVault.getFeeCollectorStorage().feeCollector, FEE_COLLECTOR);
         assertEq(levvaVault.getFeeCollectorStorage().highWaterMarkPerShare, 10 ** levvaVault.decimals());
-        assertEq(levvaVault.oracle(), address(oracle));
+        assertEq(address(levvaVault.oracle()), address(oracle));
     }
 
     function _createLevvaVault() private {

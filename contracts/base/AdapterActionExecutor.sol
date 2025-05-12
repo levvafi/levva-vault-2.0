@@ -11,6 +11,7 @@ import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/acces
 import {IAdapter} from "../interfaces/IAdapter.sol";
 import {IExternalPositionAdapter} from "../interfaces/IExternalPositionAdapter.sol";
 import {IAdapterCallback} from "../interfaces/IAdapterCallback.sol";
+import {IEulerPriceOracle} from "../interfaces/IEulerPriceOracle.sol";
 import {OraclePriceProvider} from "./OraclePriceProvider.sol";
 
 abstract contract AdapterActionExecutor is IAdapterCallback, OraclePriceProvider, AccessControlUpgradeable {
@@ -167,7 +168,11 @@ abstract contract AdapterActionExecutor is IAdapterCallback, OraclePriceProvider
         return IERC165(adapter).supportsInterface(type(IExternalPositionAdapter).interfaceId);
     }
 
-    function _getExternalPositionAdaptersTotalAssets(address asset) internal view returns (uint256 totalAssets) {
+    function _getExternalPositionAdaptersTotalAssets(IEulerPriceOracle eulerOracle, address asset)
+        internal
+        view
+        returns (uint256 totalAssets)
+    {
         unchecked {
             AdapterActionExecutorStorage storage $ = _getAdapterActionExecutorStorage();
             uint256 length = $.externalPositionAdapters.length;
@@ -177,13 +182,13 @@ abstract contract AdapterActionExecutor is IAdapterCallback, OraclePriceProvider
                 (address[] memory managedAssets, uint256[] memory managedAmounts) = adapter.getManagedAssets();
                 uint256 assetsLength = managedAssets.length;
                 for (uint256 j; j < assetsLength; ++j) {
-                    totalAssets += _getQuote(managedAmounts[i], managedAssets[i], asset);
+                    totalAssets += eulerOracle.getQuote(managedAmounts[i], managedAssets[i], asset);
                 }
 
                 (address[] memory debtAssets, uint256[] memory debtAmounts) = adapter.getDebtAssets();
                 assetsLength = debtAssets.length;
                 for (uint256 j; j < assetsLength; ++j) {
-                    totalAssets -= _getQuote(debtAmounts[i], debtAssets[i], asset);
+                    totalAssets -= eulerOracle.getQuote(debtAmounts[i], debtAssets[i], asset);
                 }
             }
         }

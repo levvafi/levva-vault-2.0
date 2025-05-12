@@ -125,7 +125,7 @@ contract LevvaVaultAdminActionsTest is TestSetUp {
         emit OraclePriceProvider.OracleSet(newOracle);
         levvaVault.setOracle(newOracle);
 
-        assertEq(levvaVault.oracle(), newOracle);
+        assertEq(address(levvaVault.oracle()), newOracle);
     }
 
     function testSetOracleOnlyOwner() public {
@@ -137,7 +137,7 @@ contract LevvaVaultAdminActionsTest is TestSetUp {
     }
 
     function testSetOracleSameValue() public {
-        address sameOracle = levvaVault.oracle();
+        address sameOracle = address(levvaVault.oracle());
         vm.expectRevert(abi.encodeWithSelector(Asserts.SameValue.selector));
         levvaVault.setOracle(sameOracle);
     }

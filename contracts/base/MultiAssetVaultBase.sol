@@ -4,16 +4,15 @@ pragma solidity 0.8.28;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ERC4626Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgradeable.sol";
-import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 
 import {Asserts} from "../libraries/Asserts.sol";
 import {FeeCollector} from "./FeeCollector.sol";
 import {WithdrawalRequestQueue} from "./WithdrawalRequestQueue.sol";
 import {AdapterActionExecutor} from "./AdapterActionExecutor.sol";
+import {IEulerPriceOracle} from "../interfaces/IEulerPriceOracle.sol";
 
 abstract contract MultiAssetVaultBase is
     ERC4626Upgradeable,
-    Ownable2StepUpgradeable,
     FeeCollector,
     WithdrawalRequestQueue,
     AdapterActionExecutor
@@ -170,22 +169,11 @@ abstract contract MultiAssetVaultBase is
         emit MinimalDepositSet(minDeposit);
     }
 
-    function setFeeCollector(address newFeeCollector) external onlyOwner {
-        _setFeeCollector(newFeeCollector);
-    }
-
-    function setManagementFeeIR(uint48 newManagementFeeIR) external onlyOwner {
-        _setManagementFeeIR(newManagementFeeIR);
-    }
-
-    function setPerformanceFeeRatio(uint48 newPerformanceFeeRatio) external onlyOwner {
-        _setPerformanceFeeRatio(newPerformanceFeeRatio);
-    }
-
     /// @inheritdoc ERC4626Upgradeable
     function totalAssets() public view override returns (uint256) {
         unchecked {
             address asset = asset();
+            IEulerPriceOracle eulerOracle = oracle();
             uint256 balance = IERC20(asset).balanceOf(address(this));
 
             IERC20[] storage trackedAssets = _getMultiAssetVaultBaseStorage().trackedAssets;
@@ -193,10 +181,10 @@ abstract contract MultiAssetVaultBase is
 
             for (uint256 i; i < length; ++i) {
                 IERC20 trackedAsset = trackedAssets[i];
-                balance += _getQuote(trackedAsset.balanceOf(address(this)), address(trackedAsset), asset);
+                balance += eulerOracle.getQuote(trackedAsset.balanceOf(address(this)), address(trackedAsset), asset);
             }
 
-            balance += _getExternalPositionAdaptersTotalAssets(asset);
+            balance += _getExternalPositionAdaptersTotalAssets(eulerOracle, asset);
 
             return balance;
         }

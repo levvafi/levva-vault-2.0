@@ -35,8 +35,8 @@ abstract contract OraclePriceProvider is Initializable, Ownable2StepUpgradeable 
         _setOracle(eulerOracle);
     }
 
-    function oracle() external view returns (address) {
-        return address(_getOraclePriceProviderStorage().eulerOracle);
+    function oracle() public view virtual returns (IEulerPriceOracle) {
+        return _getOraclePriceProviderStorage().eulerOracle;
     }
 
     function _setOracle(address eulerOracle) private {
@@ -46,9 +46,5 @@ abstract contract OraclePriceProvider is Initializable, Ownable2StepUpgradeable 
         $.eulerOracle = IEulerPriceOracle(eulerOracle);
 
         emit OracleSet(eulerOracle);
-    }
-
-    function _getQuote(uint256 inAmount, address base, address quote) internal view virtual returns (uint256) {
-        return _getOraclePriceProviderStorage().eulerOracle.getQuote(inAmount, base, quote);
     }
 }

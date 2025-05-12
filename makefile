@@ -12,4 +12,4 @@ build :; forge build --sizes
 
 test :; forge test -vvv
 
-coverage :; forge coverage
+coverage :; forge coverage --no-match-coverage test

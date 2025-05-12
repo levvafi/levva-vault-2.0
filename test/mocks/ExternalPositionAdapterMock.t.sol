@@ -9,7 +9,7 @@ import {IExternalPositionAdapter} from "../../contracts/interfaces/IExternalPosi
 import {IAdapterCallback} from "../../contracts/interfaces/IAdapterCallback.sol";
 import {MintableERC20} from "./MintableERC20.t.sol";
 
-contract ExternalPositionAdapterMock is IERC165, IAdapter, IExternalPositionAdapter {
+contract ExternalPositionAdapterMock is IERC165, IAdapter, IExternalPositionAdapter, Test {
     address private immutable _managedAsset;
     address private immutable _debtAsset;
     bytes4 private _adapterId = bytes4(keccak256("ExternalPositionAdapterMock"));
@@ -22,7 +22,7 @@ contract ExternalPositionAdapterMock is IERC165, IAdapter, IExternalPositionAdap
         _debtAsset = debtAsset;
     }
 
-    function testAction(bytes calldata data) external returns (uint256) {
+    function action(bytes calldata data) external returns (uint256) {
         actionsExecuted += 1;
         recentCalldata = data;
         return actionsExecuted;
