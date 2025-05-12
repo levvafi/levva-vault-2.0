@@ -6,7 +6,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IERC165} from "@openzeppelin/contracts/interfaces/IERC165.sol";
 import {IEulerPriceOracle} from "../../contracts/interfaces/IEulerPriceOracle.sol";
 
-contract EulerRouterMock is IEulerPriceOracle {
+contract EulerRouterMock is IEulerPriceOracle, Test {
     using Math for uint256;
 
     string public constant name = "EulerRouterMock";
@@ -30,6 +30,4 @@ contract EulerRouterMock is IEulerPriceOracle {
         prices[base][quote] = price;
         prices[quote][base] = ONE.mulDiv(ONE, price);
     }
-
-    function test() external pure {}
 }

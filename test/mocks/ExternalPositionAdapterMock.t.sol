@@ -6,7 +6,7 @@ import {IERC165} from "@openzeppelin/contracts/interfaces/IERC165.sol";
 import {IAdapter} from "../../contracts/interfaces/IAdapter.sol";
 import {IExternalPositionAdapter} from "../../contracts/interfaces/IExternalPositionAdapter.sol";
 
-contract ExternalPositionAdapterMock is IERC165, IAdapter, IExternalPositionAdapter {
+contract ExternalPositionAdapterMock is IERC165, IAdapter, IExternalPositionAdapter, Test {
     address private immutable _managedAsset;
     address private immutable _debtAsset;
     bytes4 private _adapterId = bytes4(keccak256("ExternalPositionAdapterMock"));
@@ -19,7 +19,7 @@ contract ExternalPositionAdapterMock is IERC165, IAdapter, IExternalPositionAdap
         _debtAsset = debtAsset;
     }
 
-    function testAction(bytes calldata data) external returns (uint256) {
+    function action(bytes calldata data) external returns (uint256) {
         actionsExecuted += 1;
         recentCalldata = data;
         return actionsExecuted;

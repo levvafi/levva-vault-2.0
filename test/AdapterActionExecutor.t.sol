@@ -125,7 +125,7 @@ contract AdapterActionExecutorTest is TestSetUp {
         AdapterActionExecutor.AdapterActionArg[] memory args = new AdapterActionExecutor.AdapterActionArg[](2);
 
         bytes memory adapterCalldata = "adapterData";
-        bytes memory adapterCalldataWithSelector = abi.encodeWithSelector(adapter.testAction.selector, adapterCalldata);
+        bytes memory adapterCalldataWithSelector = abi.encodeWithSelector(adapter.action.selector, adapterCalldata);
         args[0] = AdapterActionExecutor.AdapterActionArg({
             adapterId: adapter.getAdapterId(),
             data: adapterCalldataWithSelector
@@ -133,7 +133,7 @@ contract AdapterActionExecutorTest is TestSetUp {
 
         bytes memory externalPositionAdapterCalldata = "externalPositionAdapterData";
         bytes memory externalPositionAdapterCalldataWithSelector =
-            abi.encodeWithSelector(externalPositionAdapter.testAction.selector, externalPositionAdapterCalldata);
+            abi.encodeWithSelector(externalPositionAdapter.action.selector, externalPositionAdapterCalldata);
         args[1] = AdapterActionExecutor.AdapterActionArg({
             adapterId: externalPositionAdapter.getAdapterId(),
             data: externalPositionAdapterCalldataWithSelector
@@ -166,7 +166,7 @@ contract AdapterActionExecutorTest is TestSetUp {
         AdapterActionExecutor.AdapterActionArg[] memory args = new AdapterActionExecutor.AdapterActionArg[](2);
 
         bytes memory adapterCalldata = "adapterData";
-        bytes memory adapterCalldataWithSelector = abi.encodeWithSelector(adapter.testAction.selector, adapterCalldata);
+        bytes memory adapterCalldataWithSelector = abi.encodeWithSelector(adapter.action.selector, adapterCalldata);
         args[0] = AdapterActionExecutor.AdapterActionArg({
             adapterId: adapter.getAdapterId(),
             data: adapterCalldataWithSelector
@@ -174,7 +174,7 @@ contract AdapterActionExecutorTest is TestSetUp {
 
         bytes memory externalPositionAdapterCalldata = "externalPositionAdapterData";
         bytes memory externalPositionAdapterCalldataWithSelector =
-            abi.encodeWithSelector(externalPositionAdapter.testAction.selector, externalPositionAdapterCalldata);
+            abi.encodeWithSelector(externalPositionAdapter.action.selector, externalPositionAdapterCalldata);
         args[1] = AdapterActionExecutor.AdapterActionArg({
             adapterId: externalPositionAdapter.getAdapterId(),
             data: externalPositionAdapterCalldataWithSelector
@@ -193,7 +193,7 @@ contract AdapterActionExecutorTest is TestSetUp {
         AdapterActionExecutor.AdapterActionArg[] memory args = new AdapterActionExecutor.AdapterActionArg[](1);
 
         bytes memory adapterCalldata = "adapterData";
-        bytes memory adapterCalldataWithSelector = abi.encodeWithSelector(adapter.testAction.selector, adapterCalldata);
+        bytes memory adapterCalldataWithSelector = abi.encodeWithSelector(adapter.action.selector, adapterCalldata);
         args[0] = AdapterActionExecutor.AdapterActionArg({
             adapterId: adapter.getAdapterId(),
             data: adapterCalldataWithSelector
