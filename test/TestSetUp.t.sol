@@ -61,7 +61,7 @@ contract TestSetUp is Test {
         levvaVaultProxy = new ERC1967Proxy(address(levvaVaultImplementation), data);
         levvaVault = LevvaVault(address(levvaVaultProxy));
 
-        levvaVault.grantRole(levvaVault.VAULT_MANAGER_ROLE(), VAULT_MANAGER);
+        levvaVault.addVaultManager(VAULT_MANAGER, true);
     }
 
     function _createOracleMock() private {

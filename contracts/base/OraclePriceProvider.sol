@@ -2,12 +2,12 @@
 pragma solidity 0.8.28;
 
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 
 import {Asserts} from "../libraries/Asserts.sol";
 import {IEulerPriceOracle} from "../interfaces/IEulerPriceOracle.sol";
+import {VaultAccessControl} from "./VaultAccessControl.sol";
 
-abstract contract OraclePriceProvider is Initializable, Ownable2StepUpgradeable {
+abstract contract OraclePriceProvider is Initializable, VaultAccessControl {
     using Asserts for address;
 
     /// @custom:storage-location erc7201:levva.storage.OraclePriceProvider

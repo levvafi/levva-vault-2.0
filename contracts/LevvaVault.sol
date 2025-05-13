@@ -21,11 +21,9 @@ contract LevvaVault is UUPSUpgradeable, MultiAssetVaultBase {
         address eulerOracle
     ) external initializer {
         __UUPSUpgradeable_init();
-        __Ownable_init(msg.sender);
+        __VaultAccessControl_init(msg.sender);
         __MultiAssetVaultBase_init(asset, lpName, lpSymbol, feeCollector);
         __OraclePriceProvider_init(eulerOracle);
-
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}

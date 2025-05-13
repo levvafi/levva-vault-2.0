@@ -5,8 +5,6 @@ import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {IERC165} from "@openzeppelin/contracts/interfaces/IERC165.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 
 import {IAdapter} from "../interfaces/IAdapter.sol";
 import {IExternalPositionAdapter} from "../interfaces/IExternalPositionAdapter.sol";
@@ -14,7 +12,7 @@ import {IAdapterCallback} from "../interfaces/IAdapterCallback.sol";
 import {IEulerPriceOracle} from "../interfaces/IEulerPriceOracle.sol";
 import {OraclePriceProvider} from "./OraclePriceProvider.sol";
 
-abstract contract AdapterActionExecutor is IAdapterCallback, OraclePriceProvider, AccessControlUpgradeable {
+abstract contract AdapterActionExecutor is IAdapterCallback, OraclePriceProvider {
     using SafeERC20 for IERC20;
 
     /// @custom:storage-location erc7201:levva.storage.AdapterActionExecutor
@@ -39,8 +37,6 @@ abstract contract AdapterActionExecutor is IAdapterCallback, OraclePriceProvider
         bytes data;
     }
 
-    bytes32 public constant VAULT_MANAGER_ROLE = keccak256("VAULT_MANAGER_ROLE");
-
     event AdapterActionExecuted(bytes4 indexed adapterId, bytes data, bytes result);
     event NewAdapterAdded(bytes4 indexed adapterId, address indexed adapter);
     event NewExternalPositionAdapterAdded(address indexed adapter, uint256 indexed position);
@@ -62,7 +58,7 @@ abstract contract AdapterActionExecutor is IAdapterCallback, OraclePriceProvider
 
     function executeAdapterAction(AdapterActionArg[] calldata actionArgs)
         external
-        onlyRole(VAULT_MANAGER_ROLE)
+        onlyVaultManager
         returns (bytes[] memory returnData)
     {
         uint256 length = actionArgs.length;

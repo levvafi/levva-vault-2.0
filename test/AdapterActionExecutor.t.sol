@@ -2,11 +2,11 @@
 pragma solidity ^0.8.27;
 
 import {Vm} from "lib/forge-std/src/Vm.sol";
-import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import {TestSetUp} from "./TestSetUp.t.sol";
 import {AdapterActionExecutor} from "../contracts/base/AdapterActionExecutor.sol";
+import {VaultAccessControl} from "../contracts/base/VaultAccessControl.sol";
 import {AdapterMock} from "./mocks/AdapterMock.t.sol";
 import {ExternalPositionAdapterMock} from "./mocks/ExternalPositionAdapterMock.t.sol";
 
@@ -180,11 +180,7 @@ contract AdapterActionExecutorTest is TestSetUp {
             data: externalPositionAdapterCalldataWithSelector
         });
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector, NO_ACCESS, levvaVault.VAULT_MANAGER_ROLE()
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(VaultAccessControl.NoAccess.selector, NO_ACCESS));
         vm.prank(NO_ACCESS);
         levvaVault.executeAdapterAction(args);
     }
