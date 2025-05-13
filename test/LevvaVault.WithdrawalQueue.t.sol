@@ -3,12 +3,11 @@ pragma solidity ^0.8.27;
 
 import {Vm} from "lib/forge-std/src/Vm.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {IERC20Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 
 import {TestSetUp} from "./TestSetUp.t.sol";
-import {Asserts} from "../contracts/libraries/Asserts.sol";
 import {AdapterActionExecutor} from "../contracts/base/AdapterActionExecutor.sol";
 import {VaultAccessControl} from "../contracts/base/VaultAccessControl.sol";
-import {MultiAssetVaultBase} from "../contracts/base/MultiAssetVaultBase.sol";
 import {WithdrawalRequestQueue} from "../contracts/base/WithdrawalRequestQueue.sol";
 
 contract LevvaVaultUserActionsTest is TestSetUp {
@@ -48,8 +47,19 @@ contract LevvaVaultUserActionsTest is TestSetUp {
         uint256 lpBalanceBefore = levvaVault.balanceOf(USER);
         address receiver = address(0x1);
 
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IERC20Errors.ERC20InsufficientBalance.selector,
+                address(levvaVault),
+                asset.balanceOf(address(levvaVault)),
+                MIN_DEPOSIT
+            )
+        );
         vm.prank(USER);
         levvaVault.withdraw(MIN_DEPOSIT, receiver, USER);
+
+        vm.prank(USER);
+        levvaVault.requestWithdrawal(MIN_DEPOSIT, receiver, USER);
 
         assertEq(asset.balanceOf(USER), assetBalanceBefore);
         assertEq(levvaVault.balanceOf(USER), 0);
@@ -58,6 +68,23 @@ contract LevvaVaultUserActionsTest is TestSetUp {
         WithdrawalRequestQueue.WithdrawalRequest memory request = levvaVault.withdrawalRequest(0);
         assertEq(request.receiver, receiver);
         assertEq(request.shares, lpBalanceBefore);
+    }
+
+    function testRequestWithdrawalSufficientBalance() public {
+        vm.prank(USER);
+        asset.approve(address(levvaVault), MIN_DEPOSIT);
+
+        vm.prank(USER);
+        levvaVault.deposit(MIN_DEPOSIT, USER);
+        assertEq(levvaVault.balanceOf(USER), MIN_DEPOSIT);
+
+        address receiver = address(0x1);
+        vm.prank(USER);
+        levvaVault.requestWithdrawal(MIN_DEPOSIT, receiver, USER);
+
+        assertEq(asset.balanceOf(receiver), MIN_DEPOSIT);
+        vm.expectRevert(abi.encodeWithSelector(WithdrawalRequestQueue.NoElementWithIndex.selector, 0));
+        levvaVault.withdrawalRequest(0);
     }
 
     function testFinalizeWithdrawal() public {
@@ -82,7 +109,7 @@ contract LevvaVaultUserActionsTest is TestSetUp {
         address receiver = address(0x1);
 
         vm.prank(USER);
-        levvaVault.withdraw(MIN_DEPOSIT, receiver, USER);
+        levvaVault.requestWithdrawal(MIN_DEPOSIT, receiver, USER);
 
         adapterCalldataWithSelector = abi.encodeWithSelector(
             externalPositionAdapter.withdraw.selector, address(asset), MIN_DEPOSIT / 2, MIN_DEPOSIT / 2, 0
@@ -126,11 +153,14 @@ contract LevvaVaultUserActionsTest is TestSetUp {
         address receiver = address(0x1);
 
         vm.prank(USER);
-        levvaVault.withdraw(MIN_DEPOSIT, receiver, USER);
+        levvaVault.requestWithdrawal(MIN_DEPOSIT, receiver, USER);
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                MultiAssetVaultBase.FinalizationError.selector, MIN_DEPOSIT, asset.balanceOf(address(levvaVault))
+                IERC20Errors.ERC20InsufficientBalance.selector,
+                address(levvaVault),
+                asset.balanceOf(address(levvaVault)),
+                MIN_DEPOSIT
             )
         );
         vm.prank(VAULT_MANAGER);

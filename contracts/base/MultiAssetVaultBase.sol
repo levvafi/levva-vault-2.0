@@ -49,7 +49,6 @@ abstract contract MultiAssetVaultBase is
     error NotTrackedAsset();
     error NotZeroBalance(uint256 balance);
     error LessThanMinDeposit(uint256 minDeposit);
-    error FinalizationError(uint256 assets, uint256 balance);
 
     function __MultiAssetVaultBase_init(
         IERC20 asset,
@@ -107,6 +106,20 @@ abstract contract MultiAssetVaultBase is
         _withdraw(msg.sender, receiver, owner, assets, shares);
 
         return assets;
+    }
+
+    function requestWithdrawal(uint256 assets, address receiver, address owner) external returns (uint256 shares) {
+        uint256 _totalAssets = _totalAssetsWithFeeCollection();
+        shares = _convertToShares(assets, _totalAssets, Math.Rounding.Ceil);
+
+        if (IERC20(asset()).balanceOf(address(this)) < assets) {
+            _transfer(owner, address(this), shares);
+            uint128 requestId = _enqueueWithdraw(receiver, shares);
+            emit WithdrawalRequested(requestId, owner, receiver, shares);
+            return shares;
+        }
+
+        _withdraw(msg.sender, receiver, owner, assets, shares);
     }
 
     function finalizeWithdrawalRequest() external onlyVaultManager returns (uint256 assets) {
@@ -209,22 +222,6 @@ abstract contract MultiAssetVaultBase is
         }
 
         super._deposit(caller, receiver, assets, shares);
-    }
-
-    function _withdraw(address caller, address receiver, address owner, uint256 assets, uint256 shares)
-        internal
-        override
-    {
-        uint256 balance = IERC20(asset()).balanceOf(address(this));
-        if (balance >= assets) {
-            return super._withdraw(caller, receiver, owner, assets, shares);
-        }
-
-        if (caller == address(this)) revert FinalizationError(assets, balance);
-
-        _transfer(owner, address(this), shares);
-        uint128 requestId = _enqueueWithdraw(receiver, shares);
-        emit WithdrawalRequested(requestId, owner, receiver, shares);
     }
 
     function _totalAssetsWithFeeCollection() private returns (uint256 _totalAssets) {
