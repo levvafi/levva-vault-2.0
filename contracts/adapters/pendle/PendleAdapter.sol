@@ -150,7 +150,7 @@ contract PendleAdapter is IERC165, IAdapter {
     /// @param market pendle market address
     /// @param ptIn amount of PT to redeem
     /// @param tokenOut token output data
-    /// @dev Swap PT for Token if ma
+    /// @dev Swap PT for Token if market is expired
     function redeemPt(address market, uint256 ptIn, TokenOutput calldata tokenOut) external {
         (, IPPrincipalToken ptToken, IPYieldToken ytToken) = IPMarket(market).readTokens();
 
