@@ -38,6 +38,8 @@ contract PendleAdapterTest is Test {
     address public PT_MARKET_3 = makeAddr("PT_MARKET_3");
     IERC20 public PT_TOKEN_3;
 
+    address public UNKNOWN_MARKET = makeAddr("UNKNOWN_MARKET");
+
     IERC20 public USDC;
     IERC20 public USDT;
     IERC20 public SOME_TOKEN;
@@ -55,6 +57,7 @@ contract PendleAdapterTest is Test {
         pendleRouter.setMarketPtToken(PT_MARKET_1, address(PT_TOKEN_1));
         pendleRouter.setMarketPtToken(PT_MARKET_2, address(PT_TOKEN_2));
         pendleRouter.setMarketPtToken(PT_MARKET_3, address(PT_TOKEN_3));
+        pendleRouter.setMarketPtToken(UNKNOWN_MARKET, makeAddr("UNKNOWN_PT_TOKEN"));
 
         deal(address(PT_TOKEN_1), address(pendleRouter), 10000e18);
         deal(address(PT_TOKEN_2), address(pendleRouter), 10000e18);
@@ -69,6 +72,9 @@ contract PendleAdapterTest is Test {
         deal(address(USDC), address(vault), 10000e6);
         deal(address(USDT), address(vault), 10000e6);
         deal(address(SOME_TOKEN), address(vault), 10000e18);
+        deal(address(PT_TOKEN_1), address(vault), 10000e18);
+        deal(address(PT_TOKEN_2), address(vault), 10000e18);
+        deal(address(PT_TOKEN_3), address(vault), 10000e18);
 
         vm.startPrank(OWNER);
         pendleAdapter.addMarket(address(vault), PT_MARKET_1, true);
@@ -96,7 +102,7 @@ contract PendleAdapterTest is Test {
         );
     }
 
-    function testAddMarketOnlyOwner() public {
+    function testAddMarketShouldFailWhenUnauthorizedAccount() public {
         vm.prank(USER);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, USER));
         pendleAdapter.addMarket(address(vault), PT_MARKET_1, true);
@@ -115,17 +121,21 @@ contract PendleAdapterTest is Test {
         vm.startPrank(OWNER);
         assertTrue(pendleAdapter.getMarketIsAvailable(address(vault), PT_MARKET_1), "Market should be available");
 
+        vm.expectEmit(address(pendleAdapter));
+        emit PendleAdapter.MarketAvailabilityUpdated(address(vault), PT_MARKET_1, false);
+
         pendleAdapter.addMarket(address(vault), PT_MARKET_1, false);
         assertFalse(pendleAdapter.getMarketIsAvailable(address(vault), PT_MARKET_1), "Market should not be available");
     }
 
     function testAddMarketShouldAddMarketToVault() public {
         vm.startPrank(OWNER);
-        address someMarket = makeAddr("SOME_MARKET");
-        assertFalse(pendleAdapter.getMarketIsAvailable(address(vault), someMarket), "Market should not be available");
+        assertFalse(
+            pendleAdapter.getMarketIsAvailable(address(vault), UNKNOWN_MARKET), "Market should not be available"
+        );
 
-        pendleAdapter.addMarket(address(vault), someMarket, true);
-        assertTrue(pendleAdapter.getMarketIsAvailable(address(vault), someMarket), "Market should be available");
+        pendleAdapter.addMarket(address(vault), UNKNOWN_MARKET, true);
+        assertTrue(pendleAdapter.getMarketIsAvailable(address(vault), UNKNOWN_MARKET), "Market should be available");
     }
 
     function testGetMarketIsAvailable() public view {
@@ -134,41 +144,169 @@ contract PendleAdapterTest is Test {
         assertFalse(pendleAdapter.getMarketIsAvailable(address(1), address(0)));
     }
 
-    function testSwapTokenForPtShouldFailWhenMarketNotAvailable() public {
-        // vm.startPrank(USER);
-        // vm.expectRevert(PendleAdapter.PendleAdapter__MarketNotAvailable.selector);
-        // vault.swapExactTokenForPt(
-        //     PT_MARKET_1, _createDefaultApproxParams(), _createTokenInputSimple(address(USDC), 1000e6), 1000e18
-        // );
-    }
-
     function testSwapTokenForPt() public {
         uint256 ptBalanceBefore = PT_TOKEN_1.balanceOf(address(vault));
         uint256 tokenBalanceBefore = USDC.balanceOf(address(vault));
+        uint256 tokenIn = 1000e6;
+        uint256 minPtOut = 1000e18;
 
         vm.startPrank(USER);
         vault.swapExactTokenForPt(
-            PT_MARKET_1, _createDefaultApproxParams(), _createTokenInputSimple(address(USDC), 1000e6), 1000e18
+            PT_MARKET_1, _createDefaultApproxParams(), _createTokenInputSimple(address(USDC), tokenIn), minPtOut
         );
+
+        uint256 actualPtOut = PT_TOKEN_1.balanceOf(address(vault)) - ptBalanceBefore;
 
         assertEq(PT_TOKEN_1.balanceOf(address(pendleAdapter)), 0);
         assertEq(USDC.balanceOf(address(pendleAdapter)), 0);
 
-        assertEq(PT_TOKEN_1.balanceOf(address(vault)), ptBalanceBefore + 1000e18, "PT balance mismatch");
-        assertEq(USDC.balanceOf(address(vault)), tokenBalanceBefore - 1000e6, "Token balance mismatch");
+        assertGe(actualPtOut, minPtOut);
+        assertEq(USDC.balanceOf(address(vault)), tokenBalanceBefore - tokenIn);
     }
 
-    function testSwapTokenForPtShouldFailWithSlippage() public {}
+    function testSwapTokenForPtShouldFailWhenMarketNotAvailable() public {
+        vm.startPrank(USER);
+        vm.expectRevert(PendleAdapter.PendleAdapter__MarketNotAvailable.selector);
+        vault.swapExactTokenForPt(
+            UNKNOWN_MARKET, _createDefaultApproxParams(), _createTokenInputSimple(address(USDC), 1000e6), 1000e18
+        );
+    }
 
-    function testSwapPtForToken() public {}
+    function testSwapTokenForPtShouldFailWithSlippage() public {
+        pendleRouter.addOffset(1);
 
-    function addLiquiditySingleToken() public {}
+        uint256 tokenIn = 1000e6;
+        uint256 minPtOut = 1000e18;
 
-    function testAddLiquiditySingleTokenShouldFailWithSlippage() public {}
+        vm.startPrank(USER);
+        vm.expectRevert(PendleAdapter.PendleAdapter__SlippageProtection.selector);
+        vault.swapExactTokenForPt(
+            PT_MARKET_1, _createDefaultApproxParams(), _createTokenInputSimple(address(USDC), tokenIn), minPtOut
+        );
+    }
 
-    function testRemoveLiquiditySingleToken() public {}
+    function testSwapPtForToken() public {
+        uint256 ptBalanceBefore = PT_TOKEN_1.balanceOf(address(vault));
+        uint256 tokenBalanceBefore = USDC.balanceOf(address(vault));
+        uint256 ptIn = 1000e18;
+        uint256 minTokenOut = 1000e6;
 
-    function testRemoveLiquiditySingleTokenShouldFailWithSlippage() public {}
+        vm.startPrank(USER);
+        vault.swapExactPtForToken(
+            PT_MARKET_1, address(PT_TOKEN_1), ptIn, _createTokenOutputSimple(address(USDC), minTokenOut)
+        );
+
+        uint256 actualTokenOut = USDC.balanceOf(address(vault)) - tokenBalanceBefore;
+
+        assertEq(PT_TOKEN_1.balanceOf(address(pendleAdapter)), 0);
+        assertEq(USDC.balanceOf(address(pendleAdapter)), 0);
+
+        assertGe(actualTokenOut, minTokenOut);
+        assertEq(PT_TOKEN_1.balanceOf(address(vault)), ptBalanceBefore - ptIn);
+    }
+
+    function testSwapPtForTokenShouldFailWhenMarketNotAvailable() public {
+        vm.startPrank(USER);
+        vm.expectRevert(PendleAdapter.PendleAdapter__MarketNotAvailable.selector);
+        vault.swapExactPtForToken(
+            UNKNOWN_MARKET, address(PT_TOKEN_1), 1000e18, _createTokenOutputSimple(address(USDC), 1000e6)
+        );
+    }
+
+    function testSwapPtForTokenShouldFailWithSlippage() public {
+        pendleRouter.addOffset(1);
+
+        uint256 ptIn = 1000e18;
+        uint256 minTokenOut = 1000e6;
+
+        vm.startPrank(USER);
+        vm.expectRevert(PendleAdapter.PendleAdapter__SlippageProtection.selector);
+        vault.swapExactPtForToken(
+            PT_MARKET_1, address(PT_TOKEN_1), ptIn, _createTokenOutputSimple(address(USDC), minTokenOut)
+        );
+    }
+
+    function testAddLiquiditySingleToken() public {
+        uint256 tokenIn = 1000e6;
+        uint256 minLpOut = 1000e18;
+        uint256 lpBalanceBefore = PT_TOKEN_1.balanceOf(address(vault));
+        uint256 tokenBalanceBefore = USDC.balanceOf(address(vault));
+
+        vm.startPrank(USER);
+        vault.addLiquiditySingleToken(
+            PT_MARKET_1, _createDefaultApproxParams(), _createTokenInputSimple(address(USDC), tokenIn), minLpOut
+        );
+
+        uint256 actualLpOut = PT_TOKEN_1.balanceOf(address(vault)) - lpBalanceBefore;
+
+        assertEq(PT_TOKEN_1.balanceOf(address(pendleAdapter)), 0);
+        assertEq(USDC.balanceOf(address(pendleAdapter)), 0);
+
+        assertGe(actualLpOut, minLpOut);
+        assertEq(USDC.balanceOf(address(vault)), tokenBalanceBefore - tokenIn);
+    }
+
+    function testAddLiquiditySingleTokenShouldFailWhenMarketNotAvailable() public {
+        vm.startPrank(USER);
+        vm.expectRevert(PendleAdapter.PendleAdapter__MarketNotAvailable.selector);
+        vault.addLiquiditySingleToken(
+            UNKNOWN_MARKET, _createDefaultApproxParams(), _createTokenInputSimple(address(USDC), 1000e6), 1000e18
+        );
+    }
+
+    function testAddLiquiditySingleTokenShouldFailWithSlippage() public {
+        pendleRouter.addOffset(1);
+
+        uint256 tokenIn = 1000e6;
+        uint256 minLpOut = 1000e18;
+
+        vm.startPrank(USER);
+        vm.expectRevert(PendleAdapter.PendleAdapter__SlippageProtection.selector);
+        vault.addLiquiditySingleToken(
+            PT_MARKET_1, _createDefaultApproxParams(), _createTokenInputSimple(address(USDC), tokenIn), minLpOut
+        );
+    }
+
+    function testRemoveLiquiditySingleToken() public {
+        uint256 lpIn = 1000e18;
+        uint256 minTokenOut = 1000e6;
+        uint256 lpBalanceBefore = PT_TOKEN_1.balanceOf(address(vault));
+        uint256 tokenBalanceBefore = USDC.balanceOf(address(vault));
+
+        vm.startPrank(USER);
+        vault.removeLiquiditySingleToken(
+            PT_MARKET_1, address(PT_TOKEN_1), lpIn, _createTokenOutputSimple(address(USDC), minTokenOut)
+        );
+
+        uint256 actualTokenOut = USDC.balanceOf(address(vault)) - tokenBalanceBefore;
+
+        assertEq(PT_TOKEN_1.balanceOf(address(pendleAdapter)), 0);
+        assertEq(USDC.balanceOf(address(pendleAdapter)), 0);
+
+        assertGe(actualTokenOut, minTokenOut);
+        assertEq(PT_TOKEN_1.balanceOf(address(vault)), lpBalanceBefore - lpIn);
+    }
+
+    function testRemoveLiquiditySingleTokenShouldFailWhenMarketNotAvailable() public {
+        vm.startPrank(USER);
+        vm.expectRevert(PendleAdapter.PendleAdapter__MarketNotAvailable.selector);
+        vault.removeLiquiditySingleToken(
+            UNKNOWN_MARKET, address(PT_TOKEN_1), 1000e18, _createTokenOutputSimple(address(USDC), 1000e6)
+        );
+    }
+
+    function testRemoveLiquiditySingleTokenShouldFailWithSlippage() public {
+        pendleRouter.addOffset(1);
+
+        uint256 lpIn = 1000e18;
+        uint256 minTokenOut = 1000e6;
+
+        vm.startPrank(USER);
+        vm.expectRevert(PendleAdapter.PendleAdapter__SlippageProtection.selector);
+        vault.removeLiquiditySingleToken(
+            PT_MARKET_1, address(PT_TOKEN_1), lpIn, _createTokenOutputSimple(address(USDC), minTokenOut)
+        );
+    }
 
     function _createTokenInputSimple(address tokenIn, uint256 netTokenIn) private pure returns (TokenInput memory) {
         return TokenInput({

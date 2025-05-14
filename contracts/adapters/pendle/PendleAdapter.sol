@@ -75,8 +75,10 @@ contract PendleAdapter is IERC165, IAdapter, Ownable2Step {
 
         address pendleRouter = s_pendleRouter;
         IERC20(tokenInput.tokenIn).forceApprove(pendleRouter, tokenInput.netTokenIn);
+
+        LimitOrderData memory emptyLimitOrderData;
         (uint256 netPtOut,,) = IPAllActionV3(pendleRouter).swapExactTokenForPt(
-            msg.sender, market, minPtOut, approxParams, tokenInput, _createEmptyLimitOrderData()
+            msg.sender, market, minPtOut, approxParams, tokenInput, emptyLimitOrderData
         );
 
         if (netPtOut < minPtOut) {
@@ -95,8 +97,10 @@ contract PendleAdapter is IERC165, IAdapter, Ownable2Step {
 
         address pendleRouter = s_pendleRouter;
         IERC20(ptToken).forceApprove(pendleRouter, exactPtIn);
+
+        LimitOrderData memory emptyLimitOrderData;
         (uint256 netTokenOut,,) = IPAllActionV3(pendleRouter).swapExactPtForToken(
-            msg.sender, market, exactPtIn, tokenOut, _createEmptyLimitOrderData()
+            msg.sender, market, exactPtIn, tokenOut, emptyLimitOrderData
         );
 
         if (netTokenOut < tokenOut.minTokenOut) {
@@ -116,8 +120,10 @@ contract PendleAdapter is IERC165, IAdapter, Ownable2Step {
 
         address pendleRouter = s_pendleRouter;
         IERC20(tokenInput.tokenIn).forceApprove(pendleRouter, tokenInput.netTokenIn);
+
+        LimitOrderData memory emptyLimitOrderData;
         (uint256 netLpOut,,) = IPAllActionV3(pendleRouter).addLiquiditySingleToken(
-            msg.sender, market, minLpOut, approxParams, tokenInput, _createEmptyLimitOrderData()
+            msg.sender, market, minLpOut, approxParams, tokenInput, emptyLimitOrderData
         );
 
         if (netLpOut < minLpOut) {
@@ -137,8 +143,10 @@ contract PendleAdapter is IERC165, IAdapter, Ownable2Step {
 
         address pendleRouter = s_pendleRouter;
         IERC20(lpToken).forceApprove(pendleRouter, lpAmount);
+
+        LimitOrderData memory emptyLimitOrderData;
         (uint256 netTokenOut,,) = IPAllActionV3(pendleRouter).removeLiquiditySingleToken(
-            msg.sender, market, lpAmount, tokenOut, _createEmptyLimitOrderData()
+            msg.sender, market, lpAmount, tokenOut, emptyLimitOrderData
         );
 
         //double check the output
@@ -156,6 +164,4 @@ contract PendleAdapter is IERC165, IAdapter, Ownable2Step {
             revert PendleAdapter__MarketNotAvailable();
         }
     }
-
-    function _createEmptyLimitOrderData() private pure returns (LimitOrderData memory) {}
 }
