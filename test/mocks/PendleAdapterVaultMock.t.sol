@@ -12,14 +12,24 @@ import {
     TokenOutput
 } from "@pendle/core-v2/contracts/interfaces/IPAllActionTypeV3.sol";
 import {IAdapterCallback} from "../../contracts/interfaces/IAdapterCallback.sol";
+import {IMultiAssetVault} from "../../contracts/interfaces/IMultiAssetVault.sol";
 import {PendleAdapter} from "../../contracts/adapters/pendle/PendleAdapter.sol";
 
 /// @dev Mintable ERC20 token.
-contract VaultMock is IAdapterCallback {
+contract PendleAdapterVaultMock is IAdapterCallback, IMultiAssetVault {
     PendleAdapter private s_pendleAdapter;
+    mapping(address => uint256) private s_trackedAssets;
 
     constructor(address pendleAdapter) {
         s_pendleAdapter = PendleAdapter(pendleAdapter);
+    }
+
+    function trackedAssetPosition(address asset) external view returns (uint256) {
+        return s_trackedAssets[asset];
+    }
+
+    function setTrackedAsset(address asset, uint256 position) external {
+        s_trackedAssets[asset] = position;
     }
 
     function adapterCallback(address receiver, address token, uint256 amount, bytes calldata /*data*/ )
@@ -38,10 +48,8 @@ contract VaultMock is IAdapterCallback {
         s_pendleAdapter.swapExactTokenForPt(market, approxParams, tokenInput, minPtOut);
     }
 
-    function swapExactPtForToken(address market, address ptToken, uint256 exactPtIn, TokenOutput calldata tokenOut)
-        external
-    {
-        s_pendleAdapter.swapExactPtForToken(market, ptToken, exactPtIn, tokenOut);
+    function swapExactPtForToken(address market, uint256 exactPtIn, TokenOutput calldata tokenOut) external {
+        s_pendleAdapter.swapExactPtForToken(market, exactPtIn, tokenOut);
     }
 
     function addLiquiditySingleToken(
@@ -53,12 +61,15 @@ contract VaultMock is IAdapterCallback {
         s_pendleAdapter.addLiquiditySingleToken(market, approxParams, tokenInput, minLpOut);
     }
 
-    function removeLiquiditySingleToken(
-        address market,
-        address lpToken,
-        uint256 lpAmount,
-        TokenOutput calldata tokenOut
-    ) external {
-        s_pendleAdapter.removeLiquiditySingleToken(market, lpToken, lpAmount, tokenOut);
+    function removeLiquiditySingleToken(address market, uint256 lpAmount, TokenOutput calldata tokenOut) external {
+        s_pendleAdapter.removeLiquiditySingleToken(market, lpAmount, tokenOut);
+    }
+
+    function rollOverPt(address oldMarket, address newMarket, uint256 ptAmount, uint256 minNewPtOut) external {
+        s_pendleAdapter.rollOverPt(oldMarket, newMarket, ptAmount, minNewPtOut);
+    }
+
+    function redeemPt(address market, uint256 ptIn, TokenOutput calldata tokenOut) external {
+        s_pendleAdapter.redeemPt(market, ptIn, tokenOut);
     }
 }

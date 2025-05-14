@@ -4,6 +4,8 @@ pragma solidity ^0.8.28;
 import {Test} from "lib/forge-std/src/Test.sol";
 import {IERC165} from "@openzeppelin/contracts/interfaces/IERC165.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IPMarket} from "@pendle/core-v2/contracts/interfaces/IPMarket.sol";
+import {IPPrincipalToken} from "@pendle/core-v2/contracts/interfaces/IPPrincipalToken.sol";
 import {
     TokenInput,
     ApproxParams,
@@ -16,13 +18,16 @@ import {
 contract PendleRouterMock {
     mapping(address market => address ptToken) private s_ptTokens;
     uint256 private s_offset;
+    uint256 private s_rollOverOffset;
+    address private s_redeemPt;
 
-    function setMarketPtToken(address market, address ptToken) external {
-        s_ptTokens[market] = ptToken;
-    }
-
+    /* Mock function */
     function addOffset(uint256 offset) external {
         s_offset = offset;
+    }
+
+    function addRollOverOffset(uint256 offset) external {
+        s_rollOverOffset = offset;
     }
 
     function swapExactTokenForPt(
@@ -34,8 +39,9 @@ contract PendleRouterMock {
         LimitOrderData calldata /*limit*/
     ) external payable returns (uint256 netPtOut, uint256 netSyFee, uint256 netSyInterm) {
         uint256 ptOut = minPtOut - s_offset;
+        (, IPPrincipalToken ptToken,) = IPMarket(market).readTokens();
         IERC20(input.tokenIn).transferFrom(msg.sender, address(this), input.netTokenIn);
-        IERC20(s_ptTokens[market]).transfer(receiver, ptOut);
+        IERC20(ptToken).transfer(receiver, ptOut);
         return (ptOut, 0, 0);
     }
 
@@ -46,8 +52,9 @@ contract PendleRouterMock {
         TokenOutput calldata output,
         LimitOrderData calldata /*limit*/
     ) external returns (uint256 netTokenOut, uint256 netSyFee, uint256 netSyInterm) {
-        uint256 tokenOut = output.minTokenOut - s_offset;
-        IERC20(s_ptTokens[market]).transferFrom(msg.sender, address(this), exactPtIn);
+        uint256 tokenOut = output.minTokenOut + s_rollOverOffset - s_offset;
+        (, IPPrincipalToken ptToken,) = IPMarket(market).readTokens();
+        IERC20(ptToken).transferFrom(msg.sender, address(this), exactPtIn);
         IERC20(output.tokenOut).transfer(receiver, tokenOut);
         return (tokenOut, 0, 0);
     }
@@ -62,7 +69,7 @@ contract PendleRouterMock {
     ) external payable returns (uint256 netLpOut, uint256 netSyFee, uint256 netSyInterm) {
         uint256 lpOut = minLpOut - s_offset;
         IERC20(input.tokenIn).transferFrom(msg.sender, address(this), input.netTokenIn);
-        IERC20(s_ptTokens[market]).transfer(receiver, lpOut);
+        IERC20(market).transfer(receiver, lpOut);
         return (lpOut, 0, 0);
     }
 
@@ -74,8 +81,23 @@ contract PendleRouterMock {
         LimitOrderData calldata /*limit*/
     ) external returns (uint256 netTokenOut, uint256 netSyFee, uint256 netSyInterm) {
         uint256 tokenOut = output.minTokenOut - s_offset;
-        IERC20(s_ptTokens[market]).transferFrom(msg.sender, address(this), netLpToRemove);
+        IERC20(market).transferFrom(msg.sender, address(this), netLpToRemove);
         IERC20(output.tokenOut).transfer(receiver, tokenOut);
         return (tokenOut, 0, 0);
+    }
+
+    /* Mock function */
+    function setRedeemPt(address pt) external {
+        s_redeemPt = pt;
+    }
+
+    function redeemPyToToken(address receiver, address, /*ytToken*/ uint256 ptIn, TokenOutput calldata output)
+        external
+        returns (uint256 netTokenOut, uint256 netSyInterm)
+    {
+        uint256 tokenOut = output.minTokenOut - s_offset;
+        IERC20(s_redeemPt).transferFrom(msg.sender, address(this), ptIn);
+        IERC20(output.tokenOut).transfer(receiver, tokenOut);
+        return (tokenOut, 0);
     }
 }
