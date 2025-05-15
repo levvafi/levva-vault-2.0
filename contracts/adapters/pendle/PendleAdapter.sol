@@ -23,6 +23,7 @@ import {Asserts} from "../../libraries/Asserts.sol";
 import {IMultiAssetVault} from "../../interfaces/IMultiAssetVault.sol";
 import {AdapterBase} from "../AdapterBase.sol";
 
+/// @title Adapter for interaction with Pendle protocol
 contract PendleAdapter is AdapterBase {
     using SafeERC20 for IERC20;
     using Asserts for address;
@@ -189,7 +190,7 @@ contract PendleAdapter is AdapterBase {
         (IStandardizedYield syToken, IPPrincipalToken oldPtToken, IPYieldToken ytToken) =
             IPMarket(oldMarket).readTokens();
         {
-            //avoid stack to deep 
+            //avoid stack to deep
             (, IPPrincipalToken newPtToken,) = IPMarket(newMarket).readTokens();
             _ensureIsValidAsset(address(newPtToken));
         }
@@ -244,8 +245,10 @@ contract PendleAdapter is AdapterBase {
         return ApproxParams({guessMin: 0, guessMax: type(uint256).max, guessOffchain: 0, maxIteration: 256, eps: 1e14});
     }
 
+    /// @dev Creates empty LimitOrderData
     function _createEmptyLimitOrderData() private pure returns (LimitOrderData memory) {}
 
+    /// @dev Checks pendle market is valid in pendle market factory
     function _ensureIsValidPendleMarket(address pendleMarket) private view {
         if (!IPMarketFactory(s_pendleMarketFactory).isValidMarket(pendleMarket)) {
             revert PendleAdapter__InvalidPendleMarket(pendleMarket);
