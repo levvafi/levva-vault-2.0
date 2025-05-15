@@ -64,7 +64,7 @@ abstract contract MultiAssetVaultBase is
     /// @inheritdoc ERC4626Upgradeable
     function deposit(uint256 assets, address receiver) public override returns (uint256) {
         uint256 _totalAssets = _totalAssetsWithFeeCollection();
-        uint256 shares = _convertToShares(assets, _totalAssets, Math.Rounding.Floor);
+        uint256 shares = _convertToShares(assets, _totalAssets, totalSupply(), Math.Rounding.Floor);
         _deposit(msg.sender, receiver, assets, shares);
 
         return shares;
@@ -73,7 +73,7 @@ abstract contract MultiAssetVaultBase is
     /// @inheritdoc ERC4626Upgradeable
     function mint(uint256 shares, address receiver) public override returns (uint256) {
         uint256 _totalAssets = _totalAssetsWithFeeCollection();
-        uint256 assets = _convertToAssets(shares, _totalAssets, Math.Rounding.Ceil);
+        uint256 assets = _convertToAssets(shares, _totalAssets, totalSupply(), Math.Rounding.Ceil);
         _deposit(msg.sender, receiver, assets, shares);
 
         return assets;
@@ -83,12 +83,12 @@ abstract contract MultiAssetVaultBase is
     function withdraw(uint256 assets, address receiver, address owner) public override returns (uint256) {
         uint256 _totalAssets = _totalAssetsWithFeeCollection();
 
-        uint256 maxAssets = _convertToAssets(balanceOf(owner), _totalAssets, Math.Rounding.Floor);
+        uint256 maxAssets = _convertToAssets(balanceOf(owner), _totalAssets, totalSupply(), Math.Rounding.Floor);
         if (assets > maxAssets) {
             revert ERC4626ExceededMaxWithdraw(owner, assets, maxAssets);
         }
 
-        uint256 shares = _convertToShares(assets, _totalAssets, Math.Rounding.Ceil);
+        uint256 shares = _convertToShares(assets, _totalAssets, totalSupply(), Math.Rounding.Ceil);
         _withdraw(msg.sender, receiver, owner, assets, shares);
 
         return shares;
@@ -102,7 +102,7 @@ abstract contract MultiAssetVaultBase is
         }
 
         uint256 _totalAssets = _totalAssetsWithFeeCollection();
-        uint256 assets = _convertToAssets(shares, _totalAssets, Math.Rounding.Floor);
+        uint256 assets = _convertToAssets(shares, _totalAssets, totalSupply(), Math.Rounding.Floor);
         _withdraw(msg.sender, receiver, owner, assets, shares);
 
         return assets;
@@ -110,9 +110,19 @@ abstract contract MultiAssetVaultBase is
 
     function requestWithdrawal(uint256 assets, address receiver, address owner) external returns (uint256 shares) {
         uint256 _totalAssets = _totalAssetsWithFeeCollection();
-        shares = _convertToShares(assets, _totalAssets, Math.Rounding.Ceil);
+        uint256 _totalSupply = totalSupply();
+        uint256 maxAssets = _convertToAssets(balanceOf(owner), _totalAssets, _totalSupply, Math.Rounding.Floor);
+        if (assets > maxAssets) {
+            revert ERC4626ExceededMaxWithdraw(owner, assets, maxAssets);
+        }
+
+        shares = _convertToShares(assets, _totalAssets, _totalSupply, Math.Rounding.Ceil);
 
         if (IERC20(asset()).balanceOf(address(this)) < assets) {
+            if (msg.sender != owner) {
+                _spendAllowance(owner, msg.sender, shares);
+            }
+
             _transfer(owner, address(this), shares);
             uint128 requestId = _enqueueWithdraw(receiver, shares);
             emit WithdrawalRequested(requestId, owner, receiver, shares);
@@ -126,7 +136,7 @@ abstract contract MultiAssetVaultBase is
         WithdrawalRequest memory request = _getWithdrawalRequest(0);
 
         uint256 _totalAssets = _totalAssetsWithFeeCollection();
-        assets = _convertToAssets(request.shares, _totalAssets, Math.Rounding.Floor);
+        assets = _convertToAssets(request.shares, _totalAssets, totalSupply(), Math.Rounding.Floor);
         _withdraw(address(this), request.receiver, address(this), assets, request.shares);
 
         uint128 requestId = _dequeueWithdraw();
@@ -143,6 +153,8 @@ abstract contract MultiAssetVaultBase is
         if ($.trackedAssetPosition[newTrackedAsset] != 0) {
             revert AlreadyTracked($.trackedAssetPosition[newTrackedAsset]);
         }
+
+        _assertOracleExists(newTrackedAsset, asset());
 
         $.trackedAssets.push(IERC20(newTrackedAsset));
 
@@ -162,9 +174,9 @@ abstract contract MultiAssetVaultBase is
         if (currentBalance != 0) revert NotZeroBalance(currentBalance);
 
         address replacement;
-        uint256 trackedAssetsCount = $.trackedAssets.length;
-        if (position != trackedAssetsCount) {
-            replacement = address($.trackedAssets[trackedAssetsCount - 1]);
+        uint256 _trackedAssetsCount = $.trackedAssets.length;
+        if (position != _trackedAssetsCount) {
+            replacement = address($.trackedAssets[_trackedAssetsCount - 1]);
             $.trackedAssets[position - 1] = IERC20(replacement);
             $.trackedAssetPosition[replacement] = position;
         }
@@ -188,14 +200,14 @@ abstract contract MultiAssetVaultBase is
         unchecked {
             address asset = asset();
             IEulerPriceOracle eulerOracle = oracle();
-            uint256 balance = IERC20(asset).balanceOf(address(this));
+            uint256 balance = _tokenBalance(IERC20(asset));
 
             IERC20[] storage trackedAssets = _getMultiAssetVaultBaseStorage().trackedAssets;
             uint256 length = trackedAssets.length;
 
             for (uint256 i; i < length; ++i) {
                 IERC20 trackedAsset = trackedAssets[i];
-                balance += eulerOracle.getQuote(trackedAsset.balanceOf(address(this)), address(trackedAsset), asset);
+                balance += _callOracle(eulerOracle, _tokenBalance(trackedAsset), address(trackedAsset), asset);
             }
 
             balance += _getExternalPositionAdaptersTotalAssets(eulerOracle, asset);
@@ -206,6 +218,10 @@ abstract contract MultiAssetVaultBase is
 
     function trackedAssetPosition(address trackedAsset) external view returns (uint256) {
         return _getMultiAssetVaultBaseStorage().trackedAssetPosition[trackedAsset];
+    }
+
+    function trackedAssetsCount() external view returns (uint256) {
+        return _getMultiAssetVaultBaseStorage().trackedAssets.length;
     }
 
     function minimalDeposit() external view returns (uint256) {
@@ -229,19 +245,52 @@ abstract contract MultiAssetVaultBase is
         _collectFees(_totalAssets);
     }
 
-    function _convertToShares(uint256 assets, uint256 _totalAssets, Math.Rounding rounding)
-        private
-        view
-        returns (uint256)
-    {
-        return assets.mulDiv(totalSupply() + 10 ** _decimalsOffset(), _totalAssets + 1, rounding);
+    /**
+     * @inheritdoc ERC4626Upgradeable
+     * @dev Avoid calling this in non-view methods.
+     *      Both totalAssets and totalSupply estimations are computationally heavy
+     *      and are definitely calculated somewhere else.
+     */
+    function _convertToShares(uint256 assets, Math.Rounding rounding) internal view override returns (uint256) {
+        (uint256 _totalAssets, uint256 _totalSupply) = _estimateTotalAssetsAndSupply();
+        return _convertToShares(assets, _totalAssets, _totalSupply, rounding);
     }
 
-    function _convertToAssets(uint256 shares, uint256 _totalAssets, Math.Rounding rounding)
+    /**
+     * @inheritdoc ERC4626Upgradeable
+     * @dev Avoid calling this in non-view methods.
+     *      Both totalAssets and totalSupply estimations are computationally heavy
+     *      and are definitely calculated somewhere else.
+     */
+    function _convertToAssets(uint256 shares, Math.Rounding rounding) internal view override returns (uint256) {
+        (uint256 _totalAssets, uint256 _totalSupply) = _estimateTotalAssetsAndSupply();
+        return _convertToAssets(shares, _totalAssets, _totalSupply, rounding);
+    }
+
+    function _convertToShares(uint256 assets, uint256 _totalAssets, uint256 _totalSupply, Math.Rounding rounding)
         private
         view
         returns (uint256)
     {
-        return shares.mulDiv(_totalAssets + 1, totalSupply() + 10 ** _decimalsOffset(), rounding);
+        return assets.mulDiv(_totalSupply + 10 ** _decimalsOffset(), _totalAssets + 1, rounding);
+    }
+
+    function _convertToAssets(uint256 shares, uint256 _totalAssets, uint256 _totalSupply, Math.Rounding rounding)
+        private
+        view
+        returns (uint256)
+    {
+        return shares.mulDiv(_totalAssets + 1, _totalSupply + 10 ** _decimalsOffset(), rounding);
+    }
+
+    function _estimateTotalAssetsAndSupply() private view returns (uint256 _totalAssets, uint256 _totalSupply) {
+        _totalAssets = totalAssets();
+        _totalSupply = totalSupply();
+        (uint256 feeShares,,) = _calculateFees(_totalAssets, _totalSupply);
+        _totalSupply += feeShares;
+    }
+
+    function _tokenBalance(IERC20 token) private view returns (uint256) {
+        return token.balanceOf(address(this));
     }
 }

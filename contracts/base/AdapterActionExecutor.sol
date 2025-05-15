@@ -56,20 +56,14 @@ abstract contract AdapterActionExecutor is IAdapterCallback, OraclePriceProvider
         IERC20(token).safeTransfer(receiver, amount);
     }
 
-    function executeAdapterAction(AdapterActionArg[] calldata actionArgs)
-        external
-        onlyVaultManager
-        returns (bytes[] memory returnData)
-    {
+    function executeAdapterAction(AdapterActionArg[] calldata actionArgs) external onlyVaultManager {
         uint256 length = actionArgs.length;
         uint256 i;
-        returnData = new bytes[](length);
         for (; i < length;) {
             AdapterActionArg memory actionArg = actionArgs[i];
 
             address adapter = _getAdapterSafe(actionArg.adapterId);
             bytes memory result = Address.functionCall(adapter, actionArg.data);
-            returnData[i] = result;
 
             emit AdapterActionExecuted(actionArg.adapterId, actionArg.data, result);
 
@@ -178,13 +172,13 @@ abstract contract AdapterActionExecutor is IAdapterCallback, OraclePriceProvider
                 (address[] memory managedAssets, uint256[] memory managedAmounts) = adapter.getManagedAssets();
                 uint256 assetsLength = managedAssets.length;
                 for (uint256 j; j < assetsLength; ++j) {
-                    totalAssets += eulerOracle.getQuote(managedAmounts[i], managedAssets[i], asset);
+                    totalAssets += _callOracle(eulerOracle, managedAmounts[i], managedAssets[i], asset);
                 }
 
                 (address[] memory debtAssets, uint256[] memory debtAmounts) = adapter.getDebtAssets();
                 assetsLength = debtAssets.length;
                 for (uint256 j; j < assetsLength; ++j) {
-                    totalAssets -= eulerOracle.getQuote(debtAmounts[i], debtAssets[i], asset);
+                    totalAssets -= _callOracle(eulerOracle, debtAmounts[i], debtAssets[i], asset);
                 }
             }
         }
