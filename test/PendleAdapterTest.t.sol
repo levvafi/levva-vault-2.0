@@ -248,6 +248,7 @@ contract PendleAdapterTest is Test {
     }
 
     function testRedeemPt() public {
+        PendleMarketMock(PT_MARKET_1).setExpired(true);
         uint256 ptBalanceBefore = PT_TOKEN_1.balanceOf(address(vault));
         uint256 tokenBalanceBefore = USDC.balanceOf(address(vault));
         uint256 ptIn = 1000e18;
@@ -267,6 +268,7 @@ contract PendleAdapterTest is Test {
     }
 
     function testRedeemPtShouldFailWithSlippage() public {
+        PendleMarketMock(PT_MARKET_1).setExpired(true);
         pendleRouter.addOffset(1);
 
         uint256 ptIn = 1000e18;
@@ -278,6 +280,12 @@ contract PendleAdapterTest is Test {
         vault.redeemPt(PT_MARKET_1, ptIn, _createTokenOutputSimple(address(USDC), minTokenOut));
     }
 
+    function testRedeemPtShouldFailWhenMarketIsNotExpired() public {
+        vm.startPrank(USER);
+        vm.expectRevert(PendleAdapter.PendleAdapter__MarketNotExpired.selector);
+        vault.redeemPt(PT_MARKET_1, 1000e18, _createTokenOutputSimple(address(USDC), 1000e6));
+    }
+
     function testRollOverPt() public {
         uint256 oldPtBalanceBefore = PT_TOKEN_1.balanceOf(address(vault));
         uint256 newPtBalanceBefore = PT_TOKEN_2.balanceOf(address(vault));
@@ -287,7 +295,7 @@ contract PendleAdapterTest is Test {
         pendleRouter.addRollOverOffset(1000e6);
 
         vm.startPrank(USER);
-        vault.rollOverPt(PT_MARKET_1, PT_MARKET_2, ptIn, minNetPtTokenOut);
+        vault.rollOverPt(PT_MARKET_1, PT_MARKET_2, address(USDC), ptIn, minNetPtTokenOut);
 
         uint256 oldPtBalanceAfter = PT_TOKEN_1.balanceOf(address(vault));
         uint256 newPtBalanceAfter = PT_TOKEN_2.balanceOf(address(vault));
@@ -311,7 +319,7 @@ contract PendleAdapterTest is Test {
         pendleRouter.addRollOverOffset(1000e6);
 
         vm.startPrank(USER);
-        vault.rollOverPt(PT_MARKET_1, PT_MARKET_2, ptIn, minNetPtTokenOut);
+        vault.rollOverPt(PT_MARKET_1, PT_MARKET_2, address(USDC), ptIn, minNetPtTokenOut);
 
         uint256 oldPtBalanceAfter = PT_TOKEN_1.balanceOf(address(vault));
         uint256 newPtBalanceAfter = PT_TOKEN_2.balanceOf(address(vault));
@@ -333,7 +341,7 @@ contract PendleAdapterTest is Test {
 
         vm.startPrank(USER);
         vm.expectRevert(PendleAdapter.PendleAdapter__SlippageProtection.selector);
-        vault.rollOverPt(PT_MARKET_1, PT_MARKET_2, ptIn, minNetPtTokenOut);
+        vault.rollOverPt(PT_MARKET_1, PT_MARKET_2, address(USDC), ptIn, minNetPtTokenOut);
     }
 
     function _createTokenInputSimple(address tokenIn, uint256 netTokenIn) private pure returns (TokenInput memory) {

@@ -21,8 +21,6 @@ contract PendleAdapterTest is PendleAdapterTestBase {
     address internal constant PENDLE_MARKET = 0xBDb8F9729d3194f75fD1A3D9bc4FFe0DDe3A404c; //PT_tETH_29May2025Market
     address internal constant PT_TOKEN = 0x84D17Ef6BeC165484c320B852eEB294203e191be; //PT_tETH_29May2025
 
-    error MarketExpired();
-
     function setUp() public override {
         super.setUp();
         vm.rollFork(22_480_700);

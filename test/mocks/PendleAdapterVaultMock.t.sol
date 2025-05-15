@@ -74,8 +74,10 @@ contract PendleAdapterVaultMock is IAdapterCallback {
         s_pendleAdapter.removeLiquiditySingleToken(market, lpAmount, tokenOut);
     }
 
-    function rollOverPt(address oldMarket, address newMarket, uint256 ptAmount, uint256 minNewPtOut) external {
-        s_pendleAdapter.rollOverPt(oldMarket, newMarket, ptAmount, minNewPtOut);
+    function rollOverPt(address oldMarket, address newMarket, address token, uint256 ptAmount, uint256 minNewPtOut)
+        external
+    {
+        s_pendleAdapter.rollOverPt(oldMarket, newMarket, token, ptAmount, minNewPtOut);
     }
 
     function redeemPt(address market, uint256 ptIn, TokenOutput calldata tokenOut) external {

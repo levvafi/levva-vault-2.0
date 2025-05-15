@@ -14,7 +14,6 @@ import {
 
 import {IPMarket} from "@pendle/core-v2/contracts/interfaces/IPMarket.sol";
 import {IPPrincipalToken} from "@pendle/core-v2/contracts/interfaces/IPPrincipalToken.sol";
-import {IStandardizedYield} from "@pendle/core-v2/contracts/interfaces/IStandardizedYield.sol";
 import {IPYieldToken} from "@pendle/core-v2/contracts/interfaces/IPYieldToken.sol";
 
 import {IAdapterCallback} from "../../interfaces/IAdapterCallback.sol";
@@ -177,11 +176,13 @@ contract PendleAdapter is AdapterBase {
     /// @dev Works for expired and non expired old markets. Swap an old  Pt for Token, then swap Token for a new Pt
     /// @param oldMarket old pendle market address
     /// @param newMarket new pendle market address
+    /// @param token oldMarket token output and new market token input
     /// @param ptAmount amount of PT to roll over
     /// @param minNewPtOut minimum amount of new PT to receive
-    function rollOverPt(address oldMarket, address newMarket, uint256 ptAmount, uint256 minNewPtOut) external {
-        (IStandardizedYield syToken, IPPrincipalToken oldPtToken, IPYieldToken ytToken) =
-            IPMarket(oldMarket).readTokens();
+    function rollOverPt(address oldMarket, address newMarket, address token, uint256 ptAmount, uint256 minNewPtOut)
+        external
+    {
+        (, IPPrincipalToken oldPtToken, IPYieldToken ytToken) = IPMarket(oldMarket).readTokens();
         {
             //avoid stack to deep
             (, IPPrincipalToken newPtToken,) = IPMarket(newMarket).readTokens();
@@ -189,8 +190,6 @@ contract PendleAdapter is AdapterBase {
         }
 
         IAdapterCallback(msg.sender).adapterCallback(address(this), address(oldPtToken), ptAmount, "");
-
-        address token = syToken.getTokensOut()[0];
 
         SwapData memory noSwap;
         TokenOutput memory tokenOut = TokenOutput({

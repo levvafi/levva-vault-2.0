@@ -20,6 +20,7 @@ import {PendleAdapterTestBase} from "./PendleAdapterTestBase.t.sol";
 contract PendleAdapterTest is PendleAdapterTestBase {
     address internal constant OLD_PENDLE_MARKET = 0xB162B764044697cf03617C2EFbcB1f42e31E4766; //PT-sUSDE29May2025
     address internal constant NEW_PENDLE_MARKET = 0x4339Ffe2B7592Dc783ed13cCE310531aB366dEac; //PT-sUSDE31Jul2025
+    address internal constant TOKEN_OUT = 0x9D39A5DE30e57443BfF2A8307A4256c8797A3497; // sUSDE
 
     function setUp() public override {
         super.setUp();
@@ -30,7 +31,7 @@ contract PendleAdapterTest is PendleAdapterTestBase {
         uint256 ptAmount = 150e18; // 150 PT-sUSDE29May2025
         uint256 minNewPtOut = 100e18; // 100 PT-sUSDE31Jul2025
 
-        _rollOverPt(OLD_PENDLE_MARKET, NEW_PENDLE_MARKET, ptAmount, minNewPtOut);
+        _rollOverPt(OLD_PENDLE_MARKET, NEW_PENDLE_MARKET, TOKEN_OUT, ptAmount, minNewPtOut);
     }
 
     function test_rollOverPt_AfterMaturity() public {
@@ -39,6 +40,6 @@ contract PendleAdapterTest is PendleAdapterTestBase {
         uint256 ptAmount = 150e18; // 150 PT-sUSDE29May2025
         uint256 minNewPtOut = 100e18; // 100 PT-sUSDE31Jul2025
 
-        _rollOverPt(OLD_PENDLE_MARKET, NEW_PENDLE_MARKET, ptAmount, minNewPtOut);
+        _rollOverPt(OLD_PENDLE_MARKET, NEW_PENDLE_MARKET, TOKEN_OUT, ptAmount, minNewPtOut);
     }
 }

@@ -110,13 +110,15 @@ abstract contract PendleAdapterTestBase is Test {
         console.log("TokenOut = ", balanceAfter - balanceBefore);
     }
 
-    function _rollOverPt(address oldMarket, address newMarket, uint256 ptAmount, uint256 minNewPtOut) internal {
+    function _rollOverPt(address oldMarket, address newMarket, address token, uint256 ptAmount, uint256 minNewPtOut)
+        internal
+    {
         address oldPt = _getPt(oldMarket);
         address newPt = _getPt(newMarket);
         deal(oldPt, address(vault), ptAmount);
         vault.setTrackedAsset(newPt, 1);
 
-        vault.rollOverPt(oldMarket, newMarket, ptAmount, minNewPtOut);
+        vault.rollOverPt(oldMarket, newMarket, token, ptAmount, minNewPtOut);
 
         uint256 newPtBalance = IERC20(_getPt(newMarket)).balanceOf(address(vault));
         console.log("Rolled over ", ERC20(oldPt).symbol(), " to ", ERC20(newPt).symbol());
