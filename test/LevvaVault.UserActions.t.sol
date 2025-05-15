@@ -13,7 +13,6 @@ contract LevvaVaultUserActionsTest is TestSetUp {
 
     function setUp() public override {
         super.setUp();
-
         levvaVault.setMinimalDeposit(MIN_DEPOSIT);
         asset.mint(USER, 10 * MIN_DEPOSIT);
     }

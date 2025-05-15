@@ -64,9 +64,81 @@ contract FeeCollectorTest is TestSetUp {
         asset.mint(address(levvaVault), totalAssetsBefore);
 
         uint256 toRedeem = levvaVault.maxRedeem(USER);
+        uint256 expectedAssets = levvaVault.convertToAssets(toRedeem);
         vm.prank(USER);
-        levvaVault.redeem(toRedeem, USER, USER);
+        uint256 assets = levvaVault.redeem(toRedeem, USER, USER);
 
+        assertEq(expectedAssets, assets);
+        assertEq(levvaVault.totalAssets(), totalAssetsBefore.mulDiv(FEE, ONE));
+        assertApproxEqAbs(levvaVault.getFeeCollectorStorage().highWaterMarkPerShare, 2 * 10 ** levvaVault.decimals(), 1);
+    }
+
+    function testPreviewMintWithFee() public {
+        levvaVault.setPerformanceFeeRatio(FEE);
+
+        uint256 totalAssetsBefore = levvaVault.totalAssets();
+        asset.mint(address(levvaVault), totalAssetsBefore);
+
+        uint256 toMint = 10 ** levvaVault.decimals();
+        uint256 expectedAssets = levvaVault.previewMint(toMint);
+        assertApproxEqAbs(levvaVault.convertToAssets(toMint), expectedAssets, 1);
+
+        vm.prank(USER);
+        uint256 assets = levvaVault.mint(toMint, USER);
+
+        assertEq(expectedAssets, assets);
+        assertApproxEqAbs(levvaVault.getFeeCollectorStorage().highWaterMarkPerShare, 2 * 10 ** levvaVault.decimals(), 1);
+    }
+
+    function testPreviewDepositWithFee() public {
+        levvaVault.setPerformanceFeeRatio(FEE);
+
+        uint256 totalAssetsBefore = levvaVault.totalAssets();
+        asset.mint(address(levvaVault), totalAssetsBefore);
+
+        uint256 toDeposit = 10 ** asset.decimals();
+        uint256 expectedShares = levvaVault.previewDeposit(toDeposit);
+        assertApproxEqAbs(levvaVault.convertToShares(toDeposit), expectedShares, 1);
+
+        vm.prank(USER);
+        uint256 shares = levvaVault.deposit(toDeposit, USER);
+
+        assertEq(expectedShares, shares);
+        assertApproxEqAbs(levvaVault.getFeeCollectorStorage().highWaterMarkPerShare, 2 * 10 ** levvaVault.decimals(), 1);
+    }
+
+    function testPreviewRedeemWithFee() public {
+        levvaVault.setPerformanceFeeRatio(FEE);
+
+        uint256 totalAssetsBefore = levvaVault.totalAssets();
+        asset.mint(address(levvaVault), totalAssetsBefore);
+
+        uint256 toRedeem = levvaVault.maxRedeem(USER);
+        uint256 expectedAssets = levvaVault.previewRedeem(toRedeem);
+        assertApproxEqAbs(levvaVault.convertToAssets(toRedeem), expectedAssets, 1);
+
+        vm.prank(USER);
+        uint256 assets = levvaVault.redeem(toRedeem, USER, USER);
+
+        assertEq(expectedAssets, assets);
+        assertEq(levvaVault.totalAssets(), totalAssetsBefore.mulDiv(FEE, ONE));
+        assertApproxEqAbs(levvaVault.getFeeCollectorStorage().highWaterMarkPerShare, 2 * 10 ** levvaVault.decimals(), 1);
+    }
+
+    function testPreviewWithdrawWithFee() public {
+        levvaVault.setPerformanceFeeRatio(FEE);
+
+        uint256 totalAssetsBefore = levvaVault.totalAssets();
+        asset.mint(address(levvaVault), totalAssetsBefore);
+
+        uint256 toWithdraw = levvaVault.maxWithdraw(USER);
+        uint256 expectedShares = levvaVault.previewWithdraw(toWithdraw);
+        assertApproxEqAbs(levvaVault.convertToShares(toWithdraw), expectedShares, 1);
+
+        vm.prank(USER);
+        uint256 shares = levvaVault.withdraw(toWithdraw, USER, USER);
+
+        assertEq(expectedShares, shares);
         assertEq(levvaVault.totalAssets(), totalAssetsBefore.mulDiv(FEE, ONE));
         assertApproxEqAbs(levvaVault.getFeeCollectorStorage().highWaterMarkPerShare, 2 * 10 ** levvaVault.decimals(), 1);
     }

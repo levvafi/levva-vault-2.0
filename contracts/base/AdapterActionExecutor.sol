@@ -3,13 +3,18 @@ pragma solidity 0.8.28;
 
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {IERC165} from "@openzeppelin/contracts/interfaces/IERC165.sol";
-import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import {IAdapter} from "../interfaces/IAdapter.sol";
 import {IExternalPositionAdapter} from "../interfaces/IExternalPositionAdapter.sol";
+import {IAdapterCallback} from "../interfaces/IAdapterCallback.sol";
+import {IEulerPriceOracle} from "../interfaces/IEulerPriceOracle.sol";
+import {OraclePriceProvider} from "./OraclePriceProvider.sol";
 
-abstract contract AdapterActionExecutor is AccessControlUpgradeable, Ownable2StepUpgradeable {
+abstract contract AdapterActionExecutor is IAdapterCallback, OraclePriceProvider {
+    using SafeERC20 for IERC20;
+
     /// @custom:storage-location erc7201:levva.storage.AdapterActionExecutor
     struct AdapterActionExecutorStorage {
         mapping(bytes4 adapterId => IAdapter) adapters;
@@ -32,8 +37,6 @@ abstract contract AdapterActionExecutor is AccessControlUpgradeable, Ownable2Ste
         bytes data;
     }
 
-    bytes32 public constant VAULT_MANAGER_ROLE = keccak256("VAULT_MANAGER_ROLE");
-
     event AdapterActionExecuted(bytes4 indexed adapterId, bytes data, bytes result);
     event NewAdapterAdded(bytes4 indexed adapterId, address indexed adapter);
     event NewExternalPositionAdapterAdded(address indexed adapter, uint256 indexed position);
@@ -46,21 +49,21 @@ abstract contract AdapterActionExecutor is AccessControlUpgradeable, Ownable2Ste
     error WrongAddress();
     error UnknownExternalPositionAdapter();
     error AdapterAlreadyExists(address adapter);
+    error Forbidden();
 
-    function executeAdapterAction(AdapterActionArg[] calldata actionArgs)
-        external
-        onlyRole(VAULT_MANAGER_ROLE)
-        returns (bytes[] memory returnData)
-    {
+    function adapterCallback(address receiver, address token, uint256 amount) external {
+        if (msg.sender != _getAdapterSafe(IAdapter(msg.sender).getAdapterId())) revert Forbidden();
+        IERC20(token).safeTransfer(receiver, amount);
+    }
+
+    function executeAdapterAction(AdapterActionArg[] calldata actionArgs) external onlyVaultManager {
         uint256 length = actionArgs.length;
         uint256 i;
-        returnData = new bytes[](length);
         for (; i < length;) {
             AdapterActionArg memory actionArg = actionArgs[i];
 
             address adapter = _getAdapterSafe(actionArg.adapterId);
             bytes memory result = Address.functionCall(adapter, actionArg.data);
-            returnData[i] = result;
 
             emit AdapterActionExecuted(actionArg.adapterId, actionArg.data, result);
 
@@ -153,5 +156,31 @@ abstract contract AdapterActionExecutor is AccessControlUpgradeable, Ownable2Ste
 
     function _isExternalPositionAdapter(address adapter) private view returns (bool) {
         return IERC165(adapter).supportsInterface(type(IExternalPositionAdapter).interfaceId);
+    }
+
+    function _getExternalPositionAdaptersTotalAssets(IEulerPriceOracle eulerOracle, address asset)
+        internal
+        view
+        returns (uint256 totalAssets)
+    {
+        unchecked {
+            AdapterActionExecutorStorage storage $ = _getAdapterActionExecutorStorage();
+            uint256 length = $.externalPositionAdapters.length;
+            for (uint256 i; i < length; ++i) {
+                IExternalPositionAdapter adapter = $.externalPositionAdapters[i];
+
+                (address[] memory managedAssets, uint256[] memory managedAmounts) = adapter.getManagedAssets();
+                uint256 assetsLength = managedAssets.length;
+                for (uint256 j; j < assetsLength; ++j) {
+                    totalAssets += _callOracle(eulerOracle, managedAmounts[i], managedAssets[i], asset);
+                }
+
+                (address[] memory debtAssets, uint256[] memory debtAmounts) = adapter.getDebtAssets();
+                assetsLength = debtAssets.length;
+                for (uint256 j; j < assetsLength; ++j) {
+                    totalAssets -= _callOracle(eulerOracle, debtAmounts[i], debtAssets[i], asset);
+                }
+            }
+        }
     }
 }

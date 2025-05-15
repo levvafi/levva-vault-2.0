@@ -2,11 +2,11 @@
 pragma solidity ^0.8.27;
 
 import {Vm} from "lib/forge-std/src/Vm.sol";
-import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import {TestSetUp} from "./TestSetUp.t.sol";
 import {AdapterActionExecutor} from "../contracts/base/AdapterActionExecutor.sol";
+import {VaultAccessControl} from "../contracts/base/VaultAccessControl.sol";
 import {AdapterMock} from "./mocks/AdapterMock.t.sol";
 import {ExternalPositionAdapterMock} from "./mocks/ExternalPositionAdapterMock.t.sol";
 
@@ -180,11 +180,7 @@ contract AdapterActionExecutorTest is TestSetUp {
             data: externalPositionAdapterCalldataWithSelector
         });
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IAccessControl.AccessControlUnauthorizedAccount.selector, NO_ACCESS, levvaVault.VAULT_MANAGER_ROLE()
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(VaultAccessControl.NoAccess.selector, NO_ACCESS));
         vm.prank(NO_ACCESS);
         levvaVault.executeAdapterAction(args);
     }
@@ -202,5 +198,62 @@ contract AdapterActionExecutorTest is TestSetUp {
         vm.expectRevert(abi.encodeWithSelector(AdapterActionExecutor.UnknownAdapter.selector, adapter.getAdapterId()));
         vm.prank(VAULT_MANAGER);
         levvaVault.executeAdapterAction(args);
+    }
+
+    function testAdapterCallback() public {
+        levvaVault.addAdapter(address(externalPositionAdapter));
+
+        uint256 amount = 10 ** 18;
+        uint256 managedAssetAmount = amount * 3 / 2;
+        uint256 debtAssetAmount = amount / 2;
+        asset.mint(address(levvaVault), amount);
+
+        AdapterActionExecutor.AdapterActionArg[] memory args = new AdapterActionExecutor.AdapterActionArg[](1);
+        bytes memory adapterCalldataWithSelector = abi.encodeWithSelector(
+            externalPositionAdapter.deposit.selector, address(asset), amount, managedAssetAmount, debtAssetAmount
+        );
+        args[0] = AdapterActionExecutor.AdapterActionArg({
+            adapterId: externalPositionAdapter.getAdapterId(),
+            data: adapterCalldataWithSelector
+        });
+
+        vm.prank(VAULT_MANAGER);
+        levvaVault.executeAdapterAction(args);
+
+        assertEq(asset.balanceOf(address(levvaVault)), 0);
+        assertEq(externalPositionManagedAsset.balanceOf(address(levvaVault)), managedAssetAmount);
+        assertEq(externalPositionDebtAsset.balanceOf(address(levvaVault)), debtAssetAmount);
+    }
+
+    function testAdapterCallbackForbidden() public {
+        levvaVault.addAdapter(address(externalPositionAdapter));
+
+        ExternalPositionAdapterMock fakeAdapter =
+            new ExternalPositionAdapterMock(address(externalPositionManagedAsset), address(externalPositionDebtAsset));
+
+        assertNotEq(address(levvaVault.getAdapter(fakeAdapter.getAdapterId())), address(0));
+        assertNotEq(address(levvaVault.getAdapter(fakeAdapter.getAdapterId())), address(fakeAdapter));
+
+        vm.expectRevert(abi.encodeWithSelector(AdapterActionExecutor.Forbidden.selector));
+        fakeAdapter.callback(address(levvaVault), address(asset), 1);
+    }
+
+    function testTotalAssets() public {
+        levvaVault.addAdapter(address(externalPositionAdapter));
+
+        uint256 expectedTotalAssets;
+        assertEq(levvaVault.totalAssets(), expectedTotalAssets);
+
+        uint256 externalPositionManagedAssetAmount = 10 ** 15;
+        externalPositionManagedAsset.mint(address(levvaVault), externalPositionManagedAssetAmount);
+        expectedTotalAssets +=
+            oracle.getQuote(externalPositionManagedAssetAmount, address(externalPositionManagedAsset), address(asset));
+        assertEq(levvaVault.totalAssets(), expectedTotalAssets);
+
+        uint256 externalPositionDebtAssetAmount = 10 ** 9;
+        externalPositionDebtAsset.mint(address(levvaVault), externalPositionDebtAssetAmount);
+        expectedTotalAssets -=
+            oracle.getQuote(externalPositionDebtAssetAmount, address(externalPositionDebtAsset), address(asset));
+        assertEq(levvaVault.totalAssets(), expectedTotalAssets);
     }
 }
