@@ -6,15 +6,17 @@ import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import {Asserts} from "../../libraries/Asserts.sol";
-import {IAdapter} from "../../interfaces/IAdapter.sol";
 import {IAdapterCallback} from "../../interfaces/IAdapterCallback.sol";
 import {LevvaVault} from "../../LevvaVault.sol";
+import {AdapterBase} from "../AdapterBase.sol";
 
-abstract contract AbstractUniswapV3Adapter is IAdapter {
+abstract contract AbstractUniswapV3Adapter is AdapterBase {
     using Asserts for address;
     using SafeERC20 for IERC20;
 
     ISwapRouter public immutable uniswapV3Router;
+
+    error WrongRecipient(address vault, address recipient);
 
     constructor(address _router) {
         _router.assertNotZeroAddress();
@@ -22,11 +24,10 @@ abstract contract AbstractUniswapV3Adapter is IAdapter {
     }
 
     function swapExactInputV3(ISwapRouter.ExactInputParams calldata params) external {
-        if (params.recipient != msg.sender) revert();
-        
+        if (params.recipient != msg.sender) revert WrongRecipient(msg.sender, params.recipient);
+
         (address inputToken, address outputToken) = decodeTokens(params.path);
-        // TODO: replace with ILevvaVault interface
-        // if (LevvaVault(msg.sender).trackedAssetPosition(outputToken) == 0) revert();
+        _ensureIsValidAsset(outputToken);
 
         // IAdapterCallback(msg.sender).adapterCallback()
         ISwapRouter router = uniswapV3Router;
@@ -35,11 +36,10 @@ abstract contract AbstractUniswapV3Adapter is IAdapter {
     }
 
     function swapExactOutputV3(ISwapRouter.ExactOutputParams calldata params) external {
-        if (params.recipient != msg.sender) revert();
-    
+        if (params.recipient != msg.sender) revert WrongRecipient(msg.sender, params.recipient);
+
         (address outputToken, address inputToken) = decodeTokens(params.path);
-        // TODO: replace with ILevvaVault interface
-        // if (LevvaVault(msg.sender).trackedAssetPosition(outputToken) == 0) revert();
+        _ensureIsValidAsset(outputToken);
 
         // IAdapterCallback(msg.sender).adapterCallback()
         ISwapRouter router = uniswapV3Router;
