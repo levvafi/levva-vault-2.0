@@ -26,7 +26,10 @@ abstract contract PendleAdapterTestBase is Test {
     address internal OWNER = makeAddr("owner");
     PendleAdapterVaultMock internal vault;
 
+    string private mainnetRpcUrl = vm.envString("ETH_RPC_URL");
+
     function setUp() public virtual {
+        vm.createSelectFork(vm.rpcUrl(mainnetRpcUrl));
         vm.skip(block.chainid != 1, "Only mainnet fork test");
 
         pendleAdapter = new PendleAdapter(PENDLE_ROUTER);

@@ -57,7 +57,7 @@ contract PendleAdapter is AdapterBase {
     ) external {
         (, IPPrincipalToken ptToken,) = IPMarket(market).readTokens();
         _ensureIsValidAsset(address(ptToken));
-        IAdapterCallback(msg.sender).adapterCallback(address(this), tokenInput.tokenIn, tokenInput.netTokenIn, "");
+        IAdapterCallback(msg.sender).adapterCallback(address(this), tokenInput.tokenIn, tokenInput.netTokenIn);
 
         address pendleRouter = s_pendleRouter;
         IERC20(tokenInput.tokenIn).forceApprove(pendleRouter, tokenInput.netTokenIn);
@@ -81,7 +81,7 @@ contract PendleAdapter is AdapterBase {
         (, IPPrincipalToken ptToken,) = IPMarket(market).readTokens();
 
         // transfer exact amount of ptToken from msg.sender to this contract
-        IAdapterCallback(msg.sender).adapterCallback(address(this), address(ptToken), exactPtIn, "");
+        IAdapterCallback(msg.sender).adapterCallback(address(this), address(ptToken), exactPtIn);
 
         address pendleRouter = s_pendleRouter;
         IERC20(ptToken).forceApprove(pendleRouter, exactPtIn);
@@ -108,7 +108,7 @@ contract PendleAdapter is AdapterBase {
     ) external {
         _ensureIsValidAsset(market);
 
-        IAdapterCallback(msg.sender).adapterCallback(address(this), tokenInput.tokenIn, tokenInput.netTokenIn, "");
+        IAdapterCallback(msg.sender).adapterCallback(address(this), tokenInput.tokenIn, tokenInput.netTokenIn);
 
         address pendleRouter = s_pendleRouter;
         IERC20(tokenInput.tokenIn).forceApprove(pendleRouter, tokenInput.netTokenIn);
@@ -129,7 +129,7 @@ contract PendleAdapter is AdapterBase {
     function removeLiquiditySingleToken(address market, uint256 lpAmount, TokenOutput calldata tokenOut) external {
         _ensureIsValidAsset(tokenOut.tokenOut);
 
-        IAdapterCallback(msg.sender).adapterCallback(address(this), market, lpAmount, "");
+        IAdapterCallback(msg.sender).adapterCallback(address(this), market, lpAmount);
 
         address pendleRouter = s_pendleRouter;
         //market itself is the lp token
@@ -159,7 +159,7 @@ contract PendleAdapter is AdapterBase {
         (, IPPrincipalToken ptToken, IPYieldToken ytToken) = IPMarket(market).readTokens();
 
         // transfer exact amount of ptToken from msg.sender to this contract
-        IAdapterCallback(msg.sender).adapterCallback(address(this), address(ptToken), ptIn, "");
+        IAdapterCallback(msg.sender).adapterCallback(address(this), address(ptToken), ptIn);
 
         address pendleRouter = s_pendleRouter;
         IERC20(ptToken).forceApprove(pendleRouter, ptIn);
@@ -189,7 +189,7 @@ contract PendleAdapter is AdapterBase {
             _ensureIsValidAsset(address(newPtToken));
         }
 
-        IAdapterCallback(msg.sender).adapterCallback(address(this), address(oldPtToken), ptAmount, "");
+        IAdapterCallback(msg.sender).adapterCallback(address(this), address(oldPtToken), ptAmount);
 
         SwapData memory noSwap;
         TokenOutput memory tokenOut = TokenOutput({

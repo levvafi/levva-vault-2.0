@@ -7,6 +7,5 @@ interface IAdapterCallback {
     /// @param token Address of token
     /// @param receiver Address of token receiver
     /// @param amount Amount of tokens to transfer
-    /// @param data Additional callback data
-    function adapterCallback(address receiver, address token, uint256 amount, bytes calldata data) external;
+    function adapterCallback(address receiver, address token, uint256 amount) external;
 }

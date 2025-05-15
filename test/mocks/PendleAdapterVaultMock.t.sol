@@ -41,10 +41,7 @@ contract PendleAdapterVaultMock is IAdapterCallback {
         s_trackedAssets[_asset] = position;
     }
 
-    function adapterCallback(address receiver, address token, uint256 amount, bytes calldata /*data*/ )
-        external
-        override
-    {
+    function adapterCallback(address receiver, address token, uint256 amount) external override {
         IERC20(token).transfer(receiver, amount);
     }
 
