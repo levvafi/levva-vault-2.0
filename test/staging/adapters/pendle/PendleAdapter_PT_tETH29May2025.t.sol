@@ -21,6 +21,8 @@ contract PendleAdapterTest is PendleAdapterTestBase {
     address internal constant PENDLE_MARKET = 0xBDb8F9729d3194f75fD1A3D9bc4FFe0DDe3A404c; //PT_tETH_29May2025Market
     address internal constant PT_TOKEN = 0x84D17Ef6BeC165484c320B852eEB294203e191be; //PT_tETH_29May2025
 
+    error MarketExpired();
+
     function setUp() public override {
         super.setUp();
         vm.rollFork(22_480_700);
@@ -203,5 +205,24 @@ contract PendleAdapterTest is PendleAdapterTestBase {
         uint256 lpAmount = 1e18;
 
         _removeLiquidity(PENDLE_MARKET, lpAmount, _createTokenOutputSimple(wstETHToken, 0));
+    }
+
+    modifier afterMaturity() {
+        vm.warp(1748563200); // 30 may 2025
+        _;
+    }
+
+    function test_remove_liquidity_wstETH_AfterMaturity() public afterMaturity {
+        address wstETHToken = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
+        uint256 lpAmount = 1e18;
+
+        _removeLiquidity(PENDLE_MARKET, lpAmount, _createTokenOutputSimple(wstETHToken, 0));
+    }
+
+    function test_redeemPt_wstETH_AfterMaturity() public afterMaturity {
+        address wstETHToken = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
+        uint256 ptIn = 1e18;
+
+        _redeemPt(PENDLE_MARKET, PT_TOKEN, ptIn, _createTokenOutputSimple(wstETHToken, 0));
     }
 }

@@ -20,25 +20,25 @@ contract PendleAdapterVaultMock is IAdapterCallback {
     mapping(address => uint256) private s_trackedAssets;
     address private s_asset;
 
-    constructor(address pendleAdapter, address asset) {
+    constructor(address pendleAdapter, address _asset) {
         s_pendleAdapter = PendleAdapter(pendleAdapter);
-        s_asset = asset;
+        s_asset = _asset;
     }
 
     function asset() external view returns (address) {
         return s_asset;
     }
 
-    function setAsset(address asset) external {
-        s_asset = asset;
+    function setAsset(address _asset) external {
+        s_asset = _asset;
     }
 
-    function trackedAssetPosition(address asset) external view returns (uint256) {
-        return s_trackedAssets[asset];
+    function trackedAssetPosition(address _asset) external view returns (uint256) {
+        return s_trackedAssets[_asset];
     }
 
-    function setTrackedAsset(address asset, uint256 position) external {
-        s_trackedAssets[asset] = position;
+    function setTrackedAsset(address _asset, uint256 position) external {
+        s_trackedAssets[_asset] = position;
     }
 
     function adapterCallback(address receiver, address token, uint256 amount, bytes calldata /*data*/ )

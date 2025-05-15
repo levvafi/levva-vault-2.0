@@ -4,7 +4,6 @@ pragma solidity 0.8.28;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IPAllActionV3} from "@pendle/core-v2/contracts/interfaces/IPAllActionV3.sol";
-import {IPMarketFactory} from "@pendle/core-v2/contracts/interfaces/IPMarketFactory.sol";
 import {
     TokenInput,
     ApproxParams,
@@ -29,17 +28,15 @@ contract PendleAdapter is AdapterBase {
     using Asserts for address;
 
     address private immutable s_pendleRouter;
-    address private immutable s_pendleMarketFactory;
 
     error PendleAdapter__SlippageProtection();
     error PendleAdapter__InvalidPendleMarket(address pendleMarket);
+    error PendleAdapter__MarketNotExpired();
 
-    constructor(address pendleRouter, address pendleMarketFactory) {
+    constructor(address pendleRouter) {
         pendleRouter.assertNotZeroAddress();
-        pendleMarketFactory.assertNotZeroAddress();
 
         s_pendleRouter = pendleRouter;
-        s_pendleMarketFactory = pendleMarketFactory;
     }
 
     /// @notice Get the identifier of adapter
@@ -59,7 +56,6 @@ contract PendleAdapter is AdapterBase {
         TokenInput calldata tokenInput,
         uint256 minPtOut
     ) external {
-        _ensureIsValidPendleMarket(market);
         (, IPPrincipalToken ptToken,) = IPMarket(market).readTokens();
         _ensureIsValidAsset(address(ptToken));
         IAdapterCallback(msg.sender).adapterCallback(address(this), tokenInput.tokenIn, tokenInput.netTokenIn, "");
@@ -82,7 +78,6 @@ contract PendleAdapter is AdapterBase {
     /// @param tokenOut token output data
     /// @dev Market should be non expired
     function swapExactPtForToken(address market, uint256 exactPtIn, TokenOutput calldata tokenOut) external {
-        _ensureIsValidPendleMarket(market);
         _ensureIsValidAsset(tokenOut.tokenOut);
         (, IPPrincipalToken ptToken,) = IPMarket(market).readTokens();
 
@@ -112,7 +107,6 @@ contract PendleAdapter is AdapterBase {
         TokenInput calldata tokenInput,
         uint256 minLpOut
     ) external {
-        _ensureIsValidPendleMarket(market);
         _ensureIsValidAsset(market);
 
         IAdapterCallback(msg.sender).adapterCallback(address(this), tokenInput.tokenIn, tokenInput.netTokenIn, "");
@@ -134,7 +128,6 @@ contract PendleAdapter is AdapterBase {
     /// @param lpAmount amount of LP token to remove
     /// @param tokenOut token output data
     function removeLiquiditySingleToken(address market, uint256 lpAmount, TokenOutput calldata tokenOut) external {
-        _ensureIsValidPendleMarket(market);
         _ensureIsValidAsset(tokenOut.tokenOut);
 
         IAdapterCallback(msg.sender).adapterCallback(address(this), market, lpAmount, "");
@@ -157,10 +150,12 @@ contract PendleAdapter is AdapterBase {
     /// @param market pendle market address
     /// @param ptIn amount of PT to redeem
     /// @param tokenOut token output data
-    /// @dev Swap PT for Token if market is expired
+    /// @dev Works only for expired markets. Swap PT for Token if market is expired
     function redeemPt(address market, uint256 ptIn, TokenOutput calldata tokenOut) external {
-        _ensureIsValidPendleMarket(market);
         _ensureIsValidAsset(tokenOut.tokenOut);
+        if (!IPMarket(market).isExpired()) {
+            revert PendleAdapter__MarketNotExpired();
+        }
 
         (, IPPrincipalToken ptToken, IPYieldToken ytToken) = IPMarket(market).readTokens();
 
@@ -179,14 +174,12 @@ contract PendleAdapter is AdapterBase {
     }
 
     /// @notice Roll over PT from old market to new market
+    /// @dev Works for expired and non expired old markets. Swap an old  Pt for Token, then swap Token for a new Pt
     /// @param oldMarket old pendle market address
     /// @param newMarket new pendle market address
     /// @param ptAmount amount of PT to roll over
     /// @param minNewPtOut minimum amount of new PT to receive
     function rollOverPt(address oldMarket, address newMarket, uint256 ptAmount, uint256 minNewPtOut) external {
-        _ensureIsValidPendleMarket(oldMarket);
-        _ensureIsValidPendleMarket(newMarket);
-
         (IStandardizedYield syToken, IPPrincipalToken oldPtToken, IPYieldToken ytToken) =
             IPMarket(oldMarket).readTokens();
         {
@@ -247,11 +240,4 @@ contract PendleAdapter is AdapterBase {
 
     /// @dev Creates empty LimitOrderData
     function _createEmptyLimitOrderData() private pure returns (LimitOrderData memory) {}
-
-    /// @dev Checks pendle market is valid in pendle market factory
-    function _ensureIsValidPendleMarket(address pendleMarket) private view {
-        if (!IPMarketFactory(s_pendleMarketFactory).isValidMarket(pendleMarket)) {
-            revert PendleAdapter__InvalidPendleMarket(pendleMarket);
-        }
-    }
 }

@@ -21,7 +21,6 @@ import {PendleAdapterVaultMock} from "../../../mocks/PendleAdapterVaultMock.t.so
 
 abstract contract PendleAdapterTestBase is Test {
     address internal constant PENDLE_ROUTER = 0x888888888889758F76e7103c6CbF23ABbF58F946;
-    address internal constant P_MARKET_FACTORY = 0x27b1dAcd74688aF24a64BD3C9C1B143118740784;
 
     PendleAdapter internal pendleAdapter;
     address internal OWNER = makeAddr("owner");
@@ -30,7 +29,7 @@ abstract contract PendleAdapterTestBase is Test {
     function setUp() public virtual {
         vm.skip(block.chainid != 1, "Only mainnet fork test");
 
-        pendleAdapter = new PendleAdapter(PENDLE_ROUTER, P_MARKET_FACTORY);
+        pendleAdapter = new PendleAdapter(PENDLE_ROUTER);
         vm.deal(OWNER, 1 ether);
 
         vault = new PendleAdapterVaultMock(address(pendleAdapter), address(0));
@@ -57,6 +56,7 @@ abstract contract PendleAdapterTestBase is Test {
 
     function _swapPtToToken(address market, address ptToken, uint256 ptTokenIn, TokenOutput memory tokenOut) internal {
         deal(ptToken, address(vault), ptTokenIn);
+        vault.setTrackedAsset(tokenOut.tokenOut, 1);
         uint256 balanceBefore = IERC20(tokenOut.tokenOut).balanceOf(address(vault));
 
         vault.swapExactPtForToken(market, ptTokenIn, tokenOut);
@@ -68,8 +68,23 @@ abstract contract PendleAdapterTestBase is Test {
         console.log("TokenOut = ", balanceAfter - balanceBefore);
     }
 
+    function _redeemPt(address market, address ptToken, uint256 ptTokenIn, TokenOutput memory tokenOut) internal {
+        deal(ptToken, address(vault), ptTokenIn);
+        vault.setTrackedAsset(tokenOut.tokenOut, 1);
+        uint256 balanceBefore = IERC20(tokenOut.tokenOut).balanceOf(address(vault));
+
+        vault.redeemPt(market, ptTokenIn, tokenOut);
+
+        uint256 balanceAfter = IERC20(tokenOut.tokenOut).balanceOf(address(vault));
+
+        console.log("Redeem Pt ", ERC20(ptToken).symbol(), " to ", ERC20(tokenOut.tokenOut).symbol());
+        console.log("PTIn = ", ptTokenIn);
+        console.log("TokenOut = ", balanceAfter - balanceBefore);
+    }
+
     function _addLiquidity(address market, ApproxParams memory approxParams, TokenInput memory tokenInput) internal {
         deal(tokenInput.tokenIn, address(vault), tokenInput.netTokenIn);
+        vault.setTrackedAsset(market, 1);
         uint256 balanceBefore = IERC20(market).balanceOf(address(vault));
 
         vault.addLiquiditySingleToken(market, approxParams, tokenInput, 0);
@@ -83,6 +98,7 @@ abstract contract PendleAdapterTestBase is Test {
 
     function _removeLiquidity(address market, uint256 lpAmount, TokenOutput memory tokenOut) internal {
         deal(market, address(vault), lpAmount);
+        vault.setTrackedAsset(tokenOut.tokenOut, 1);
         uint256 balanceBefore = IERC20(tokenOut.tokenOut).balanceOf(address(vault));
 
         vault.removeLiquiditySingleToken(market, lpAmount, tokenOut);
@@ -98,6 +114,7 @@ abstract contract PendleAdapterTestBase is Test {
         address oldPt = _getPt(oldMarket);
         address newPt = _getPt(newMarket);
         deal(oldPt, address(vault), ptAmount);
+        vault.setTrackedAsset(newPt, 1);
 
         vault.rollOverPt(oldMarket, newMarket, ptAmount, minNewPtOut);
 
