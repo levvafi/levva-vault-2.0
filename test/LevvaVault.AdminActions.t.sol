@@ -20,6 +20,7 @@ contract LevvaVaultAdminActionsTest is TestSetUp {
         levvaVault.addTrackedAsset(address(trackedAsset));
 
         assertEq(levvaVault.trackedAssetPosition(address(trackedAsset)), 1);
+        assertEq(levvaVault.trackedAssetsCount(), 1);
     }
 
     function testAddNewAssetOnlyOwner() public {
@@ -44,6 +45,16 @@ contract LevvaVaultAdminActionsTest is TestSetUp {
         levvaVault.addTrackedAsset(address(0));
     }
 
+    function testAddNewAssetOracleNotExist() public {
+        MintableERC20 secondTrackedAsset = new MintableERC20("wstUSDTest", "wstUSDTest", 6);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                OraclePriceProvider.OracleNotExist.selector, address(secondTrackedAsset), levvaVault.asset()
+            )
+        );
+        levvaVault.addTrackedAsset(address(secondTrackedAsset));
+    }
+
     function testRemoveLastAsset() public {
         levvaVault.addTrackedAsset(address(trackedAsset));
 
@@ -52,11 +63,13 @@ contract LevvaVaultAdminActionsTest is TestSetUp {
         levvaVault.removeTrackedAsset(address(trackedAsset));
 
         assertEq(levvaVault.trackedAssetPosition(address(trackedAsset)), 0);
+        assertEq(levvaVault.trackedAssetsCount(), 0);
     }
 
     function testRemoveNotLastAsset() public {
         levvaVault.addTrackedAsset(address(trackedAsset));
-        MintableERC20 secondTrackedAsset = new MintableERC20("wstUSDTest", "wstUSDTest", 18);
+        MintableERC20 secondTrackedAsset = new MintableERC20("wstUSDTest", "wstUSDTest", 6);
+        oracle.setPrice(oracle.ONE(), address(secondTrackedAsset), address(asset));
         levvaVault.addTrackedAsset(address(secondTrackedAsset));
 
         assertEq(levvaVault.trackedAssetPosition(address(trackedAsset)), 1);
@@ -68,6 +81,7 @@ contract LevvaVaultAdminActionsTest is TestSetUp {
 
         assertEq(levvaVault.trackedAssetPosition(address(trackedAsset)), 0);
         assertEq(levvaVault.trackedAssetPosition(address(secondTrackedAsset)), 1);
+        assertEq(levvaVault.trackedAssetsCount(), 1);
     }
 
     function testRemoveAssetOnlyOwner() public {
