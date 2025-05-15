@@ -1084,6 +1084,11 @@
   resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-3.4.2-solc-0.7.tgz#38f4dbab672631034076ccdf2f3201fab1726635"
   integrity sha512-W6QmqgkADuFcTLzHL8vVoNBtkwjvQRpYIAom7KiUNoLKghyx3FgH0GBjt8NRvigV1ZmMOBllvE1By1C+bi8WpA==
 
+"@openzeppelin/contracts@5.0.2":
+  version "5.0.2"
+  resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-5.0.2.tgz#b1d03075e49290d06570b2fd42154d76c2a5d210"
+  integrity sha512-ytPc6eLGcHHnapAZ9S+5qsdomhjo6QBHTDRRBFfTxXIpsicMhVPouPgmUPebZZZGX7vt9USA+Z+0M0dSVtSUEA==
+
 "@openzeppelin/contracts@^5.3.0":
   version "5.3.0"
   resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-5.3.0.tgz#0a90ce16f5c855e3c8239691f1722cd4999ae741"
@@ -2029,10 +2034,24 @@
   resolved "https://registry.yarnpkg.com/@uniswap/lib/-/lib-4.0.1-alpha.tgz#2881008e55f075344675b3bca93f020b028fbd02"
   integrity sha512-f6UIliwBbRsgVLxIaBANF6w09tYqc6Y/qXdsrbEmXHyFA7ILiKrIwRFXe1yOg8M3cksgVsO9N7yuL2DdCGQKBA==
 
-"@uniswap/v2-core@^1.0.1":
+"@uniswap/universal-router@^2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@uniswap/universal-router/-/universal-router-2.0.0.tgz#ae6161c23ebfae6553ae8d730593ee94aef693a7"
+  integrity sha512-6V21kuf547hE1gLfLQ89gv41DMSJY1ZZKer/k7CBagNPJ0oDnUyme+qQPtdoWknyUgSKd1M6sDm/WpocjVmPlA==
+  dependencies:
+    "@openzeppelin/contracts" "5.0.2"
+    "@uniswap/v2-core" "1.0.1"
+    "@uniswap/v3-core" "1.0.0"
+
+"@uniswap/v2-core@1.0.1", "@uniswap/v2-core@^1.0.1":
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/@uniswap/v2-core/-/v2-core-1.0.1.tgz#af8f508bf183204779938969e2e54043e147d425"
   integrity sha512-MtybtkUPSyysqLY2U210NBDeCHX+ltHt3oADGdjqoThZaFRDKwM6k1Nb3F0A3hk5hwuQvytFWhrWHOEq6nVJ8Q==
+
+"@uniswap/v3-core@1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@uniswap/v3-core/-/v3-core-1.0.0.tgz#6c24adacc4c25dceee0ba3ca142b35adbd7e359d"
+  integrity sha512-kSC4djMGKMHj7sLMYVnn61k9nu+lHjMIxgg9CDQT+s2QYLoA56GbSK9Oxr+qJXzzygbkrmuY6cwgP6cW2JXPFA==
 
 "@uniswap/v3-core@^1.0.0":
   version "1.0.1"
@@ -2049,6 +2068,16 @@
     "@uniswap/v2-core" "^1.0.1"
     "@uniswap/v3-core" "^1.0.0"
     base64-sol "1.0.1"
+
+"@uniswap/v4-core@^1.0.2":
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/@uniswap/v4-core/-/v4-core-1.0.2.tgz#5b5701267eea25e84221f7697d971fb4f66169f6"
+  integrity sha512-X15Tm2wWd+USAzEExMbo+g9naA6QN6mPgWm0MzDwRNlOfaNlepfUpSyt9RSrUfEODspwbyWbcLg6t5nwc/e7lg==
+
+"@uniswap/v4-periphery@^1.0.2":
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/@uniswap/v4-periphery/-/v4-periphery-1.0.2.tgz#7dc2dd96bcf588ce7c32ac1e54b6c2deaad08920"
+  integrity sha512-DgdfC+V2lF04YCCIA55Om+twhvvuk31K3ErbWquvdaqP5DynEGszcvADLrVdWNaVcGZkqhtMSxVnHnIylNAznw==
 
 abbrev@1:
   version "1.1.1"

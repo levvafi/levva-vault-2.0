@@ -18,6 +18,7 @@ contract UniswapAdapterTest is Test {
     using Math for uint256;
 
     address private constant UNISWAP_V3_ROUTER = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
+    address private constant UNISWAP_UNIVERSAL_ROUTER = 0x66a9893cC07D91D95644AEDD05D03f95e1dBA8Af;
     IERC20 private constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
     IERC20 private constant USDC = IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
     address private constant USDT = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
@@ -39,7 +40,7 @@ contract UniswapAdapterTest is Test {
         );
         levvaVault = LevvaVault(address(new ERC1967Proxy(address(levvaVaultImplementation), data)));
 
-        adapter = new UniswapAdapter(UNISWAP_V3_ROUTER);
+        adapter = new UniswapAdapter(UNISWAP_V3_ROUTER, UNISWAP_UNIVERSAL_ROUTER);
         levvaVault.addAdapter(address(adapter));
 
         levvaVault.addTrackedAsset(address(WETH));
