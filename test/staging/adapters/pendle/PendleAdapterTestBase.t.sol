@@ -21,6 +21,7 @@ import {PendleAdapterVaultMock} from "../../../mocks/PendleAdapterVaultMock.t.so
 
 abstract contract PendleAdapterTestBase is Test {
     address internal constant PENDLE_ROUTER = 0x888888888889758F76e7103c6CbF23ABbF58F946;
+    address internal constant P_MARKET_FACTORY = 0x27b1dAcd74688aF24a64BD3C9C1B143118740784;
 
     PendleAdapter internal pendleAdapter;
     address internal OWNER = makeAddr("owner");
@@ -29,7 +30,7 @@ abstract contract PendleAdapterTestBase is Test {
     function setUp() public virtual {
         vm.skip(block.chainid != 1, "Only mainnet fork test");
 
-        pendleAdapter = new PendleAdapter(PENDLE_ROUTER);
+        pendleAdapter = new PendleAdapter(PENDLE_ROUTER, P_MARKET_FACTORY);
         vm.deal(OWNER, 1 ether);
 
         vault = new PendleAdapterVaultMock(address(pendleAdapter));

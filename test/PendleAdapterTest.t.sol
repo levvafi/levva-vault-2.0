@@ -22,11 +22,13 @@ import {
     SwapData,
     TokenOutput
 } from "@pendle/core-v2/contracts/interfaces/IPAllActionTypeV3.sol";
+import {PendleMarketFactoryMock} from "./mocks/PendleMarketFactoryMock.t.sol";
 
 contract PendleAdapterTest is Test {
     PendleAdapterVaultMock public vault;
     PendleRouterMock pendleRouter;
     PendleAdapter public pendleAdapter;
+    PendleMarketFactoryMock public marketFactory;
 
     address public OWNER = makeAddr("OWNER");
     address public USER = makeAddr("USER");
@@ -68,7 +70,11 @@ contract PendleAdapterTest is Test {
         deal(address(PT_MARKET_1), address(pendleRouter), 10000e18);
         deal(address(PT_MARKET_2), address(pendleRouter), 10000e18);
 
-        pendleAdapter = new PendleAdapter(address(pendleRouter));
+        marketFactory = new PendleMarketFactoryMock();
+        marketFactory.addMarket(PT_MARKET_1, true);
+        marketFactory.addMarket(PT_MARKET_2, true);
+
+        pendleAdapter = new PendleAdapter(address(pendleRouter), address(marketFactory));
 
         vault = new PendleAdapterVaultMock(address(pendleAdapter));
 
@@ -83,9 +89,14 @@ contract PendleAdapterTest is Test {
         vm.stopPrank();
     }
 
-    function testConstructorShouldFailWhenZeroAddress() public {
+    function testConstructorShouldFailWhenPendleRouterIsZeroAddress() public {
         vm.expectRevert(Asserts.ZeroAddress.selector);
-        new PendleAdapter(address(0));
+        new PendleAdapter(address(0), address(1));
+    }
+
+    function testConstructorShouldFailWhenPendleMarketFactoryIsZeroAddress() public {
+        vm.expectRevert(Asserts.ZeroAddress.selector);
+        new PendleAdapter(address(1), address(0));
     }
 
     function testGetAdapterId() public view {
@@ -99,6 +110,17 @@ contract PendleAdapterTest is Test {
         assertFalse(
             pendleAdapter.supportsInterface(type(IExternalPositionAdapter).interfaceId),
             "IExternalPositionAdapter should not be supported"
+        );
+    }
+
+    function testSwapTokenForPtShouldFailWhenInvalidMarket() public {
+        marketFactory.addMarket(PT_MARKET_1, false);
+        uint256 tokenIn = 1000e6;
+        uint256 minPtOut = 1000e18;
+
+        vm.expectRevert(abi.encodeWithSelector(PendleAdapter.PendleAdapter__InvalidPendleMarket.selector, PT_MARKET_1));
+        vault.swapExactTokenForPt(
+            PT_MARKET_1, _createDefaultApproxParams(), _createTokenInputSimple(address(USDC), tokenIn), minPtOut
         );
     }
 
@@ -153,6 +175,16 @@ contract PendleAdapterTest is Test {
         assertEq(PT_TOKEN_1.balanceOf(address(vault)), ptBalanceBefore - ptIn);
     }
 
+    function testSwapPtForTokenShouldFailWhenInvalidMarket() public {
+        marketFactory.addMarket(PT_MARKET_1, false);
+        uint256 ptIn = 1000e18;
+        uint256 minTokenOut = 1000e6;
+
+        vm.startPrank(USER);
+        vm.expectRevert(abi.encodeWithSelector(PendleAdapter.PendleAdapter__InvalidPendleMarket.selector, PT_MARKET_1));
+        vault.swapExactPtForToken(PT_MARKET_1, ptIn, _createTokenOutputSimple(address(USDC), minTokenOut));
+    }
+
     function testSwapPtForTokenShouldFailWithSlippage() public {
         pendleRouter.addOffset(1);
 
@@ -182,6 +214,18 @@ contract PendleAdapterTest is Test {
 
         assertGe(actualLpOut, minLpOut);
         assertEq(USDC.balanceOf(address(vault)), tokenBalanceBefore - tokenIn);
+    }
+
+    function testAddLiquiditySingleTokenShouldFailWhenInvalidMarket() public {
+        marketFactory.addMarket(PT_MARKET_1, false);
+        uint256 tokenIn = 1000e6;
+        uint256 minLpOut = 1000e18;
+
+        vm.startPrank(USER);
+        vm.expectRevert(abi.encodeWithSelector(PendleAdapter.PendleAdapter__InvalidPendleMarket.selector, PT_MARKET_1));
+        vault.addLiquiditySingleToken(
+            PT_MARKET_1, _createDefaultApproxParams(), _createTokenInputSimple(address(USDC), tokenIn), minLpOut
+        );
     }
 
     function testAddLiquiditySingleTokenShouldFailWithSlippage() public {
@@ -215,6 +259,16 @@ contract PendleAdapterTest is Test {
         assertEq(IERC20(PT_MARKET_1).balanceOf(address(vault)), lpBalanceBefore - lpIn);
     }
 
+    function testRemoveLiquiditySingleTokenShouldFailWhenInvalidMarket() public {
+        marketFactory.addMarket(PT_MARKET_1, false);
+        uint256 lpIn = 1000e18;
+        uint256 minTokenOut = 1000e6;
+
+        vm.startPrank(USER);
+        vm.expectRevert(abi.encodeWithSelector(PendleAdapter.PendleAdapter__InvalidPendleMarket.selector, PT_MARKET_1));
+        vault.removeLiquiditySingleToken(PT_MARKET_1, lpIn, _createTokenOutputSimple(address(USDC), minTokenOut));
+    }
+
     function testRemoveLiquiditySingleTokenShouldFailWithSlippage() public {
         pendleRouter.addOffset(1);
 
@@ -243,6 +297,16 @@ contract PendleAdapterTest is Test {
 
         assertGe(actualTokenOut, minTokenOut);
         assertEq(PT_TOKEN_1.balanceOf(address(vault)), ptBalanceBefore - ptIn);
+    }
+
+    function testRedeemPtShouldFailWhenInvalidMarket() public {
+        marketFactory.addMarket(PT_MARKET_1, false);
+        uint256 ptIn = 1000e18;
+        uint256 minTokenOut = 1000e6;
+
+        vm.startPrank(USER);
+        vm.expectRevert(abi.encodeWithSelector(PendleAdapter.PendleAdapter__InvalidPendleMarket.selector, PT_MARKET_1));
+        vault.redeemPt(PT_MARKET_1, ptIn, _createTokenOutputSimple(address(USDC), minTokenOut));
     }
 
     function testRedeemPtShouldFailWithSlippage() public {
@@ -277,6 +341,26 @@ contract PendleAdapterTest is Test {
         assertEq(PT_TOKEN_1.balanceOf(address(pendleAdapter)), 0);
         assertEq(PT_TOKEN_2.balanceOf(address(pendleAdapter)), 0);
         assertEq(USDC.balanceOf(address(pendleAdapter)), 0);
+    }
+
+    function testRollOverPtShouldFailWhenInvalidOldMarket() public {
+        marketFactory.addMarket(PT_MARKET_1, false);
+        uint256 ptIn = 1000e18;
+        uint256 minNetPtTokenOut = 1000e18;
+
+        vm.startPrank(USER);
+        vm.expectRevert(abi.encodeWithSelector(PendleAdapter.PendleAdapter__InvalidPendleMarket.selector, PT_MARKET_1));
+        vault.rollOverPt(PT_MARKET_1, PT_MARKET_2, ptIn, minNetPtTokenOut);
+    }
+
+    function testRollOverPtShouldFailWhenInvalidNewMarket() public {
+        marketFactory.addMarket(PT_MARKET_2, false);
+        uint256 ptIn = 1000e18;
+        uint256 minNetPtTokenOut = 1000e18;
+
+        vm.startPrank(USER);
+        vm.expectRevert(abi.encodeWithSelector(PendleAdapter.PendleAdapter__InvalidPendleMarket.selector, PT_MARKET_2));
+        vault.rollOverPt(PT_MARKET_1, PT_MARKET_2, ptIn, minNetPtTokenOut);
     }
 
     function testRollOverPtExpiredMarket() public {

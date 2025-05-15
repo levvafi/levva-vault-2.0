@@ -7,6 +7,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {ERC4626Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/Extensions/ERC4626Upgradeable.sol";
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {IPAllActionV3} from "@pendle/core-v2/contracts/interfaces/IPAllActionV3.sol";
+import {IPMarketFactory} from "@pendle/core-v2/contracts/interfaces/IPMarketFactory.sol";
 import {
     TokenInput,
     ApproxParams,
@@ -29,15 +30,17 @@ contract PendleAdapter is IERC165, IAdapter {
     using Asserts for address;
 
     address private immutable s_pendleRouter;
-    //TODO: add pendle factory for market validation
-    //address private immutable s_pendleMarketFactory;
+    address private immutable s_pendleMarketFactory;
 
     error PendleAdapter__SlippageProtection();
+    error PendleAdapter__InvalidPendleMarket(address pendleMarket);
 
-    constructor(address pendleRouter) {
+    constructor(address pendleRouter, address pendleMarketFactory) {
         pendleRouter.assertNotZeroAddress();
+        pendleMarketFactory.assertNotZeroAddress();
 
         s_pendleRouter = pendleRouter;
+        s_pendleMarketFactory = pendleMarketFactory;
     }
 
     /// @notice Get the identifier of adapter
@@ -62,7 +65,7 @@ contract PendleAdapter is IERC165, IAdapter {
         TokenInput calldata tokenInput,
         uint256 minPtOut
     ) external {
-        // transfer exact amount of tokenIn from msg.sender to this contract
+        _ensureIsValidPendleMarket(market);
         IAdapterCallback(msg.sender).adapterCallback(address(this), tokenInput.tokenIn, tokenInput.netTokenIn, "");
 
         address pendleRouter = s_pendleRouter;
@@ -83,6 +86,7 @@ contract PendleAdapter is IERC165, IAdapter {
     /// @param tokenOut token output data
     /// @dev Market should be non expired
     function swapExactPtForToken(address market, uint256 exactPtIn, TokenOutput calldata tokenOut) external {
+        _ensureIsValidPendleMarket(market);
         (, IPPrincipalToken ptToken,) = IPMarket(market).readTokens();
 
         // transfer exact amount of ptToken from msg.sender to this contract
@@ -111,6 +115,7 @@ contract PendleAdapter is IERC165, IAdapter {
         TokenInput calldata tokenInput,
         uint256 minLpOut
     ) external {
+        _ensureIsValidPendleMarket(market);
         IAdapterCallback(msg.sender).adapterCallback(address(this), tokenInput.tokenIn, tokenInput.netTokenIn, "");
 
         address pendleRouter = s_pendleRouter;
@@ -130,6 +135,7 @@ contract PendleAdapter is IERC165, IAdapter {
     /// @param lpAmount amount of LP token to remove
     /// @param tokenOut token output data
     function removeLiquiditySingleToken(address market, uint256 lpAmount, TokenOutput calldata tokenOut) external {
+        _ensureIsValidPendleMarket(market);
         IAdapterCallback(msg.sender).adapterCallback(address(this), market, lpAmount, "");
 
         address pendleRouter = s_pendleRouter;
@@ -152,6 +158,7 @@ contract PendleAdapter is IERC165, IAdapter {
     /// @param tokenOut token output data
     /// @dev Swap PT for Token if market is expired
     function redeemPt(address market, uint256 ptIn, TokenOutput calldata tokenOut) external {
+        _ensureIsValidPendleMarket(market);
         (, IPPrincipalToken ptToken, IPYieldToken ytToken) = IPMarket(market).readTokens();
 
         // transfer exact amount of ptToken from msg.sender to this contract
@@ -174,6 +181,9 @@ contract PendleAdapter is IERC165, IAdapter {
     /// @param ptAmount amount of PT to roll over
     /// @param minNewPtOut minimum amount of new PT to receive
     function rollOverPt(address oldMarket, address newMarket, uint256 ptAmount, uint256 minNewPtOut) external {
+        _ensureIsValidPendleMarket(oldMarket);
+        _ensureIsValidPendleMarket(newMarket);
+
         (IStandardizedYield syToken, IPPrincipalToken oldPtToken, IPYieldToken ytToken) =
             IPMarket(oldMarket).readTokens();
 
@@ -228,4 +238,10 @@ contract PendleAdapter is IERC165, IAdapter {
     }
 
     function _createEmptyLimitOrderData() private pure returns (LimitOrderData memory) {}
+
+    function _ensureIsValidPendleMarket(address pendleMarket) private view {
+        if (!IPMarketFactory(s_pendleMarketFactory).isValidMarket(pendleMarket)) {
+            revert PendleAdapter__InvalidPendleMarket(pendleMarket);
+        }
+    }
 }
