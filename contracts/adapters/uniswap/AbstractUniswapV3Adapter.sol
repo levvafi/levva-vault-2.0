@@ -7,7 +7,6 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 
 import {Asserts} from "../../libraries/Asserts.sol";
 import {IAdapterCallback} from "../../interfaces/IAdapterCallback.sol";
-import {LevvaVault} from "../../LevvaVault.sol";
 import {AdapterBase} from "../AdapterBase.sol";
 
 abstract contract AbstractUniswapV3Adapter is AdapterBase {
