@@ -12,16 +12,25 @@ import {
     TokenOutput
 } from "@pendle/core-v2/contracts/interfaces/IPAllActionTypeV3.sol";
 import {IAdapterCallback} from "../../contracts/interfaces/IAdapterCallback.sol";
-import {IMultiAssetVault} from "../../contracts/interfaces/IMultiAssetVault.sol";
 import {PendleAdapter} from "../../contracts/adapters/pendle/PendleAdapter.sol";
 
 /// @dev Mintable ERC20 token.
-contract PendleAdapterVaultMock is IAdapterCallback, IMultiAssetVault {
+contract PendleAdapterVaultMock is IAdapterCallback {
     PendleAdapter private s_pendleAdapter;
     mapping(address => uint256) private s_trackedAssets;
+    address private s_asset;
 
-    constructor(address pendleAdapter) {
+    constructor(address pendleAdapter, address asset) {
         s_pendleAdapter = PendleAdapter(pendleAdapter);
+        s_asset = asset;
+    }
+
+    function asset() external view returns (address) {
+        return s_asset;
+    }
+
+    function setAsset(address asset) external {
+        s_asset = asset;
     }
 
     function trackedAssetPosition(address asset) external view returns (uint256) {

@@ -1,11 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.28;
 
-import {IERC165} from "@openzeppelin/contracts/interfaces/IERC165.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {ERC4626Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/Extensions/ERC4626Upgradeable.sol";
-import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {IPAllActionV3} from "@pendle/core-v2/contracts/interfaces/IPAllActionV3.sol";
 import {IPMarketFactory} from "@pendle/core-v2/contracts/interfaces/IPMarketFactory.sol";
 import {
@@ -22,10 +19,11 @@ import {IStandardizedYield} from "@pendle/core-v2/contracts/interfaces/IStandard
 import {IPYieldToken} from "@pendle/core-v2/contracts/interfaces/IPYieldToken.sol";
 
 import {IAdapterCallback} from "../../interfaces/IAdapterCallback.sol";
-import {IAdapter} from "../../interfaces/IAdapter.sol";
 import {Asserts} from "../../libraries/Asserts.sol";
+import {IMultiAssetVault} from "../../interfaces/IMultiAssetVault.sol";
+import {AdapterBase} from "../AdapterBase.sol";
 
-contract PendleAdapter is IERC165, IAdapter {
+contract PendleAdapter is AdapterBase {
     using SafeERC20 for IERC20;
     using Asserts for address;
 
@@ -48,11 +46,6 @@ contract PendleAdapter is IERC165, IAdapter {
         return 0x94dfa9d4; // bytes4(keccak256("PendleAdapter"))
     }
 
-    /// @notice Implementation of ERC165, supports IAdapter and IERC165
-    function supportsInterface(bytes4 interfaceId) external pure returns (bool) {
-        return interfaceId == type(IAdapter).interfaceId || interfaceId == type(IERC165).interfaceId;
-    }
-
     /// @notice Swap exact token for PT
     /// @param market pendle market address
     /// @param approxParams approximation parameters
@@ -66,6 +59,8 @@ contract PendleAdapter is IERC165, IAdapter {
         uint256 minPtOut
     ) external {
         _ensureIsValidPendleMarket(market);
+        (, IPPrincipalToken ptToken,) = IPMarket(market).readTokens();
+        _ensureIsValidAsset(address(ptToken));
         IAdapterCallback(msg.sender).adapterCallback(address(this), tokenInput.tokenIn, tokenInput.netTokenIn, "");
 
         address pendleRouter = s_pendleRouter;
@@ -87,6 +82,7 @@ contract PendleAdapter is IERC165, IAdapter {
     /// @dev Market should be non expired
     function swapExactPtForToken(address market, uint256 exactPtIn, TokenOutput calldata tokenOut) external {
         _ensureIsValidPendleMarket(market);
+        _ensureIsValidAsset(tokenOut.tokenOut);
         (, IPPrincipalToken ptToken,) = IPMarket(market).readTokens();
 
         // transfer exact amount of ptToken from msg.sender to this contract
@@ -116,6 +112,8 @@ contract PendleAdapter is IERC165, IAdapter {
         uint256 minLpOut
     ) external {
         _ensureIsValidPendleMarket(market);
+        _ensureIsValidAsset(market);
+
         IAdapterCallback(msg.sender).adapterCallback(address(this), tokenInput.tokenIn, tokenInput.netTokenIn, "");
 
         address pendleRouter = s_pendleRouter;
@@ -136,6 +134,8 @@ contract PendleAdapter is IERC165, IAdapter {
     /// @param tokenOut token output data
     function removeLiquiditySingleToken(address market, uint256 lpAmount, TokenOutput calldata tokenOut) external {
         _ensureIsValidPendleMarket(market);
+        _ensureIsValidAsset(tokenOut.tokenOut);
+
         IAdapterCallback(msg.sender).adapterCallback(address(this), market, lpAmount, "");
 
         address pendleRouter = s_pendleRouter;
@@ -159,6 +159,8 @@ contract PendleAdapter is IERC165, IAdapter {
     /// @dev Swap PT for Token if market is expired
     function redeemPt(address market, uint256 ptIn, TokenOutput calldata tokenOut) external {
         _ensureIsValidPendleMarket(market);
+        _ensureIsValidAsset(tokenOut.tokenOut);
+
         (, IPPrincipalToken ptToken, IPYieldToken ytToken) = IPMarket(market).readTokens();
 
         // transfer exact amount of ptToken from msg.sender to this contract
@@ -186,6 +188,11 @@ contract PendleAdapter is IERC165, IAdapter {
 
         (IStandardizedYield syToken, IPPrincipalToken oldPtToken, IPYieldToken ytToken) =
             IPMarket(oldMarket).readTokens();
+        {
+            //avoid stack to deep 
+            (, IPPrincipalToken newPtToken,) = IPMarket(newMarket).readTokens();
+            _ensureIsValidAsset(address(newPtToken));
+        }
 
         IAdapterCallback(msg.sender).adapterCallback(address(this), address(oldPtToken), ptAmount, "");
 

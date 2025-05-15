@@ -12,6 +12,7 @@ import {PendleMarketMock} from "./mocks/PendleMarketMock.t.sol";
 import {MintableERC20} from "./mocks/MintableERC20.t.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {PendleAdapter} from "../contracts/adapters/pendle/PendleAdapter.sol";
+import {AdapterBase} from "../contracts/adapters/AdapterBase.sol";
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {Asserts} from "../contracts/libraries/Asserts.sol";
 import {PendleSyTokenMock} from "./mocks/PendleSyTokenMock.t.sol";
@@ -43,6 +44,7 @@ contract PendleAdapterTest is Test {
 
     address public UNKNOWN_MARKET = makeAddr("UNKNOWN_MARKET");
 
+    IERC20 public WETH;
     IERC20 public USDC;
     IERC20 public USDT;
     IERC20 public SOME_TOKEN;
@@ -51,6 +53,7 @@ contract PendleAdapterTest is Test {
         PT_TOKEN_1 = new MintableERC20("PT_TOKEN_1", "PT_TOKEN_1", 18);
         PT_TOKEN_2 = new MintableERC20("PT_TOKEN_2", "PT_TOKEN_2", 18);
 
+        WETH = new MintableERC20("WETH", "WETH", 18);
         USDC = new MintableERC20("USDC", "USDC", 6);
         USDT = new MintableERC20("USDT", "USDT", 6);
         SOME_TOKEN = new MintableERC20("SOME_TOKEN", "SOME_TOKEN", 18);
@@ -76,7 +79,13 @@ contract PendleAdapterTest is Test {
 
         pendleAdapter = new PendleAdapter(address(pendleRouter), address(marketFactory));
 
-        vault = new PendleAdapterVaultMock(address(pendleAdapter));
+        vault = new PendleAdapterVaultMock(address(pendleAdapter), address(WETH));
+        vault.setTrackedAsset(address(USDC), 1);
+        vault.setTrackedAsset(address(USDT), 2);
+        vault.setTrackedAsset(address(PT_TOKEN_1), 3);
+        vault.setTrackedAsset(address(PT_TOKEN_2), 4);
+        vault.setTrackedAsset(address(PT_MARKET_1), 5);
+        vault.setTrackedAsset(address(PT_MARKET_2), 6);
 
         deal(address(USDC), address(vault), 10000e6);
         deal(address(USDT), address(vault), 10000e6);
@@ -119,6 +128,17 @@ contract PendleAdapterTest is Test {
         uint256 minPtOut = 1000e18;
 
         vm.expectRevert(abi.encodeWithSelector(PendleAdapter.PendleAdapter__InvalidPendleMarket.selector, PT_MARKET_1));
+        vault.swapExactTokenForPt(
+            PT_MARKET_1, _createDefaultApproxParams(), _createTokenInputSimple(address(USDC), tokenIn), minPtOut
+        );
+    }
+
+    function testSwapTokenForPtShouldFailWhenPtIsNotTracked() public {
+        vault.setTrackedAsset(address(PT_TOKEN_1), 0);
+        uint256 tokenIn = 1000e6;
+        uint256 minPtOut = 1000e18;
+
+        vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, address(PT_TOKEN_1)));
         vault.swapExactTokenForPt(
             PT_MARKET_1, _createDefaultApproxParams(), _createTokenInputSimple(address(USDC), tokenIn), minPtOut
         );
@@ -425,7 +445,6 @@ contract PendleAdapterTest is Test {
 
     function _createEmptyLimitOrderData() private pure returns (LimitOrderData memory) {}
 
-    /// @dev Creates default ApproxParams for on-chain approximation
     function _createDefaultApproxParams() private pure returns (ApproxParams memory) {
         return ApproxParams({guessMin: 0, guessMax: type(uint256).max, guessOffchain: 0, maxIteration: 256, eps: 1e14});
     }

@@ -33,7 +33,7 @@ abstract contract PendleAdapterTestBase is Test {
         pendleAdapter = new PendleAdapter(PENDLE_ROUTER, P_MARKET_FACTORY);
         vm.deal(OWNER, 1 ether);
 
-        vault = new PendleAdapterVaultMock(address(pendleAdapter));
+        vault = new PendleAdapterVaultMock(address(pendleAdapter), address(0));
     }
 
     function _swapTokenToPt(
@@ -43,6 +43,7 @@ abstract contract PendleAdapterTestBase is Test {
         address ptToken
     ) internal {
         deal(tokenInput.tokenIn, address(vault), tokenInput.netTokenIn);
+        vault.setTrackedAsset(ptToken, 1);
         uint256 balanceBefore = IERC20(ptToken).balanceOf(address(vault));
 
         vault.swapExactTokenForPt(market, approxParams, tokenInput, 0);
