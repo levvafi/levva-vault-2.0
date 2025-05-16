@@ -7,6 +7,10 @@ import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ISwapRouter} from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
+import {IV4Router} from "@uniswap/v4-periphery/src/interfaces/IV4Router.sol";
+import {PathKey} from "@uniswap/v4-periphery/src/libraries/PathKey.sol";
+import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
+import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
 
 import {LevvaVault} from "../../contracts/LevvaVault.sol";
 import {UniswapAdapter} from "../../contracts/adapters/uniswap/UniswapAdapter.sol";
@@ -19,7 +23,8 @@ contract UniswapAdapterTest is Test {
 
     address private constant UNISWAP_V3_ROUTER = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
     address private constant UNISWAP_UNIVERSAL_ROUTER = 0x66a9893cC07D91D95644AEDD05D03f95e1dBA8Af;
-    IERC20 private constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+    address private constant PERMIT2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
+    IERC20 private constant WBTC = IERC20(0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599);
     IERC20 private constant USDC = IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
     address private constant USDT = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
 
@@ -32,7 +37,7 @@ contract UniswapAdapterTest is Test {
         vm.createSelectFork(vm.rpcUrl(mainnetRpcUrl));
 
         EulerRouterMock oracle = new EulerRouterMock();
-        oracle.setPrice(oracle.ONE().mulDiv(2000, 10 ** 12), address(WETH), address(USDC));
+        oracle.setPrice(oracle.ONE().mulDiv(100_000, 10 ** 2), address(WBTC), address(USDC));
 
         LevvaVault levvaVaultImplementation = new LevvaVault();
         bytes memory data = abi.encodeWithSelector(
@@ -40,18 +45,18 @@ contract UniswapAdapterTest is Test {
         );
         levvaVault = LevvaVault(address(new ERC1967Proxy(address(levvaVaultImplementation), data)));
 
-        adapter = new UniswapAdapter(UNISWAP_V3_ROUTER, UNISWAP_UNIVERSAL_ROUTER);
+        adapter = new UniswapAdapter(UNISWAP_V3_ROUTER, UNISWAP_UNIVERSAL_ROUTER, PERMIT2);
         levvaVault.addAdapter(address(adapter));
 
-        levvaVault.addTrackedAsset(address(WETH));
+        levvaVault.addTrackedAsset(address(WBTC));
         deal(address(USDC), address(levvaVault), 10 ** 18);
     }
 
     function testSwapExactInputV3() public {
-        uint256 amountIn = 1000 * 10 ** 6;
+        uint256 amountIn = 100_000 * 10 ** 6;
         uint256 usdcBalanceBefore = USDC.balanceOf(address(levvaVault));
 
-        bytes memory path = abi.encodePacked(USDC, uint24(3_000), WETH);
+        bytes memory path = abi.encodePacked(USDC, uint24(3_000), WBTC);
 
         ISwapRouter.ExactInputParams memory params = ISwapRouter.ExactInputParams({
             path: path,
@@ -66,11 +71,11 @@ contract UniswapAdapterTest is Test {
 
         uint256 usdcBalanceAfter = USDC.balanceOf(address(levvaVault));
         assertEq(usdcBalanceBefore - usdcBalanceAfter, amountIn);
-        assertGt(WETH.balanceOf(address(levvaVault)), 0);
+        assertGt(WBTC.balanceOf(address(levvaVault)), 0);
     }
 
     function testSwapExactInputV3NotTrackedAsset() public {
-        uint256 amountIn = 1000 * 10 ** 6;
+        uint128 amountIn = 100_000 * 10 ** 6;
         bytes memory path = abi.encodePacked(USDC, uint24(3_000), USDT);
 
         ISwapRouter.ExactInputParams memory params = ISwapRouter.ExactInputParams({
@@ -87,8 +92,8 @@ contract UniswapAdapterTest is Test {
     }
 
     function testSwapExactInputV3WrongRecipient() public {
-        uint256 amountIn = 1000 * 10 ** 6;
-        bytes memory path = abi.encodePacked(USDC, uint24(3_000), WETH);
+        uint128 amountIn = 100_000 * 10 ** 6;
+        bytes memory path = abi.encodePacked(USDC, uint24(3_000), WBTC);
         address recipient = address(0x01);
 
         ISwapRouter.ExactInputParams memory params = ISwapRouter.ExactInputParams({
@@ -107,10 +112,10 @@ contract UniswapAdapterTest is Test {
     }
 
     function testSwapExactOutputV3() public {
-        uint256 amountOut = 1 ether;
+        uint256 amountOut = 10 ** 8;
         uint256 usdcBalanceBefore = USDC.balanceOf(address(levvaVault));
 
-        bytes memory path = abi.encodePacked(WETH, uint24(3_000), USDC);
+        bytes memory path = abi.encodePacked(WBTC, uint24(3_000), USDC);
 
         ISwapRouter.ExactOutputParams memory params = ISwapRouter.ExactOutputParams({
             path: path,
@@ -125,11 +130,11 @@ contract UniswapAdapterTest is Test {
 
         uint256 usdcBalanceAfter = USDC.balanceOf(address(levvaVault));
         assertGt(usdcBalanceBefore, usdcBalanceAfter);
-        assertEq(WETH.balanceOf(address(levvaVault)), amountOut);
+        assertEq(WBTC.balanceOf(address(levvaVault)), amountOut);
     }
 
     function testSwapExactOutputV3NotTrackedAsset() public {
-        uint256 amountOut = 1 ether;
+        uint256 amountOut = 10 ** 8;
         bytes memory path = abi.encodePacked(USDT, uint24(3_000), USDC);
 
         ISwapRouter.ExactOutputParams memory params = ISwapRouter.ExactOutputParams({
@@ -146,8 +151,8 @@ contract UniswapAdapterTest is Test {
     }
 
     function testSwapExactOutputV3WrongRecipient() public {
-        uint256 amountOut = 1 ether;
-        bytes memory path = abi.encodePacked(WETH, uint24(3_000), USDC);
+        uint256 amountOut = 10 ** 8;
+        bytes memory path = abi.encodePacked(WBTC, uint24(3_000), USDC);
         address recipient = address(0x01);
 
         ISwapRouter.ExactOutputParams memory params = ISwapRouter.ExactOutputParams({
@@ -163,5 +168,61 @@ contract UniswapAdapterTest is Test {
             abi.encodeWithSelector(AbstractUniswapV3Adapter.WrongRecipient.selector, address(levvaVault), recipient)
         );
         adapter.swapExactOutputV3(params);
+    }
+
+    function testSwapExactInputV4() public {
+        uint128 amountIn = 100_000 * 10 ** 6;
+        uint256 usdcBalanceBefore = USDC.balanceOf(address(levvaVault));
+
+        PathKey[] memory path = new PathKey[](1);
+        path[0] = PathKey({
+            intermediateCurrency: Currency.wrap(address(WBTC)),
+            fee: 3000,
+            tickSpacing: 60,
+            hooks: IHooks(address(0)),
+            hookData: ""
+        });
+
+        IV4Router.ExactInputParams memory params = IV4Router.ExactInputParams({
+            path: path,
+            currencyIn: Currency.wrap(address(USDC)),
+            amountIn: amountIn,
+            amountOutMinimum: 0
+        });
+
+        vm.prank(address(levvaVault));
+        adapter.swapExactInputV4(params);
+
+        uint256 usdcBalanceAfter = USDC.balanceOf(address(levvaVault));
+        assertEq(usdcBalanceBefore - usdcBalanceAfter, amountIn);
+        assertGt(WBTC.balanceOf(address(levvaVault)), 0);
+    }
+
+    function testSwapExactOutputV4() public {
+        uint128 amountOut = 10 ** 8;
+        uint256 usdcBalanceBefore = USDC.balanceOf(address(levvaVault));
+
+        PathKey[] memory path = new PathKey[](1);
+        path[0] = PathKey({
+            intermediateCurrency: Currency.wrap(address(USDC)),
+            fee: 3000,
+            tickSpacing: 60,
+            hooks: IHooks(address(0)),
+            hookData: ""
+        });
+
+        IV4Router.ExactOutputParams memory params = IV4Router.ExactOutputParams({
+            path: path,
+            currencyOut: Currency.wrap(address(WBTC)),
+            amountOut: amountOut,
+            amountInMaximum: uint128(usdcBalanceBefore)
+        });
+
+        vm.prank(address(levvaVault));
+        adapter.swapExactOutputV4(params);
+
+        uint256 usdcBalanceAfter = USDC.balanceOf(address(levvaVault));
+        assertGt(usdcBalanceBefore, usdcBalanceAfter);
+        assertEq(WBTC.balanceOf(address(levvaVault)), amountOut);
     }
 }

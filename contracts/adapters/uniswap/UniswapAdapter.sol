@@ -10,8 +10,8 @@ import {AbstractUniswapV4Adapter} from "./AbstractUniswapV4Adapter.sol";
 contract UniswapAdapter is IERC165, AbstractUniswapV3Adapter, AbstractUniswapV4Adapter {
     bytes4 public constant getAdapterId = bytes4(keccak256("UniswapAdapter"));
 
-    constructor(address v3Router, address universalRouter)
+    constructor(address v3Router, address universalRouter, address _permit2)
         AbstractUniswapV3Adapter(v3Router)
-        AbstractUniswapV4Adapter(universalRouter)
+        AbstractUniswapV4Adapter(universalRouter, _permit2)
     {}
 }
