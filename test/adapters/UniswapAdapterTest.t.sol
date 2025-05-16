@@ -198,6 +198,30 @@ contract UniswapAdapterTest is Test {
         assertGt(WBTC.balanceOf(address(levvaVault)), 0);
     }
 
+    function testSwapExactInputV4NotTrackedAsset() public {
+        uint128 amountIn = 100_000 * 10 ** 6;
+
+        PathKey[] memory path = new PathKey[](1);
+        path[0] = PathKey({
+            intermediateCurrency: Currency.wrap(USDT),
+            fee: 3000,
+            tickSpacing: 60,
+            hooks: IHooks(address(0)),
+            hookData: ""
+        });
+
+        IV4Router.ExactInputParams memory params = IV4Router.ExactInputParams({
+            path: path,
+            currencyIn: Currency.wrap(address(USDC)),
+            amountIn: amountIn,
+            amountOutMinimum: 0
+        });
+
+        vm.prank(address(levvaVault));
+        vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, USDT));
+        adapter.swapExactInputV4(params);
+    }
+
     function testSwapExactOutputV4() public {
         uint128 amountOut = 10 ** 8;
         uint256 usdcBalanceBefore = USDC.balanceOf(address(levvaVault));
@@ -223,6 +247,31 @@ contract UniswapAdapterTest is Test {
 
         uint256 usdcBalanceAfter = USDC.balanceOf(address(levvaVault));
         assertGt(usdcBalanceBefore, usdcBalanceAfter);
+        assertNotEq(usdcBalanceAfter, 0);
         assertEq(WBTC.balanceOf(address(levvaVault)), amountOut);
+    }
+
+    function testSwapExactOutputV4NotTrackedAsset() public {
+        uint128 amountOut = 10 ** 8;
+
+        PathKey[] memory path = new PathKey[](1);
+        path[0] = PathKey({
+            intermediateCurrency: Currency.wrap(address(USDC)),
+            fee: 3000,
+            tickSpacing: 60,
+            hooks: IHooks(address(0)),
+            hookData: ""
+        });
+
+        IV4Router.ExactOutputParams memory params = IV4Router.ExactOutputParams({
+            path: path,
+            currencyOut: Currency.wrap(USDT),
+            amountOut: amountOut,
+            amountInMaximum: uint128(USDC.balanceOf(address(levvaVault)))
+        });
+
+        vm.prank(address(levvaVault));
+        vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, USDT));
+        adapter.swapExactOutputV4(params);
     }
 }
