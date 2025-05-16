@@ -2,7 +2,6 @@
 pragma solidity ^0.8.28;
 
 import {Test} from "lib/forge-std/src/Test.sol";
-import {IERC165} from "@openzeppelin/contracts/interfaces/IERC165.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {
     TokenInput,
@@ -11,38 +10,17 @@ import {
     SwapData,
     TokenOutput
 } from "@pendle/core-v2/contracts/interfaces/IPAllActionTypeV3.sol";
-import {IAdapterCallback} from "../../contracts/interfaces/IAdapterCallback.sol";
 import {PendleAdapter} from "../../contracts/adapters/pendle/PendleAdapter.sol";
+import {AdapterVaultMock} from "./AdapterVaultMock.t.sol";
 
 /// @dev Mintable ERC20 token.
-contract PendleAdapterVaultMock is IAdapterCallback {
+contract PendleAdapterVaultMock is AdapterVaultMock {
     PendleAdapter private s_pendleAdapter;
     mapping(address => uint256) private s_trackedAssets;
     address private s_asset;
 
-    constructor(address pendleAdapter, address _asset) {
+    constructor(address pendleAdapter, address _asset) AdapterVaultMock(_asset) {
         s_pendleAdapter = PendleAdapter(pendleAdapter);
-        s_asset = _asset;
-    }
-
-    function asset() external view returns (address) {
-        return s_asset;
-    }
-
-    function setAsset(address _asset) external {
-        s_asset = _asset;
-    }
-
-    function trackedAssetPosition(address _asset) external view returns (uint256) {
-        return s_trackedAssets[_asset];
-    }
-
-    function setTrackedAsset(address _asset, uint256 position) external {
-        s_trackedAssets[_asset] = position;
-    }
-
-    function adapterCallback(address receiver, address token, uint256 amount) external override {
-        IERC20(token).transfer(receiver, amount);
     }
 
     function swapExactTokenForPt(
