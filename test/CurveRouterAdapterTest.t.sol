@@ -79,5 +79,128 @@ contract CurveRouterAdapterTest is Test {
         deal(address(rsETH), address(vault), 10000e18);
     }
 
-    function test() public {}
+    function testGetAdapterId() public view {
+        assertEq(curveRouterAdapter.getAdapterId(), bytes4(keccak256("CurveRouterAdapter")));
+    }
+
+    function testConstructorShouldFailWhenZeroAddress() public {
+        vm.expectRevert(Asserts.ZeroAddress.selector);
+        new CurveRouterAdapter(address(0));
+    }
+
+    function testExchangeSingleHop() public {
+        IERC20 tokenIn = USDC;
+        IERC20 tokenOut = DAI;
+
+        address[11] memory route;
+        route[0] = address(USDC);
+        route[1] = address(POOL_1);
+        route[2] = address(DAI);
+
+        uint256[5][5] memory swapParams;
+        uint256 amount = 100e6;
+        uint256 minDy = 99e6;
+        address[5] memory pools;
+
+        uint256 tokenInBalanceBefore = tokenIn.balanceOf(address(vault));
+
+        vault.exchange(route, swapParams, amount, minDy, pools);
+
+        assertGe(tokenOut.balanceOf(address(vault)), minDy);
+        assertEq(tokenIn.balanceOf(address(vault)), tokenInBalanceBefore - amount);
+
+        assertEq(tokenIn.balanceOf(address(curveRouterAdapter)), 0);
+        assertEq(tokenOut.balanceOf(address(curveRouterAdapter)), 0);
+    }
+
+    function testExchangeMultiHop() public {
+        IERC20 tokenIn = USDC;
+        IERC20 tokenOut = WETH;
+
+        address[11] memory route;
+        route[0] = address(USDC);
+        route[1] = address(POOL_1);
+        route[2] = address(DAI);
+        route[3] = address(POOL_2);
+        route[4] = address(WETH);
+
+        uint256[5][5] memory swapParams;
+        uint256 amount = 3000e6;
+        uint256 minDy = 1.7e18;
+        address[5] memory pools;
+
+        uint256 tokenInBalanceBefore = tokenIn.balanceOf(address(vault));
+
+        vault.exchange(route, swapParams, amount, minDy, pools);
+
+        assertGe(tokenOut.balanceOf(address(vault)), minDy);
+        assertEq(tokenIn.balanceOf(address(vault)), tokenInBalanceBefore - amount);
+
+        assertEq(tokenIn.balanceOf(address(curveRouterAdapter)), 0);
+        assertEq(tokenOut.balanceOf(address(curveRouterAdapter)), 0);
+    }
+
+    function testExchangeMaxHops() public {
+        IERC20 tokenIn = USDC;
+        IERC20 tokenOut = PENDLE;
+
+        address[11] memory route;
+        route[0] = address(USDC);
+        route[1] = address(POOL_1);
+        route[2] = address(DAI);
+        route[3] = address(POOL_2);
+        route[4] = address(WETH);
+        route[5] = address(POOL_3);
+        route[6] = address(USDT);
+        route[7] = address(POOL_4);
+        route[8] = address(USDE);
+        route[9] = address(POOL_5);
+        route[10] = address(PENDLE);
+
+        uint256[5][5] memory swapParams;
+        uint256 amount = 3000e6;
+        uint256 minDy = 950e18;
+        address[5] memory pools;
+
+        uint256 tokenInBalanceBefore = tokenIn.balanceOf(address(vault));
+
+        vault.exchange(route, swapParams, amount, minDy, pools);
+
+        assertGe(tokenOut.balanceOf(address(vault)), minDy);
+        assertEq(tokenIn.balanceOf(address(vault)), tokenInBalanceBefore - amount);
+
+        assertEq(tokenIn.balanceOf(address(curveRouterAdapter)), 0);
+        assertEq(tokenOut.balanceOf(address(curveRouterAdapter)), 0);
+    }
+
+    function testExchangeShouldFailWhenSlippage() public {
+        curveRouter.setOffset(1);
+
+        address[11] memory route;
+        route[0] = address(USDC);
+        route[1] = address(POOL_1);
+        route[2] = address(DAI);
+
+        uint256[5][5] memory swapParams;
+        uint256 amount = 100e6;
+        uint256 minDy = 99e6;
+        address[5] memory pools;
+
+        vm.expectRevert(CurveRouterAdapter.CurveRouterAdapter__SlippageProtection.selector);
+        vault.exchange(route, swapParams, amount, minDy, pools);
+
+    }
+
+    function testExchangeShouldFailWhenZeroTokenOut() public {
+        address[11] memory route;
+        route[0] = address(USDC);
+
+        uint256[5][5] memory swapParams;
+        uint256 amount = 3000e6;
+        uint256 minDy = 950e18;
+        address[5] memory pools;
+
+        vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, address(0)));
+        vault.exchange(route, swapParams, amount, minDy, pools);
+    }
 }
