@@ -92,7 +92,7 @@ contract PendleAdapterTest is Test {
         vm.stopPrank();
     }
 
-    function testGetPendleRouter() public {
+    function testGetPendleRouter() public view {
         assertEq(pendleAdapter.getPendleRouter(), address(pendleRouter));
     }
 
