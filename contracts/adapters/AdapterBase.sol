@@ -18,8 +18,8 @@ abstract contract AdapterBase is IERC165, IAdapter {
     /// @param asset asset address
     function _ensureIsValidAsset(address asset) internal view {
         if (
-            IMultiAssetVault(msg.sender).asset() != asset
-                && IMultiAssetVault(msg.sender).trackedAssetPosition(asset) == 0
+            IMultiAssetVault(msg.sender).trackedAssetPosition(asset) == 0
+                && IMultiAssetVault(msg.sender).asset() != asset
         ) {
             revert AdapterBase__InvalidToken(asset);
         }
