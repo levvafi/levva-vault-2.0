@@ -6,6 +6,7 @@ import {IV4Router} from "@uniswap/v4-periphery/src/interfaces/IV4Router.sol";
 import {Actions} from "@uniswap/v4-periphery/src/libraries/Actions.sol";
 import {Commands} from "@uniswap/universal-router/contracts/libraries/Commands.sol";
 import {IUniversalRouter} from "@uniswap/universal-router/contracts/interfaces/IUniversalRouter.sol";
+import {IAllowanceTransfer} from "permit2/src/interfaces/IAllowanceTransfer.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -13,23 +14,19 @@ import {Asserts} from "../../libraries/Asserts.sol";
 import {IAdapterCallback} from "../../interfaces/IAdapterCallback.sol";
 import {AdapterBase} from "../AdapterBase.sol";
 
-interface IPermit2 {
-    function approve(address token, address spender, uint160 amount, uint48 expiration) external;
-}
-
 abstract contract AbstractUniswapV4Adapter is AdapterBase {
     using SafeERC20 for IERC20;
     using Asserts for address;
 
     IUniversalRouter public immutable universalRouter;
-    IPermit2 public immutable permit2;
+    IAllowanceTransfer public immutable permit2;
 
     constructor(address _universalRouter, address _permit2) {
         _universalRouter.assertNotZeroAddress();
         _permit2.assertNotZeroAddress();
 
         universalRouter = IUniversalRouter(_universalRouter);
-        permit2 = IPermit2(_permit2);
+        permit2 = IAllowanceTransfer(_permit2);
     }
 
     function swapExactInputV4(IV4Router.ExactInputParams memory params) external {
@@ -44,7 +41,7 @@ abstract contract AbstractUniswapV4Adapter is AdapterBase {
         IAdapterCallback(msg.sender).adapterCallback(address(this), inputToken, params.amountIn);
 
         IUniversalRouter router = universalRouter;
-        IPermit2 _permit2 = permit2;
+        IAllowanceTransfer _permit2 = permit2;
         IERC20(inputToken).forceApprove(address(_permit2), params.amountIn);
         _permit2.approve(inputToken, address(router), uint160(params.amountIn), uint48(block.timestamp));
 
@@ -72,7 +69,7 @@ abstract contract AbstractUniswapV4Adapter is AdapterBase {
         IAdapterCallback(msg.sender).adapterCallback(address(this), inputToken, params.amountInMaximum);
 
         IUniversalRouter router = universalRouter;
-        IPermit2 _permit2 = permit2;
+        IAllowanceTransfer _permit2 = permit2;
         IERC20(inputToken).forceApprove(address(_permit2), params.amountInMaximum);
         _permit2.approve(inputToken, address(router), uint160(params.amountInMaximum), uint48(block.timestamp));
 
