@@ -26,6 +26,8 @@ contract PendleAdapter is AdapterBase {
     using SafeERC20 for IERC20;
     using Asserts for address;
 
+    bytes4 public constant getAdapterId = bytes4(keccak256("PendleAdapter"));
+
     address private immutable s_pendleRouter;
 
     error PendleAdapter__SlippageProtection();
@@ -38,9 +40,9 @@ contract PendleAdapter is AdapterBase {
         s_pendleRouter = pendleRouter;
     }
 
-    /// @notice Get the identifier of adapter
-    function getAdapterId() external pure returns (bytes4) {
-        return 0x94dfa9d4; // bytes4(keccak256("PendleAdapter"))
+    /// @notice Get pendle router address
+    function getPendleRouter() external view returns (address) {
+        return s_pendleRouter;
     }
 
     /// @notice Swap exact token for PT

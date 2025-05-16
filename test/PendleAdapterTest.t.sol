@@ -23,7 +23,6 @@ import {
     SwapData,
     TokenOutput
 } from "@pendle/core-v2/contracts/interfaces/IPAllActionTypeV3.sol";
-import {PendleMarketFactoryMock} from "./mocks/PendleMarketFactoryMock.t.sol";
 
 contract PendleAdapterTest is Test {
     PendleAdapterVaultMock public vault;
@@ -91,6 +90,10 @@ contract PendleAdapterTest is Test {
         deal(address(PT_MARKET_2), address(vault), 10000e18);
 
         vm.stopPrank();
+    }
+
+    function testGetPendleRouter() public {
+        assertEq(pendleAdapter.getPendleRouter(), address(pendleRouter));
     }
 
     function testConstructorShouldFailWhenPendleRouterIsZeroAddress() public {
