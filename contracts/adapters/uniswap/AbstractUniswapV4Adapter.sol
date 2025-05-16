@@ -29,67 +29,83 @@ abstract contract AbstractUniswapV4Adapter is AdapterBase {
         permit2 = IAllowanceTransfer(_permit2);
     }
 
-    function swapExactInputV4(IV4Router.ExactInputParams memory params) external {
+    function swapExactInputV4(IV4Router.ExactInputParams calldata params) external {
         address outputToken = Currency.unwrap(params.path[params.path.length - 1].intermediateCurrency);
         _ensureIsValidAsset(outputToken);
-
-        bytes memory commands = abi.encodePacked(uint8(Commands.V4_SWAP));
-        bytes memory actions =
-            abi.encodePacked(uint8(Actions.SWAP_EXACT_IN), uint8(Actions.SETTLE_ALL), uint8(Actions.TAKE_ALL));
 
         address inputToken = Currency.unwrap(params.currencyIn);
         IAdapterCallback(msg.sender).adapterCallback(address(this), inputToken, params.amountIn);
 
-        IUniversalRouter router = universalRouter;
-        IAllowanceTransfer _permit2 = permit2;
-        IERC20(inputToken).forceApprove(address(_permit2), params.amountIn);
-        _permit2.approve(inputToken, address(router), uint160(params.amountIn), uint48(block.timestamp));
+        IUniversalRouter _universalRouter = universalRouter;
+        _permit2Approve(inputToken, address(universalRouter), params.amountIn);
 
-        bytes[] memory actionParams = new bytes[](3);
-        actionParams[0] = abi.encode(params);
-        actionParams[1] = abi.encode(params.currencyIn, params.amountIn);
-        actionParams[2] = abi.encode(outputToken, params.amountOutMinimum);
-
-        bytes[] memory inputs = new bytes[](1);
-        inputs[0] = abi.encode(actions, actionParams);
-
-        router.execute(commands, inputs, block.timestamp);
+        _universalRouter.execute(_getSwapCommandByteArray(), _getExecuteInputs(params), block.timestamp);
         _sendTokenToVault(outputToken);
     }
 
-    function swapExactOutputV4(IV4Router.ExactOutputParams memory params) external {
+    function swapExactOutputV4(IV4Router.ExactOutputParams calldata params) external {
         address outputToken = Currency.unwrap(params.currencyOut);
-
-        bytes memory commands = abi.encodePacked(uint8(Commands.V4_SWAP));
-        bytes memory actions =
-            abi.encodePacked(uint8(Actions.SWAP_EXACT_OUT), uint8(Actions.SETTLE_ALL), uint8(Actions.TAKE_ALL));
+        _ensureIsValidAsset(outputToken);
 
         address inputToken = Currency.unwrap(params.path[0].intermediateCurrency);
-
         IAdapterCallback(msg.sender).adapterCallback(address(this), inputToken, params.amountInMaximum);
 
-        IUniversalRouter router = universalRouter;
-        IAllowanceTransfer _permit2 = permit2;
-        IERC20(inputToken).forceApprove(address(_permit2), params.amountInMaximum);
-        _permit2.approve(inputToken, address(router), uint160(params.amountInMaximum), uint48(block.timestamp));
+        IUniversalRouter _universalRouter = universalRouter;
+        _permit2Approve(inputToken, address(universalRouter), params.amountInMaximum);
 
-        bytes[] memory actionParams = new bytes[](3);
-        actionParams[0] = abi.encode(params);
-        actionParams[1] = abi.encode(inputToken, params.amountInMaximum);
-        actionParams[2] = abi.encode(params.currencyOut, params.amountOut);
+        universalRouter.execute(_getSwapCommandByteArray(), _getExecuteInputs(params), block.timestamp);
+        IERC20(inputToken).forceApprove(address(_universalRouter), 0);
 
-        bytes[] memory inputs = new bytes[](1);
-        inputs[0] = abi.encode(actions, actionParams);
-
-        universalRouter.execute(commands, inputs, block.timestamp);
-
-        IERC20(inputToken).forceApprove(address(router), 0);
         _sendTokenToVault(inputToken);
         _sendTokenToVault(outputToken);
+    }
+
+    function _permit2Approve(address token, address spender, uint256 amount) private {
+        IAllowanceTransfer _permit2 = permit2;
+        IERC20(token).forceApprove(address(_permit2), amount);
+        _permit2.approve(token, spender, uint160(amount), uint48(block.timestamp));
     }
 
     function _sendTokenToVault(address token) private {
         uint256 balance = IERC20(token).balanceOf(address(this));
         IERC20(token).safeTransfer(msg.sender, balance);
+    }
+
+    function _getSwapCommandByteArray() private pure returns (bytes memory) {
+        return abi.encodePacked(uint8(Commands.V4_SWAP));
+    }
+
+    function _getExecuteInputs(IV4Router.ExactInputParams calldata params)
+        private
+        pure
+        returns (bytes[] memory inputs)
+    {
+        bytes memory actions =
+            abi.encodePacked(uint8(Actions.SWAP_EXACT_IN), uint8(Actions.SETTLE_ALL), uint8(Actions.TAKE_ALL));
+
+        bytes[] memory actionParams = new bytes[](3);
+        actionParams[0] = abi.encode(params);
+        actionParams[1] = abi.encode(params.currencyIn, params.amountIn);
+        actionParams[2] = abi.encode(params.path[params.path.length - 1].intermediateCurrency, params.amountOutMinimum);
+
+        inputs = new bytes[](1);
+        inputs[0] = abi.encode(actions, actionParams);
+    }
+
+    function _getExecuteInputs(IV4Router.ExactOutputParams calldata params)
+        private
+        pure
+        returns (bytes[] memory inputs)
+    {
+        bytes memory actions =
+            abi.encodePacked(uint8(Actions.SWAP_EXACT_OUT), uint8(Actions.SETTLE_ALL), uint8(Actions.TAKE_ALL));
+
+        bytes[] memory actionParams = new bytes[](3);
+        actionParams[0] = abi.encode(params);
+        actionParams[1] = abi.encode(params.path[0].intermediateCurrency, params.amountInMaximum);
+        actionParams[2] = abi.encode(params.currencyOut, params.amountOut);
+
+        inputs = new bytes[](1);
+        inputs[0] = abi.encode(actions, actionParams);
     }
 }

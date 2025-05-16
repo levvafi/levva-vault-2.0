@@ -29,9 +29,9 @@ abstract contract AbstractUniswapV3Adapter is AdapterBase {
         _ensureIsValidAsset(outputToken);
 
         IAdapterCallback(msg.sender).adapterCallback(address(this), inputToken, params.amountIn);
-        ISwapRouter router = uniswapV3Router;
-        IERC20(inputToken).forceApprove(address(router), params.amountIn);
-        router.exactInput(params);
+        ISwapRouter _uniswapV3Router = uniswapV3Router;
+        IERC20(inputToken).forceApprove(address(_uniswapV3Router), params.amountIn);
+        _uniswapV3Router.exactInput(params);
     }
 
     function swapExactOutputV3(ISwapRouter.ExactOutputParams calldata params) external {
@@ -42,10 +42,10 @@ abstract contract AbstractUniswapV3Adapter is AdapterBase {
 
         IAdapterCallback(msg.sender).adapterCallback(address(this), inputToken, params.amountInMaximum);
 
-        ISwapRouter router = uniswapV3Router;
-        IERC20(inputToken).forceApprove(address(router), params.amountInMaximum);
-        router.exactOutput(params);
-        IERC20(inputToken).forceApprove(address(router), 0);
+        ISwapRouter _uniswapV3Router = uniswapV3Router;
+        IERC20(inputToken).forceApprove(address(_uniswapV3Router), params.amountInMaximum);
+        _uniswapV3Router.exactOutput(params);
+        IERC20(inputToken).forceApprove(address(_uniswapV3Router), 0);
         IERC20(inputToken).safeTransfer(msg.sender, IERC20(inputToken).balanceOf(address(this)));
     }
 
