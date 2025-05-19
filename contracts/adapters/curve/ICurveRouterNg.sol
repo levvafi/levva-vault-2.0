@@ -10,16 +10,4 @@ interface ICurveRouterNg {
         address[5] memory pools,
         address receiver
     ) external returns (uint256);
-
-    function get_dy(address[11] memory route, uint256[5][5] memory swapParams, uint256 amount)
-        external
-        view
-        returns (uint256);
-
-    function get_dx(
-        address[11] memory route,
-        uint256[5][5] memory swapParams,
-        uint256 outAmount,
-        address[5] memory pools
-    ) external view returns (uint256);
 }

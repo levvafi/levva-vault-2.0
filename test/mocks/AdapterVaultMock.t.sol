@@ -3,10 +3,13 @@ pragma solidity ^0.8.28;
 
 import {Test} from "lib/forge-std/src/Test.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IAdapterCallback} from "../../contracts/interfaces/IAdapterCallback.sol";
 
 /// @dev Mintable ERC20 token.
 contract AdapterVaultMock is IAdapterCallback {
+    using SafeERC20 for IERC20;
+
     mapping(address => uint256) private s_trackedAssets;
     address private s_asset;
 
@@ -31,6 +34,6 @@ contract AdapterVaultMock is IAdapterCallback {
     }
 
     function adapterCallback(address receiver, address token, uint256 amount) external override {
-        IERC20(token).transfer(receiver, amount);
+        IERC20(token).safeTransfer(receiver, amount);
     }
 }
