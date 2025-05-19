@@ -25,6 +25,10 @@ contract PendleAdapterTest is PendleAdapterTestBase {
     function setUp() public override {
         super.setUp();
         vm.rollFork(22_480_700);
+
+        oracle.setPrice(oracle.ONE(), address(_getPt(NEW_PENDLE_MARKET)), address(USDC));
+
+        vault.addTrackedAsset(address(_getPt(NEW_PENDLE_MARKET)));
     }
 
     function test_rollOverPt() public {

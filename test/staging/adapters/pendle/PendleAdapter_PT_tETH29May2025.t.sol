@@ -20,10 +20,28 @@ import {PendleAdapterTestBase} from "./PendleAdapterTestBase.t.sol";
 contract PendleAdapterTest is PendleAdapterTestBase {
     address internal constant PENDLE_MARKET = 0xBDb8F9729d3194f75fD1A3D9bc4FFe0DDe3A404c; //PT_tETH_29May2025Market
     address internal constant PT_TOKEN = 0x84D17Ef6BeC165484c320B852eEB294203e191be; //PT_tETH_29May2025
+    address internal constant tETH = 0xD11c452fc99cF405034ee446803b6F6c1F6d5ED8;
+    address internal constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address internal constant wstETH = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
+    address internal constant stETH = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
 
     function setUp() public override {
         super.setUp();
         vm.rollFork(22_480_700);
+
+        oracle.setPrice(oracle.ONE(), PT_TOKEN, address(USDC));
+        oracle.setPrice(oracle.ONE(), tETH, address(USDC));
+        oracle.setPrice(oracle.ONE(), WETH, address(USDC));
+        oracle.setPrice(oracle.ONE(), wstETH, address(USDC));
+        oracle.setPrice(oracle.ONE(), stETH, address(USDC));
+        oracle.setPrice(oracle.ONE(), PENDLE_MARKET, address(USDC));
+
+        vault.addTrackedAsset(PENDLE_MARKET);
+        vault.addTrackedAsset(address(PT_TOKEN));
+        vault.addTrackedAsset(tETH);
+        vault.addTrackedAsset(wstETH);
+        vault.addTrackedAsset(stETH);
+        vault.addTrackedAsset(WETH);
     }
 
     function test_swap_wstETHToken_to_pt() public {
@@ -36,17 +54,14 @@ contract PendleAdapterTest is PendleAdapterTestBase {
     }
 
     function test_swap_tETH_to_pt() public {
-        address tETHToken = 0xD11c452fc99cF405034ee446803b6F6c1F6d5ED8;
         uint256 amountIn = 10 * 10 ** 18;
 
-        TokenInput memory tokenInput = _createTokenInputSimple(tETHToken, amountIn);
+        TokenInput memory tokenInput = _createTokenInputSimple(tETH, amountIn);
 
         _swapTokenToPt(PENDLE_MARKET, _createDefaultApproxParams(), tokenInput, PT_TOKEN);
     }
 
     function test_swap_Usdc_to_Pt() public {
-        address usdcToken = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
-
         /*
         To get call data use curl below
 
@@ -68,7 +83,7 @@ contract PendleAdapterTest is PendleAdapterTestBase {
         });
 
         TokenInput memory usdcTokenInput = TokenInput({
-            tokenIn: usdcToken,
+            tokenIn: address(USDC),
             netTokenIn: 100e6,
             tokenMintSy: 0xD11c452fc99cF405034ee446803b6F6c1F6d5ED8,
             pendleSwap: 0x313e7Ef7d52f5C10aC04ebaa4d33CDc68634c212,
@@ -79,7 +94,6 @@ contract PendleAdapterTest is PendleAdapterTestBase {
     }
 
     function test_swap_Pt_to_USDC() public {
-        address usdcToken = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
         uint256 amountIn = 15e17; // 1.5 PT
 
         /*
@@ -97,7 +111,7 @@ contract PendleAdapterTest is PendleAdapterTestBase {
         });
 
         TokenOutput memory tokenOutput = TokenOutput({
-            tokenOut: usdcToken,
+            tokenOut: address(USDC),
             minTokenOut: 3700917437,
             tokenRedeemSy: 0xD11c452fc99cF405034ee446803b6F6c1F6d5ED8,
             pendleSwap: 0xd4e9B0d466789d7F6201442eecCBA6a75A552db0,
@@ -108,7 +122,6 @@ contract PendleAdapterTest is PendleAdapterTestBase {
     }
 
     function test_swap_WETH_to_Pt() public {
-        address wethToken = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
         uint256 amountIn = 5e18;
 
         /*
@@ -126,7 +139,7 @@ contract PendleAdapterTest is PendleAdapterTestBase {
         });
 
         TokenInput memory tokenInput = TokenInput({
-            tokenIn: wethToken,
+            tokenIn: WETH,
             netTokenIn: amountIn,
             tokenMintSy: 0xD11c452fc99cF405034ee446803b6F6c1F6d5ED8,
             pendleSwap: 0xd4e9B0d466789d7F6201442eecCBA6a75A552db0,
@@ -137,7 +150,6 @@ contract PendleAdapterTest is PendleAdapterTestBase {
     }
 
     function test_swap_Pt_to_WETH() public {
-        address wethToken = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
         uint256 amountIn = 5e18; // 5.0 Pt
         uint256 minTokenOut = 497e16; // 4.97 WETH
         /*
@@ -154,7 +166,7 @@ contract PendleAdapterTest is PendleAdapterTestBase {
         });
 
         TokenOutput memory tokenOutput = TokenOutput({
-            tokenOut: wethToken,
+            tokenOut: WETH,
             minTokenOut: minTokenOut,
             tokenRedeemSy: 0xD11c452fc99cF405034ee446803b6F6c1F6d5ED8,
             pendleSwap: 0xd4e9B0d466789d7F6201442eecCBA6a75A552db0,
@@ -165,37 +177,33 @@ contract PendleAdapterTest is PendleAdapterTestBase {
     }
 
     function test_swap_pt_to_wstETH() public {
-        address wstETHToken = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
         uint256 amountIn = 1e18;
 
-        TokenOutput memory tokenOutput = _createTokenOutputSimple(wstETHToken, 0);
+        TokenOutput memory tokenOutput = _createTokenOutputSimple(wstETH, 0);
 
         _swapPtToToken(PENDLE_MARKET, PT_TOKEN, amountIn, tokenOutput);
     }
 
     function test_swap_pt_to_stETHToken() public {
-        address stETHToken = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
         uint256 amountIn = 1e18;
 
-        TokenOutput memory tokenOutput = _createTokenOutputSimple(stETHToken, 0);
+        TokenOutput memory tokenOutput = _createTokenOutputSimple(stETH, 0);
 
         _swapPtToToken(PENDLE_MARKET, PT_TOKEN, amountIn, tokenOutput);
     }
 
     function test_swap_pt_to_tETHToken() public {
-        address tETHToken = 0xD11c452fc99cF405034ee446803b6F6c1F6d5ED8;
         uint256 amountIn = 1e18;
 
-        TokenOutput memory tokenOutput = _createTokenOutputSimple(tETHToken, 0);
+        TokenOutput memory tokenOutput = _createTokenOutputSimple(tETH, 0);
 
         _swapPtToToken(PENDLE_MARKET, PT_TOKEN, amountIn, tokenOutput);
     }
 
     function test_add_liquidity_wstETH() public {
-        address wstETHToken = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
         uint256 amountIn = 1e18;
 
-        _addLiquidity(PENDLE_MARKET, _createDefaultApproxParams(), _createTokenInputSimple(wstETHToken, amountIn));
+        _addLiquidity(PENDLE_MARKET, _createDefaultApproxParams(), _createTokenInputSimple(wstETH, amountIn));
     }
 
     function test_remove_liquidity_wstETH() public {
@@ -211,16 +219,14 @@ contract PendleAdapterTest is PendleAdapterTestBase {
     }
 
     function test_remove_liquidity_wstETH_AfterMaturity() public afterMaturity {
-        address wstETHToken = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
         uint256 lpAmount = 1e18;
 
-        _removeLiquidity(PENDLE_MARKET, lpAmount, _createTokenOutputSimple(wstETHToken, 0));
+        _removeLiquidity(PENDLE_MARKET, lpAmount, _createTokenOutputSimple(wstETH, 0));
     }
 
     function test_redeemPt_wstETH_AfterMaturity() public afterMaturity {
-        address wstETHToken = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
         uint256 ptIn = 1e18;
 
-        _redeemPt(PENDLE_MARKET, PT_TOKEN, ptIn, _createTokenOutputSimple(wstETHToken, 0));
+        _redeemPt(PENDLE_MARKET, PT_TOKEN, ptIn, _createTokenOutputSimple(wstETH, 0));
     }
 }
