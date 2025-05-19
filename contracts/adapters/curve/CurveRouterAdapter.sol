@@ -50,7 +50,7 @@ contract CurveRouterAdapter is AdapterBase {
         uint256 amount,
         uint256 minDy,
         address[5] memory pools
-    ) external {
+    ) external returns (uint256 amountOut) {
         address tokenIn = route[0];
         address tokenOut = route[10]; // assume last token is output token
         if (tokenOut == address(0)) {
@@ -69,9 +69,9 @@ contract CurveRouterAdapter is AdapterBase {
 
         ICurveRouterNg curveRouter = s_curveRouter;
         IERC20(tokenIn).forceApprove(address(curveRouter), amount);
-        uint256 dyOut = curveRouter.exchange(route, swapParams, amount, minDy, pools, msg.sender);
+        amountOut = curveRouter.exchange(route, swapParams, amount, minDy, pools, msg.sender);
 
-        if (dyOut < minDy) {
+        if (amountOut < minDy) {
             revert CurveRouterAdapter__SlippageProtection();
         }
     }
