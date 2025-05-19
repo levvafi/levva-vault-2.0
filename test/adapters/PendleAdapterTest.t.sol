@@ -2,20 +2,20 @@
 pragma solidity ^0.8.27;
 
 import {IERC165} from "@openzeppelin/contracts/interfaces/IERC165.sol";
-import {IAdapter} from "../contracts/interfaces/IAdapter.sol";
-import {IExternalPositionAdapter} from "../contracts/interfaces/IExternalPositionAdapter.sol";
+import {IAdapter} from "../../contracts/interfaces/IAdapter.sol";
+import {IExternalPositionAdapter} from "../../contracts/interfaces/IExternalPositionAdapter.sol";
 import {Vm} from "lib/forge-std/src/Vm.sol";
 import {Test} from "lib/forge-std/src/Test.sol";
-import {PendleAdapterVaultMock} from "./mocks/PendleAdapterVaultMock.t.sol";
-import {PendleRouterMock} from "./mocks/PendleRouterMock.t.sol";
-import {PendleMarketMock} from "./mocks/PendleMarketMock.t.sol";
-import {MintableERC20} from "./mocks/MintableERC20.t.sol";
+import {PendleAdapterVaultMock} from "../mocks/PendleAdapterVaultMock.t.sol";
+import {PendleRouterMock} from "../mocks/PendleRouterMock.t.sol";
+import {PendleMarketMock} from "../mocks/PendleMarketMock.t.sol";
+import {MintableERC20} from "../mocks/MintableERC20.t.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {PendleAdapter} from "../contracts/adapters/pendle/PendleAdapter.sol";
-import {AdapterBase} from "../contracts/adapters/AdapterBase.sol";
+import {PendleAdapter} from "../../contracts/adapters/pendle/PendleAdapter.sol";
+import {AdapterBase} from "../../contracts/adapters/AdapterBase.sol";
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
-import {Asserts} from "../contracts/libraries/Asserts.sol";
-import {PendleSyTokenMock} from "./mocks/PendleSyTokenMock.t.sol";
+import {Asserts} from "../../contracts/libraries/Asserts.sol";
+import {PendleSyTokenMock} from "../mocks/PendleSyTokenMock.t.sol";
 import {
     TokenInput,
     ApproxParams,
