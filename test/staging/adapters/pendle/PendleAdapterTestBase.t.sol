@@ -5,8 +5,10 @@ import {Test} from "lib/forge-std/src/Test.sol";
 import {Vm} from "lib/forge-std/src/Vm.sol";
 import {console} from "lib/forge-std/src/console.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {PendleAdapter} from "../../../../contracts/adapters/pendle/PendleAdapter.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {
     TokenInput,
     ApproxParams,
@@ -17,14 +19,18 @@ import {
 } from "@pendle/core-v2/contracts/interfaces/IPAllActionTypeV3.sol";
 import {IPMarket} from "@pendle/core-v2/contracts/interfaces/IPMarket.sol";
 import {IPPrincipalToken} from "@pendle/core-v2/contracts/interfaces/IPPrincipalToken.sol";
-import {PendleAdapterVaultMock} from "../../../mocks/PendleAdapterVaultMock.t.sol";
+import {EulerRouterMock} from "../../../mocks/EulerRouterMock.t.sol";
+import {LevvaVault} from "../../../../contracts/LevvaVault.sol";
 
 abstract contract PendleAdapterTestBase is Test {
     address internal constant PENDLE_ROUTER = 0x888888888889758F76e7103c6CbF23ABbF58F946;
 
+    IERC20 internal USDC = IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
+
+    EulerRouterMock internal oracle;
     PendleAdapter internal pendleAdapter;
     address internal OWNER = makeAddr("owner");
-    PendleAdapterVaultMock internal vault;
+    LevvaVault internal vault;
 
     string private mainnetRpcUrl = vm.envString("ETH_RPC_URL");
 
@@ -35,7 +41,15 @@ abstract contract PendleAdapterTestBase is Test {
         pendleAdapter = new PendleAdapter(PENDLE_ROUTER);
         vm.deal(OWNER, 1 ether);
 
-        vault = new PendleAdapterVaultMock(address(pendleAdapter), address(0));
+        oracle = new EulerRouterMock();
+
+        LevvaVault levvaVaultImplementation = new LevvaVault();
+        bytes memory data = abi.encodeWithSelector(
+            LevvaVault.initialize.selector, USDC, "lpName", "lpSymbol", address(0xFEE), address(oracle)
+        );
+
+        vault = LevvaVault(address(new ERC1967Proxy(address(levvaVaultImplementation), data)));
+        vault.addAdapter(address(pendleAdapter));
     }
 
     function _swapTokenToPt(
@@ -45,10 +59,10 @@ abstract contract PendleAdapterTestBase is Test {
         address ptToken
     ) internal {
         deal(tokenInput.tokenIn, address(vault), tokenInput.netTokenIn);
-        vault.setTrackedAsset(ptToken, 1);
         uint256 balanceBefore = IERC20(ptToken).balanceOf(address(vault));
 
-        vault.swapExactTokenForPt(market, approxParams, tokenInput, 0);
+        vm.prank(address(vault));
+        pendleAdapter.swapExactTokenForPt(market, approxParams, tokenInput, 0);
 
         uint256 balanceAfter = IERC20(ptToken).balanceOf(address(vault));
 
@@ -59,10 +73,10 @@ abstract contract PendleAdapterTestBase is Test {
 
     function _swapPtToToken(address market, address ptToken, uint256 ptTokenIn, TokenOutput memory tokenOut) internal {
         deal(ptToken, address(vault), ptTokenIn);
-        vault.setTrackedAsset(tokenOut.tokenOut, 1);
         uint256 balanceBefore = IERC20(tokenOut.tokenOut).balanceOf(address(vault));
 
-        vault.swapExactPtForToken(market, ptTokenIn, tokenOut);
+        vm.prank(address(vault));
+        pendleAdapter.swapExactPtForToken(market, ptTokenIn, tokenOut);
 
         uint256 balanceAfter = IERC20(tokenOut.tokenOut).balanceOf(address(vault));
 
@@ -73,10 +87,10 @@ abstract contract PendleAdapterTestBase is Test {
 
     function _redeemPt(address market, address ptToken, uint256 ptTokenIn, TokenOutput memory tokenOut) internal {
         deal(ptToken, address(vault), ptTokenIn);
-        vault.setTrackedAsset(tokenOut.tokenOut, 1);
         uint256 balanceBefore = IERC20(tokenOut.tokenOut).balanceOf(address(vault));
 
-        vault.redeemPt(market, ptTokenIn, tokenOut);
+        vm.prank(address(vault));
+        pendleAdapter.redeemPt(market, ptTokenIn, tokenOut);
 
         uint256 balanceAfter = IERC20(tokenOut.tokenOut).balanceOf(address(vault));
 
@@ -87,10 +101,10 @@ abstract contract PendleAdapterTestBase is Test {
 
     function _addLiquidity(address market, ApproxParams memory approxParams, TokenInput memory tokenInput) internal {
         deal(tokenInput.tokenIn, address(vault), tokenInput.netTokenIn);
-        vault.setTrackedAsset(market, 1);
         uint256 balanceBefore = IERC20(market).balanceOf(address(vault));
 
-        vault.addLiquiditySingleToken(market, approxParams, tokenInput, 0);
+        vm.prank(address(vault));
+        pendleAdapter.addLiquiditySingleToken(market, approxParams, tokenInput, 0);
 
         uint256 balanceAfter = IERC20(market).balanceOf(address(vault));
 
@@ -101,10 +115,10 @@ abstract contract PendleAdapterTestBase is Test {
 
     function _removeLiquidity(address market, uint256 lpAmount, TokenOutput memory tokenOut) internal {
         deal(market, address(vault), lpAmount);
-        vault.setTrackedAsset(tokenOut.tokenOut, 1);
         uint256 balanceBefore = IERC20(tokenOut.tokenOut).balanceOf(address(vault));
 
-        vault.removeLiquiditySingleToken(market, lpAmount, tokenOut);
+        vm.prank(address(vault));
+        pendleAdapter.removeLiquiditySingleToken(market, lpAmount, tokenOut);
 
         uint256 balanceAfter = IERC20(tokenOut.tokenOut).balanceOf(address(vault));
 
@@ -119,9 +133,9 @@ abstract contract PendleAdapterTestBase is Test {
         address oldPt = _getPt(oldMarket);
         address newPt = _getPt(newMarket);
         deal(oldPt, address(vault), ptAmount);
-        vault.setTrackedAsset(newPt, 1);
 
-        vault.rollOverPt(oldMarket, newMarket, token, ptAmount, minNewPtOut);
+        vm.prank(address(vault));
+        pendleAdapter.rollOverPt(oldMarket, newMarket, token, ptAmount, minNewPtOut);
 
         uint256 newPtBalance = IERC20(_getPt(newMarket)).balanceOf(address(vault));
         console.log("Rolled over ", ERC20(oldPt).symbol(), " to ", ERC20(newPt).symbol());

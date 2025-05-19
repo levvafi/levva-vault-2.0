@@ -4,17 +4,22 @@ pragma solidity ^0.8.28;
 import {Test} from "lib/forge-std/src/Test.sol";
 import {Vm} from "lib/forge-std/src/Vm.sol";
 import {console} from "lib/forge-std/src/console.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {CurveRouterAdapter} from "../../../../contracts/adapters/curve/CurveRouterAdapter.sol";
-import {CurveAdapterVaultMock} from "../../../mocks/CurveAdapterVaultMock.t.sol";
 import {ICurveRouterNg} from "../../../../contracts/adapters/curve/ICurveRouterNg.sol";
+import {EulerRouterMock} from "../../../mocks/EulerRouterMock.t.sol";
+import {LevvaVault} from "../../../../contracts/LevvaVault.sol";
 
 interface IWSTEHT {
     function unwrap(uint256 _wstETHAmount) external returns (uint256);
 }
 
 contract CurveRouterAdapterTest is Test {
+    using Math for uint256;
+
     address internal constant CURVE_ROUTER = 0x16C6521Dff6baB339122a0FE25a9116693265353;
 
     IERC20 private USDC = IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
@@ -29,7 +34,7 @@ contract CurveRouterAdapterTest is Test {
     CurveRouterAdapter internal curveRouterAdapter;
 
     address internal OWNER = makeAddr("owner");
-    CurveAdapterVaultMock internal vault;
+    LevvaVault internal vault;
 
     string private mainnetRpcUrl = vm.envString("ETH_RPC_URL");
 
@@ -40,7 +45,18 @@ contract CurveRouterAdapterTest is Test {
         curveRouterAdapter = new CurveRouterAdapter(CURVE_ROUTER);
         vm.deal(OWNER, 1 ether);
 
-        vault = new CurveAdapterVaultMock(address(curveRouterAdapter), address(0));
+        EulerRouterMock oracle = new EulerRouterMock();
+        oracle.setPrice(oracle.ONE(), address(DAI), address(USDC));
+        oracle.setPrice(oracle.ONE(), address(sUSDE), address(USDC));
+        oracle.setPrice(oracle.ONE(), address(wstETH), address(USDC));
+
+        LevvaVault levvaVaultImplementation = new LevvaVault();
+        bytes memory data = abi.encodeWithSelector(
+            LevvaVault.initialize.selector, USDC, "lpName", "lpSymbol", address(0xFEE), address(oracle)
+        );
+
+        vault = LevvaVault(address(new ERC1967Proxy(address(levvaVaultImplementation), data)));
+        vault.addAdapter(address(curveRouterAdapter));
     }
 
     function test_exchange_USDT_DAI() public {
@@ -110,7 +126,7 @@ contract CurveRouterAdapterTest is Test {
 
         uint256[5][5] memory swapParams;
         swapParams[0] = [uint256(0), 0, 8, 0, 0]; // WETH -> ETH withdraw
-        swapParams[1] = [uint256(0), 1, 1, 1, 1]; // swap ETH to stETH in poll ETH/stETH  
+        swapParams[1] = [uint256(0), 1, 1, 1, 1]; // swap ETH to stETH in poll ETH/stETH
         swapParams[2] = [uint256(0), 0, 8, 0, 0]; // stETH -> wstETH wrap
 
         uint256 amount = 1e18;
@@ -136,10 +152,11 @@ contract CurveRouterAdapterTest is Test {
 
         deal(tokenIn, address(vault), amount);
 
-        vault.setTrackedAsset(tokenOut, 1);
+        vault.addTrackedAsset(tokenOut);
         uint256 balanceBefore = IERC20(tokenOut).balanceOf(address(vault));
 
-        vault.exchange(route, swapParams, amount, minDy, pools);
+        hoax(address(vault));
+        curveRouterAdapter.exchange(route, swapParams, amount, minDy, pools);
 
         uint256 balanceAfter = IERC20(tokenOut).balanceOf(address(vault));
 

@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IERC165} from "@openzeppelin/contracts/interfaces/IERC165.sol";
 import {IAdapter} from "../../contracts/interfaces/IAdapter.sol";
 import {IExternalPositionAdapter} from "../../contracts/interfaces/IExternalPositionAdapter.sol";
 import {Vm} from "lib/forge-std/src/Vm.sol";
 import {Test} from "lib/forge-std/src/Test.sol";
-import {PendleAdapterVaultMock} from "../mocks/PendleAdapterVaultMock.t.sol";
 import {PendleRouterMock} from "../mocks/PendleRouterMock.t.sol";
 import {PendleMarketMock} from "../mocks/PendleMarketMock.t.sol";
 import {MintableERC20} from "../mocks/MintableERC20.t.sol";
@@ -14,8 +14,12 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {PendleAdapter} from "../../contracts/adapters/pendle/PendleAdapter.sol";
 import {AdapterBase} from "../../contracts/adapters/AdapterBase.sol";
 import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {Asserts} from "../../contracts/libraries/Asserts.sol";
+import {LevvaVault} from "../../contracts/LevvaVault.sol";
 import {PendleSyTokenMock} from "../mocks/PendleSyTokenMock.t.sol";
+
+import {EulerRouterMock} from "../mocks/EulerRouterMock.t.sol";
 import {
     TokenInput,
     ApproxParams,
@@ -25,7 +29,9 @@ import {
 } from "@pendle/core-v2/contracts/interfaces/IPAllActionTypeV3.sol";
 
 contract PendleAdapterTest is Test {
-    PendleAdapterVaultMock public vault;
+    using Math for uint256;
+
+    LevvaVault public vault;
     PendleRouterMock pendleRouter;
     PendleAdapter public pendleAdapter;
 
@@ -73,13 +79,28 @@ contract PendleAdapterTest is Test {
 
         pendleAdapter = new PendleAdapter(address(pendleRouter));
 
-        vault = new PendleAdapterVaultMock(address(pendleAdapter), address(WETH));
-        vault.setTrackedAsset(address(USDC), 1);
-        vault.setTrackedAsset(address(USDT), 2);
-        vault.setTrackedAsset(address(PT_TOKEN_1), 3);
-        vault.setTrackedAsset(address(PT_TOKEN_2), 4);
-        vault.setTrackedAsset(address(PT_MARKET_1), 5);
-        vault.setTrackedAsset(address(PT_MARKET_2), 6);
+        EulerRouterMock oracle = new EulerRouterMock();
+        oracle.setPrice(oracle.ONE().mulDiv(100_000, 10 ** 2), address(USDC), address(WETH));
+        oracle.setPrice(oracle.ONE().mulDiv(100_000, 10 ** 2), address(USDT), address(WETH));
+        oracle.setPrice(oracle.ONE().mulDiv(100_000, 10 ** 2), address(PT_TOKEN_1), address(WETH));
+        oracle.setPrice(oracle.ONE().mulDiv(100_000, 10 ** 2), address(PT_TOKEN_2), address(WETH));
+        oracle.setPrice(oracle.ONE().mulDiv(100_000, 10 ** 2), address(PT_MARKET_1), address(WETH));
+        oracle.setPrice(oracle.ONE().mulDiv(100_000, 10 ** 2), address(PT_MARKET_2), address(WETH));
+
+        LevvaVault levvaVaultImplementation = new LevvaVault();
+        bytes memory data = abi.encodeWithSelector(
+            LevvaVault.initialize.selector, WETH, "lpName", "lpSymbol", address(0xFEE), address(oracle)
+        );
+
+        vault = LevvaVault(address(new ERC1967Proxy(address(levvaVaultImplementation), data)));
+        vault.addTrackedAsset(address(USDC));
+        vault.addTrackedAsset(address(USDT));
+        vault.addTrackedAsset(address(PT_TOKEN_1));
+        vault.addTrackedAsset(address(PT_TOKEN_2));
+        vault.addTrackedAsset(address(PT_MARKET_1));
+        vault.addTrackedAsset(address(PT_MARKET_2));
+
+        vault.addAdapter(address(pendleAdapter));
 
         deal(address(USDC), address(vault), 10000e6);
         deal(address(USDT), address(vault), 10000e6);
@@ -116,12 +137,14 @@ contract PendleAdapterTest is Test {
     }
 
     function testSwapTokenForPtShouldFailWhenPtIsNotTracked() public {
-        vault.setTrackedAsset(address(PT_TOKEN_1), 0);
+        deal(address(PT_TOKEN_1), address(vault), 0);
+        vault.removeTrackedAsset(address(PT_TOKEN_1));
         uint256 tokenIn = 1000e6;
         uint256 minPtOut = 1000e18;
 
         vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, address(PT_TOKEN_1)));
-        vault.swapExactTokenForPt(
+        hoax(address(vault));
+        pendleAdapter.swapExactTokenForPt(
             PT_MARKET_1, _createDefaultApproxParams(), _createTokenInputSimple(address(USDC), tokenIn), minPtOut
         );
     }
@@ -132,8 +155,8 @@ contract PendleAdapterTest is Test {
         uint256 tokenIn = 1000e6;
         uint256 minPtOut = 1000e18;
 
-        vm.startPrank(USER);
-        vault.swapExactTokenForPt(
+        hoax(address(vault));
+        pendleAdapter.swapExactTokenForPt(
             PT_MARKET_1, _createDefaultApproxParams(), _createTokenInputSimple(address(USDC), tokenIn), minPtOut
         );
 
@@ -152,9 +175,9 @@ contract PendleAdapterTest is Test {
         uint256 tokenIn = 1000e6;
         uint256 minPtOut = 1000e18;
 
-        vm.startPrank(USER);
+        hoax(address(vault));
         vm.expectRevert(PendleAdapter.PendleAdapter__SlippageProtection.selector);
-        vault.swapExactTokenForPt(
+        pendleAdapter.swapExactTokenForPt(
             PT_MARKET_1, _createDefaultApproxParams(), _createTokenInputSimple(address(USDC), tokenIn), minPtOut
         );
     }
@@ -165,8 +188,8 @@ contract PendleAdapterTest is Test {
         uint256 ptIn = 1000e18;
         uint256 minTokenOut = 1000e6;
 
-        vm.startPrank(USER);
-        vault.swapExactPtForToken(PT_MARKET_1, ptIn, _createTokenOutputSimple(address(USDC), minTokenOut));
+        hoax(address(vault));
+        pendleAdapter.swapExactPtForToken(PT_MARKET_1, ptIn, _createTokenOutputSimple(address(USDC), minTokenOut));
 
         uint256 actualTokenOut = USDC.balanceOf(address(vault)) - tokenBalanceBefore;
 
@@ -183,9 +206,9 @@ contract PendleAdapterTest is Test {
         uint256 ptIn = 1000e18;
         uint256 minTokenOut = 1000e6;
 
-        vm.startPrank(USER);
+        hoax(address(vault));
         vm.expectRevert(PendleAdapter.PendleAdapter__SlippageProtection.selector);
-        vault.swapExactPtForToken(PT_MARKET_1, ptIn, _createTokenOutputSimple(address(USDC), minTokenOut));
+        pendleAdapter.swapExactPtForToken(PT_MARKET_1, ptIn, _createTokenOutputSimple(address(USDC), minTokenOut));
     }
 
     function testAddLiquiditySingleToken() public {
@@ -194,8 +217,8 @@ contract PendleAdapterTest is Test {
         uint256 lpBalanceBefore = IERC20(PT_MARKET_1).balanceOf(address(vault));
         uint256 tokenBalanceBefore = USDC.balanceOf(address(vault));
 
-        vm.startPrank(USER);
-        vault.addLiquiditySingleToken(
+        hoax(address(vault));
+        pendleAdapter.addLiquiditySingleToken(
             PT_MARKET_1, _createDefaultApproxParams(), _createTokenInputSimple(address(USDC), tokenIn), minLpOut
         );
 
@@ -214,9 +237,9 @@ contract PendleAdapterTest is Test {
         uint256 tokenIn = 1000e6;
         uint256 minLpOut = 1000e18;
 
-        vm.startPrank(USER);
+        hoax(address(vault));
         vm.expectRevert(PendleAdapter.PendleAdapter__SlippageProtection.selector);
-        vault.addLiquiditySingleToken(
+        pendleAdapter.addLiquiditySingleToken(
             PT_MARKET_1, _createDefaultApproxParams(), _createTokenInputSimple(address(USDC), tokenIn), minLpOut
         );
     }
@@ -227,8 +250,10 @@ contract PendleAdapterTest is Test {
         uint256 lpBalanceBefore = IERC20(PT_MARKET_1).balanceOf(address(vault));
         uint256 tokenBalanceBefore = USDC.balanceOf(address(vault));
 
-        vm.startPrank(USER);
-        vault.removeLiquiditySingleToken(PT_MARKET_1, lpIn, _createTokenOutputSimple(address(USDC), minTokenOut));
+        hoax(address(vault));
+        pendleAdapter.removeLiquiditySingleToken(
+            PT_MARKET_1, lpIn, _createTokenOutputSimple(address(USDC), minTokenOut)
+        );
 
         uint256 actualTokenOut = USDC.balanceOf(address(vault)) - tokenBalanceBefore;
 
@@ -245,9 +270,11 @@ contract PendleAdapterTest is Test {
         uint256 lpIn = 1000e18;
         uint256 minTokenOut = 1000e6;
 
-        vm.startPrank(USER);
+        hoax(address(vault));
         vm.expectRevert(PendleAdapter.PendleAdapter__SlippageProtection.selector);
-        vault.removeLiquiditySingleToken(PT_MARKET_1, lpIn, _createTokenOutputSimple(address(USDC), minTokenOut));
+        pendleAdapter.removeLiquiditySingleToken(
+            PT_MARKET_1, lpIn, _createTokenOutputSimple(address(USDC), minTokenOut)
+        );
     }
 
     function testRedeemPt() public {
@@ -258,8 +285,8 @@ contract PendleAdapterTest is Test {
         uint256 minTokenOut = 1000e6;
         pendleRouter.setRedeemPt(address(PT_TOKEN_1));
 
-        vm.startPrank(USER);
-        vault.redeemPt(PT_MARKET_1, ptIn, _createTokenOutputSimple(address(USDC), minTokenOut));
+        hoax(address(vault));
+        pendleAdapter.redeemPt(PT_MARKET_1, ptIn, _createTokenOutputSimple(address(USDC), minTokenOut));
 
         uint256 actualTokenOut = USDC.balanceOf(address(vault)) - tokenBalanceBefore;
 
@@ -278,15 +305,15 @@ contract PendleAdapterTest is Test {
         uint256 minTokenOut = 1000e6;
         pendleRouter.setRedeemPt(address(PT_TOKEN_1));
 
-        vm.startPrank(USER);
+        hoax(address(vault));
         vm.expectRevert(PendleAdapter.PendleAdapter__SlippageProtection.selector);
-        vault.redeemPt(PT_MARKET_1, ptIn, _createTokenOutputSimple(address(USDC), minTokenOut));
+        pendleAdapter.redeemPt(PT_MARKET_1, ptIn, _createTokenOutputSimple(address(USDC), minTokenOut));
     }
 
     function testRedeemPtShouldFailWhenMarketIsNotExpired() public {
-        vm.startPrank(USER);
+        hoax(address(vault));
         vm.expectRevert(PendleAdapter.PendleAdapter__MarketNotExpired.selector);
-        vault.redeemPt(PT_MARKET_1, 1000e18, _createTokenOutputSimple(address(USDC), 1000e6));
+        pendleAdapter.redeemPt(PT_MARKET_1, 1000e18, _createTokenOutputSimple(address(USDC), 1000e6));
     }
 
     function testRollOverPt() public {
@@ -297,8 +324,8 @@ contract PendleAdapterTest is Test {
 
         pendleRouter.addRollOverOffset(1000e6);
 
-        vm.startPrank(USER);
-        vault.rollOverPt(PT_MARKET_1, PT_MARKET_2, address(USDC), ptIn, minNetPtTokenOut);
+        hoax(address(vault));
+        pendleAdapter.rollOverPt(PT_MARKET_1, PT_MARKET_2, address(USDC), ptIn, minNetPtTokenOut);
 
         uint256 oldPtBalanceAfter = PT_TOKEN_1.balanceOf(address(vault));
         uint256 newPtBalanceAfter = PT_TOKEN_2.balanceOf(address(vault));
@@ -321,8 +348,8 @@ contract PendleAdapterTest is Test {
         pendleRouter.setRedeemPt(address(PT_TOKEN_1));
         pendleRouter.addRollOverOffset(1000e6);
 
-        vm.startPrank(USER);
-        vault.rollOverPt(PT_MARKET_1, PT_MARKET_2, address(USDC), ptIn, minNetPtTokenOut);
+        hoax(address(vault));
+        pendleAdapter.rollOverPt(PT_MARKET_1, PT_MARKET_2, address(USDC), ptIn, minNetPtTokenOut);
 
         uint256 oldPtBalanceAfter = PT_TOKEN_1.balanceOf(address(vault));
         uint256 newPtBalanceAfter = PT_TOKEN_2.balanceOf(address(vault));
@@ -342,9 +369,9 @@ contract PendleAdapterTest is Test {
         pendleRouter.addRollOverOffset(1000e6);
         pendleRouter.addOffset(1);
 
-        vm.startPrank(USER);
+        hoax(address(vault));
         vm.expectRevert(PendleAdapter.PendleAdapter__SlippageProtection.selector);
-        vault.rollOverPt(PT_MARKET_1, PT_MARKET_2, address(USDC), ptIn, minNetPtTokenOut);
+        pendleAdapter.rollOverPt(PT_MARKET_1, PT_MARKET_2, address(USDC), ptIn, minNetPtTokenOut);
     }
 
     function _createTokenInputSimple(address tokenIn, uint256 netTokenIn) private pure returns (TokenInput memory) {

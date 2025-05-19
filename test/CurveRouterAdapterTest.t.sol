@@ -8,14 +8,19 @@ import {Vm} from "lib/forge-std/src/Vm.sol";
 import {Test} from "lib/forge-std/src/Test.sol";
 import {MintableERC20} from "./mocks/MintableERC20.t.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {AdapterBase} from "../contracts/adapters/AdapterBase.sol";
 import {Asserts} from "../contracts/libraries/Asserts.sol";
 import {CurveRouterAdapter} from "../contracts/adapters/curve/CurveRouterAdapter.sol";
-import {CurveAdapterVaultMock} from "./mocks/CurveAdapterVaultMock.t.sol";
 import {CurveRouterMock} from "./mocks/CurveRouterMock.t.sol";
+import {EulerRouterMock} from "./mocks/EulerRouterMock.t.sol";
+import {LevvaVault} from "../contracts/LevvaVault.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract CurveRouterAdapterTest is Test {
-    CurveAdapterVaultMock public vault;
+    using Math for uint256;
+
+    LevvaVault public vault;
     CurveRouterMock curveRouter;
     CurveRouterAdapter public curveRouterAdapter;
 
@@ -58,16 +63,33 @@ contract CurveRouterAdapterTest is Test {
         deal(address(wstETH), address(curveRouter), 10000e18);
         deal(address(rsETH), address(curveRouter), 10000e18);
 
+        EulerRouterMock oracle = new EulerRouterMock();
+        oracle.setPrice(oracle.ONE(), address(WETH), address(USDC));
+        oracle.setPrice(oracle.ONE(), address(USDT), address(USDC));
+        oracle.setPrice(oracle.ONE(), address(USDT), address(USDC));
+        oracle.setPrice(oracle.ONE(), address(DAI), address(USDC));
+        oracle.setPrice(oracle.ONE(), address(USDE), address(USDC));
+        oracle.setPrice(oracle.ONE(), address(PENDLE), address(USDC));
+        oracle.setPrice(oracle.ONE(), address(wstETH), address(USDC));
+        oracle.setPrice(oracle.ONE(), address(rsETH), address(USDC));
+
         curveRouterAdapter = new CurveRouterAdapter(address(curveRouter));
 
-        vault = new CurveAdapterVaultMock(address(curveRouterAdapter), address(WETH));
-        vault.setTrackedAsset(address(USDC), 1);
-        vault.setTrackedAsset(address(USDT), 2);
-        vault.setTrackedAsset(address(DAI), 3);
-        vault.setTrackedAsset(address(USDE), 4);
-        vault.setTrackedAsset(address(PENDLE), 5);
-        vault.setTrackedAsset(address(wstETH), 6);
-        vault.setTrackedAsset(address(rsETH), 6);
+        LevvaVault levvaVaultImplementation = new LevvaVault();
+        bytes memory data = abi.encodeWithSelector(
+            LevvaVault.initialize.selector, USDC, "lpName", "lpSymbol", address(0xFEE), address(oracle)
+        );
+
+        vault = LevvaVault(address(new ERC1967Proxy(address(levvaVaultImplementation), data)));
+        vault.addTrackedAsset(address(USDT));
+        vault.addTrackedAsset(address(DAI));
+        vault.addTrackedAsset(address(USDE));
+        vault.addTrackedAsset(address(PENDLE));
+        vault.addTrackedAsset(address(WETH));
+        vault.addTrackedAsset(address(wstETH));
+        vault.addTrackedAsset(address(rsETH));
+
+        vault.addAdapter(address(curveRouterAdapter));
 
         deal(address(WETH), address(vault), 10000e18);
         deal(address(USDC), address(vault), 10000e6);
@@ -104,7 +126,8 @@ contract CurveRouterAdapterTest is Test {
 
         uint256 tokenInBalanceBefore = tokenIn.balanceOf(address(vault));
 
-        vault.exchange(route, swapParams, amount, minDy, pools);
+        hoax(address(vault));
+        curveRouterAdapter.exchange(route, swapParams, amount, minDy, pools);
 
         assertGe(tokenOut.balanceOf(address(vault)), minDy);
         assertEq(tokenIn.balanceOf(address(vault)), tokenInBalanceBefore - amount);
@@ -131,7 +154,8 @@ contract CurveRouterAdapterTest is Test {
 
         uint256 tokenInBalanceBefore = tokenIn.balanceOf(address(vault));
 
-        vault.exchange(route, swapParams, amount, minDy, pools);
+        hoax(address(vault));
+        curveRouterAdapter.exchange(route, swapParams, amount, minDy, pools);
 
         assertGe(tokenOut.balanceOf(address(vault)), minDy);
         assertEq(tokenIn.balanceOf(address(vault)), tokenInBalanceBefore - amount);
@@ -164,7 +188,8 @@ contract CurveRouterAdapterTest is Test {
 
         uint256 tokenInBalanceBefore = tokenIn.balanceOf(address(vault));
 
-        vault.exchange(route, swapParams, amount, minDy, pools);
+        hoax(address(vault));
+        curveRouterAdapter.exchange(route, swapParams, amount, minDy, pools);
 
         assertGe(tokenOut.balanceOf(address(vault)), minDy);
         assertEq(tokenIn.balanceOf(address(vault)), tokenInBalanceBefore - amount);
@@ -187,8 +212,8 @@ contract CurveRouterAdapterTest is Test {
         address[5] memory pools;
 
         vm.expectRevert(CurveRouterAdapter.CurveRouterAdapter__SlippageProtection.selector);
-        vault.exchange(route, swapParams, amount, minDy, pools);
-
+        hoax(address(vault));
+        curveRouterAdapter.exchange(route, swapParams, amount, minDy, pools);
     }
 
     function testExchangeShouldFailWhenZeroTokenOut() public {
@@ -201,6 +226,7 @@ contract CurveRouterAdapterTest is Test {
         address[5] memory pools;
 
         vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, address(0)));
-        vault.exchange(route, swapParams, amount, minDy, pools);
+        hoax(address(vault));
+        curveRouterAdapter.exchange(route, swapParams, amount, minDy, pools);
     }
 }

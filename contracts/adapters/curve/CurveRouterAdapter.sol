@@ -24,40 +24,52 @@ contract CurveRouterAdapter is AdapterBase {
     }
 
     ///@notice Exchange exact amount of token for another token
-    ///@dev Receiver of output token is msg.sender
-    ///@param route Array of [initial token, pool, token, pool, token, ...]
+    ///@dev Receiver of output token is msg.sender.
+    ///@dev https://docs.curve.finance/router/CurveRouterNG
+    ///@param route Array of [initial token, pool or zap, token, pool or zap, token, ...]
     ///              The array is iterated until a pool address of 0x00, then the last
     ///              given token is transferred to `_receiver`
-    ///@param swapParams Multidimensional array of [i, j, swap_type, pool_type] where
-    ///                    i is the index of input token
-    ///                    j is the index of output token
-    ///                    The swap_type should be:
-    ///                    1. for `exchange`,
-    ///                    2. for `exchange_underlying` (stable-ng metapools),
-    ///                    3. -- legacy --
-    ///                    4. for coin -> LP token "exchange" (actually `add_liquidity`),
-    ///                    5. -- legacy --
-    ///                    6. for LP token -> coin "exchange" (actually `remove_liquidity_one_coin`)
-    ///                    7. -- legacy --
-    ///                    8. for ETH <-> WETH
-    ///                    pool_type: 10 - stable-ng, 20 - twocrypto-ng, 30 - tricrypto-ng, 4 - llamma
+    ///@param swapParams Multidimensional array of [i, j, swap_type, pool_type, n_coins] where
+    ///                         i is the index of input token
+    ///                         j is the index of output token
+    ///                         For ERC4626:
+    ///                             i == 0 - asset -> share
+    ///                             i == 1 - share -> asset
+
+    ///                         The swap_type should be:
+    ///                         1. for `exchange`,
+    ///                         2. for `exchange_underlying`,
+    ///                         3. for underlying exchange via zap: factory stable metapools with lending base pool `exchange_underlying`
+    ///                            and factory crypto-meta pools underlying exchange (`exchange` method in zap)
+    ///                         4. for coin -> LP token "exchange" (actually `add_liquidity`),
+    ///                         5. for lending pool underlying coin -> LP token "exchange" (actually `add_liquidity`),
+    ///                         6. for LP token -> coin "exchange" (actually `remove_liquidity_one_coin`)
+    ///                         7. for LP token -> lending or fake pool underlying coin "exchange" (actually `remove_liquidity_one_coin`)
+    ///                         8. for ETH <-> WETH, ETH -> stETH or ETH -> frxETH, stETH <-> wstETH, ETH -> wBETH
+    ///                         9. for ERC4626 asset <-> share
+
+    ///                         pool_type: 1 - stable, 2 - twocrypto, 3 - tricrypto, 4 - llamma
+    ///                                    10 - stable-ng, 20 - twocrypto-ng, 30 - tricrypto-ng
+
+    ///                         n_coins is the number of coins in pool
     ///@param amount The amount of input token (`_route[0]`) to be sent.
     ///@param minDy The minimum amount received after the final swap.
-    ///@param pools Array of pools for swaps via zap contracts. This parameter is only needed for swap_type = 3.
+    //@param pools Array of pools for swaps via zap contracts. This parameter is only needed for swap_type = 3.
+    ///@return amountOut Received amount of the final output token.
     function exchange(
-        address[11] memory route,
-        uint256[5][5] memory swapParams,
+        address[11] calldata route,
+        uint256[5][5] calldata swapParams,
         uint256 amount,
         uint256 minDy,
-        address[5] memory pools
+        address[5] calldata pools
     ) external returns (uint256 amountOut) {
         address tokenIn = route[0];
         address tokenOut = route[10]; // assume last token is output token
         if (tokenOut == address(0)) {
             unchecked {
-                for (uint256 i = 3; i < 11; ++i) {
+                for (uint256 i = 4; i <= 10; i += 2) {
                     if (route[i] == address(0)) {
-                        tokenOut = route[i - 1];
+                        tokenOut = route[i - 2];
                         break;
                     }
                 }
