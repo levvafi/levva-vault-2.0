@@ -54,7 +54,7 @@ contract CurveRouterAdapter is AdapterBase {
     ///                         n_coins is the number of coins in pool
     ///@param amount The amount of input token (`_route[0]`) to be sent.
     ///@param minDy The minimum amount received after the final swap.
-    //@param pools Array of pools for swaps via zap contracts. This parameter is only needed for swap_type = 3.
+    ///@param pools Array of pools for swaps via zap contracts. This parameter is only needed for swap_type = 3.
     ///@return amountOut Received amount of the final output token.
     function exchange(
         address[11] calldata route,

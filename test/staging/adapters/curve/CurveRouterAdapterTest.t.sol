@@ -4,7 +4,6 @@ pragma solidity ^0.8.28;
 import {Test} from "lib/forge-std/src/Test.sol";
 import {Vm} from "lib/forge-std/src/Vm.sol";
 import {console} from "lib/forge-std/src/console.sol";
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -12,14 +11,11 @@ import {CurveRouterAdapter} from "../../../../contracts/adapters/curve/CurveRout
 import {ICurveRouterNg} from "../../../../contracts/adapters/curve/ICurveRouterNg.sol";
 import {EulerRouterMock} from "../../../mocks/EulerRouterMock.t.sol";
 import {LevvaVault} from "../../../../contracts/LevvaVault.sol";
-
 interface IWSTEHT {
     function unwrap(uint256 _wstETHAmount) external returns (uint256);
 }
 
 contract CurveRouterAdapterTest is Test {
-    using Math for uint256;
-
     address internal constant CURVE_ROUTER = 0x16C6521Dff6baB339122a0FE25a9116693265353;
 
     IERC20 private USDC = IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
