@@ -21,6 +21,8 @@ import {EulerRouterMock} from "../mocks/EulerRouterMock.t.sol";
 contract UniswapAdapterTest is Test {
     using Math for uint256;
 
+    uint256 public constant FORK_BLOCK = 22515980;
+
     address private constant UNISWAP_V3_ROUTER = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
     address private constant UNISWAP_UNIVERSAL_ROUTER = 0x66a9893cC07D91D95644AEDD05D03f95e1dBA8Af;
     address private constant PERMIT2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
@@ -34,7 +36,7 @@ contract UniswapAdapterTest is Test {
     LevvaVault private levvaVault;
 
     function setUp() public {
-        vm.createSelectFork(vm.rpcUrl(mainnetRpcUrl));
+        vm.createSelectFork(vm.rpcUrl(mainnetRpcUrl), FORK_BLOCK);
 
         EulerRouterMock oracle = new EulerRouterMock();
         oracle.setPrice(oracle.ONE().mulDiv(100_000, 10 ** 2), address(WBTC), address(USDC));
@@ -72,6 +74,9 @@ contract UniswapAdapterTest is Test {
         uint256 usdcBalanceAfter = USDC.balanceOf(address(levvaVault));
         assertEq(usdcBalanceBefore - usdcBalanceAfter, amountIn);
         assertGt(WBTC.balanceOf(address(levvaVault)), 0);
+
+        assertEq(WBTC.balanceOf(address(adapter)), 0);
+        assertEq(USDC.balanceOf(address(adapter)), 0);
     }
 
     function testSwapExactInputV3NotTrackedAsset() public {
@@ -131,6 +136,9 @@ contract UniswapAdapterTest is Test {
         uint256 usdcBalanceAfter = USDC.balanceOf(address(levvaVault));
         assertGt(usdcBalanceBefore, usdcBalanceAfter);
         assertEq(WBTC.balanceOf(address(levvaVault)), amountOut);
+
+        assertEq(WBTC.balanceOf(address(adapter)), 0);
+        assertEq(USDC.balanceOf(address(adapter)), 0);
     }
 
     function testSwapExactOutputV3NotTrackedAsset() public {
@@ -196,6 +204,9 @@ contract UniswapAdapterTest is Test {
         uint256 usdcBalanceAfter = USDC.balanceOf(address(levvaVault));
         assertEq(usdcBalanceBefore - usdcBalanceAfter, amountIn);
         assertGt(WBTC.balanceOf(address(levvaVault)), 0);
+
+        assertEq(WBTC.balanceOf(address(adapter)), 0);
+        assertEq(USDC.balanceOf(address(adapter)), 0);
     }
 
     function testSwapExactInputV4NotTrackedAsset() public {
@@ -249,6 +260,9 @@ contract UniswapAdapterTest is Test {
         assertGt(usdcBalanceBefore, usdcBalanceAfter);
         assertNotEq(usdcBalanceAfter, 0);
         assertEq(WBTC.balanceOf(address(levvaVault)), amountOut);
+
+        assertEq(WBTC.balanceOf(address(adapter)), 0);
+        assertEq(USDC.balanceOf(address(adapter)), 0);
     }
 
     function testSwapExactOutputV4NotTrackedAsset() public {

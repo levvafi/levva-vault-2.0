@@ -37,7 +37,7 @@ abstract contract AbstractUniswapV4Adapter is AdapterBase {
         IAdapterCallback(msg.sender).adapterCallback(address(this), inputToken, params.amountIn);
 
         IUniversalRouter _universalRouter = universalRouter;
-        _permit2Approve(inputToken, address(universalRouter), params.amountIn);
+        _permit2Approve(inputToken, address(_universalRouter), params.amountIn);
 
         _universalRouter.execute(_getSwapCommandByteArray(), _getExecuteInputs(params), block.timestamp);
         _sendTokenToVault(outputToken);
@@ -51,9 +51,9 @@ abstract contract AbstractUniswapV4Adapter is AdapterBase {
         IAdapterCallback(msg.sender).adapterCallback(address(this), inputToken, params.amountInMaximum);
 
         IUniversalRouter _universalRouter = universalRouter;
-        _permit2Approve(inputToken, address(universalRouter), params.amountInMaximum);
+        _permit2Approve(inputToken, address(_universalRouter), params.amountInMaximum);
 
-        universalRouter.execute(_getSwapCommandByteArray(), _getExecuteInputs(params), block.timestamp);
+        _universalRouter.execute(_getSwapCommandByteArray(), _getExecuteInputs(params), block.timestamp);
         IERC20(inputToken).forceApprove(address(_universalRouter), 0);
 
         _sendTokenToVault(inputToken);
