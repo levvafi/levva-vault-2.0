@@ -29,7 +29,7 @@ abstract contract AbstractUniswapV4Adapter is AdapterBase {
         permit2 = IAllowanceTransfer(_permit2);
     }
 
-    function swapExactInputV4(IV4Router.ExactInputParams calldata params) external {
+    function swapExactInputV4(IV4Router.ExactInputParams calldata params) external returns (uint256 amountOut) {
         address outputToken = Currency.unwrap(params.path[params.path.length - 1].intermediateCurrency);
         _ensureIsValidAsset(outputToken);
 
@@ -40,10 +40,10 @@ abstract contract AbstractUniswapV4Adapter is AdapterBase {
         _permit2Approve(inputToken, address(_universalRouter), params.amountIn);
 
         _universalRouter.execute(_getSwapCommandByteArray(), _getExecuteInputs(params), block.timestamp);
-        _sendTokenToVault(outputToken);
+        return _sendTokenToVault(outputToken);
     }
 
-    function swapExactOutputV4(IV4Router.ExactOutputParams calldata params) external {
+    function swapExactOutputV4(IV4Router.ExactOutputParams calldata params) external returns (uint256 amountIn) {
         address outputToken = Currency.unwrap(params.currencyOut);
         _ensureIsValidAsset(outputToken);
 
@@ -56,7 +56,7 @@ abstract contract AbstractUniswapV4Adapter is AdapterBase {
         _universalRouter.execute(_getSwapCommandByteArray(), _getExecuteInputs(params), block.timestamp);
         IERC20(inputToken).forceApprove(address(_universalRouter), 0);
 
-        _sendTokenToVault(inputToken);
+        amountIn = params.amountInMaximum - _sendTokenToVault(inputToken);
         _sendTokenToVault(outputToken);
     }
 
@@ -66,9 +66,9 @@ abstract contract AbstractUniswapV4Adapter is AdapterBase {
         _permit2.approve(token, spender, uint160(amount), uint48(block.timestamp));
     }
 
-    function _sendTokenToVault(address token) private {
-        uint256 balance = IERC20(token).balanceOf(address(this));
-        IERC20(token).safeTransfer(msg.sender, balance);
+    function _sendTokenToVault(address token) private returns (uint256 sent) {
+        sent = IERC20(token).balanceOf(address(this));
+        IERC20(token).safeTransfer(msg.sender, sent);
     }
 
     function _getSwapCommandByteArray() private pure returns (bytes memory) {

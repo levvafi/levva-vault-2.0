@@ -22,7 +22,7 @@ abstract contract AbstractUniswapV3Adapter is AdapterBase {
         uniswapV3Router = ISwapRouter(_router);
     }
 
-    function swapExactInputV3(ISwapRouter.ExactInputParams calldata params) external {
+    function swapExactInputV3(ISwapRouter.ExactInputParams calldata params) external returns (uint256 amountOut) {
         if (params.recipient != msg.sender) revert WrongRecipient(msg.sender, params.recipient);
 
         (address inputToken, address outputToken) = decodeTokens(params.path);
@@ -31,10 +31,10 @@ abstract contract AbstractUniswapV3Adapter is AdapterBase {
         IAdapterCallback(msg.sender).adapterCallback(address(this), inputToken, params.amountIn);
         ISwapRouter _uniswapV3Router = uniswapV3Router;
         IERC20(inputToken).forceApprove(address(_uniswapV3Router), params.amountIn);
-        _uniswapV3Router.exactInput(params);
+        amountOut = _uniswapV3Router.exactInput(params);
     }
 
-    function swapExactOutputV3(ISwapRouter.ExactOutputParams calldata params) external {
+    function swapExactOutputV3(ISwapRouter.ExactOutputParams calldata params) external returns (uint256 amountIn) {
         if (params.recipient != msg.sender) revert WrongRecipient(msg.sender, params.recipient);
 
         (address outputToken, address inputToken) = decodeTokens(params.path);
@@ -44,9 +44,11 @@ abstract contract AbstractUniswapV3Adapter is AdapterBase {
 
         ISwapRouter _uniswapV3Router = uniswapV3Router;
         IERC20(inputToken).forceApprove(address(_uniswapV3Router), params.amountInMaximum);
-        _uniswapV3Router.exactOutput(params);
-        IERC20(inputToken).forceApprove(address(_uniswapV3Router), 0);
-        IERC20(inputToken).safeTransfer(msg.sender, IERC20(inputToken).balanceOf(address(this)));
+        amountIn = _uniswapV3Router.exactOutput(params);
+        if (amountIn < params.amountInMaximum - amountIn) {
+            IERC20(inputToken).forceApprove(address(_uniswapV3Router), 0);
+            IERC20(inputToken).safeTransfer(msg.sender, params.amountInMaximum - amountIn);
+        }
     }
 
     function decodeTokens(bytes memory path) private pure returns (address firstToken, address lastToken) {
