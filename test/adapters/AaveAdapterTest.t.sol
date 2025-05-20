@@ -36,6 +36,9 @@ contract AaveAdapterTest is Test {
         aUsdt = IERC20(IPool(AAVE_POOL_PROVIDER.getPool()).getReserveData(address(USDT)).aTokenAddress);
 
         EulerRouterMock oracle = new EulerRouterMock();
+        oracle.setPrice(oracle.ONE(), address(USDT), address(USDC));
+        oracle.setPrice(oracle.ONE(), address(aUsdc), address(USDC));
+        oracle.setPrice(oracle.ONE(), address(aUsdt), address(USDC));
 
         LevvaVault levvaVaultImplementation = new LevvaVault();
         bytes memory data = abi.encodeWithSelector(
@@ -47,8 +50,11 @@ contract AaveAdapterTest is Test {
         levvaVault.addAdapter(address(adapter));
         assertEq(levvaVault.externalPositionAdapterPosition(address(adapter)), 0);
 
-        deal(address(USDC), address(levvaVault), 10 ** 18);
-        deal(address(USDT), address(levvaVault), 10 ** 18);
+        deal(address(USDC), address(levvaVault), 10 ** 12);
+        deal(address(USDT), address(levvaVault), 10 ** 12);
+
+        levvaVault.addTrackedAsset(address(USDT));
+        levvaVault.addTrackedAsset(address(aUsdc));
     }
 
     function testSupply() public {
@@ -61,6 +67,14 @@ contract AaveAdapterTest is Test {
         assertApproxEqAbs(aUsdc.balanceOf(address(levvaVault)), supplyAmount, 1);
         assertEq(aUsdc.balanceOf(address(adapter)), 0);
         assertEq(USDC.balanceOf(address(adapter)), 0);
+    }
+
+    function testSupplyNotTrackedAsset() public {
+        uint256 supplyAmount = 1000 * 10 ** 6;
+
+        vm.prank(address(levvaVault));
+        vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, aUsdt));
+        adapter.supply(address(USDT), supplyAmount);
     }
 
     function testFullWithdraw() public {
@@ -95,5 +109,19 @@ contract AaveAdapterTest is Test {
         assertApproxEqAbs(aUsdc.balanceOf(address(levvaVault)), aTokenBalanceBefore - withdrawalAmount, 1);
         assertEq(aUsdc.balanceOf(address(adapter)), 0);
         assertEq(USDC.balanceOf(address(adapter)), 0);
+    }
+
+    function testWithdrawNotTrackedAsset() public {
+        levvaVault.addTrackedAsset(address(aUsdt));
+
+        uint256 supplyAmount = USDT.balanceOf(address(levvaVault));
+        vm.prank(address(levvaVault));
+        adapter.supply(address(USDT), supplyAmount);
+
+        levvaVault.removeTrackedAsset(address(USDT));
+
+        vm.prank(address(levvaVault));
+        vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, USDT));
+        adapter.withdraw(address(USDT), type(uint256).max);
     }
 }

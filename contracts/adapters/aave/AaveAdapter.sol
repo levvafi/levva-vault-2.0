@@ -20,6 +20,7 @@ contract AaveAdapter is AdapterBase {
     bytes4 public constant getAdapterId = bytes4(keccak256("AaveAdapter"));
 
     IPoolAddressesProvider public immutable aavePoolAddressProvider;
+
     constructor(address _aavePoolAddressProvider) {
         _aavePoolAddressProvider.assertNotZeroAddress();
         aavePoolAddressProvider = IPoolAddressesProvider(_aavePoolAddressProvider);
@@ -28,15 +29,20 @@ contract AaveAdapter is AdapterBase {
     function supply(address asset, uint256 amount) external {
         IPool aavePool = IPool(aavePoolAddressProvider.getPool());
 
+        address aToken = _getAToken(aavePool, asset);
+        _ensureIsValidAsset(aToken);
+
         IAdapterCallback(msg.sender).adapterCallback(address(this), asset, amount);
         IERC20(asset).forceApprove(address(aavePool), amount);
         aavePool.supply(asset, amount, msg.sender, 0);
     }
 
     function withdraw(address asset, uint256 amount) external {
-        IPool aavePool = IPool(aavePoolAddressProvider.getPool());
+        _ensureIsValidAsset(asset);
 
+        IPool aavePool = IPool(aavePoolAddressProvider.getPool());
         address aToken = _getAToken(aavePool, asset);
+
         uint256 toTransfer = amount == type(uint256).max ? IERC20(aToken).balanceOf(msg.sender) : amount;
         IAdapterCallback(msg.sender).adapterCallback(address(this), aToken, toTransfer);
         IERC20(asset).forceApprove(aToken, toTransfer);
