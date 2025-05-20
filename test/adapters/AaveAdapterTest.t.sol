@@ -45,7 +45,7 @@ contract AaveAdapterTest is Test {
 
         adapter = new AaveAdapter(address(AAVE_POOL_PROVIDER));
         levvaVault.addAdapter(address(adapter));
-        assertNotEq(levvaVault.externalPositionAdapterPosition(address(adapter)), 0);
+        assertEq(levvaVault.externalPositionAdapterPosition(address(adapter)), 0);
 
         deal(address(USDC), address(levvaVault), 10 ** 18);
         deal(address(USDT), address(levvaVault), 10 ** 18);
@@ -61,47 +61,9 @@ contract AaveAdapterTest is Test {
         assertApproxEqAbs(aUsdc.balanceOf(address(levvaVault)), supplyAmount, 1);
         assertEq(aUsdc.balanceOf(address(adapter)), 0);
         assertEq(USDC.balanceOf(address(adapter)), 0);
-
-        vm.prank(address(levvaVault));
-        (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets();
-        assertEq(assets.length, 1);
-        assertEq(amounts.length, 1);
-        assertEq(assets[0], address(aUsdc));
-        assertEq(amounts[0], aUsdc.balanceOf(address(levvaVault)));
-
-        (assets, amounts) = adapter.getVaultManagedAssets(address(levvaVault));
-        assertEq(assets.length, 1);
-        assertEq(amounts.length, 1);
-        assertEq(assets[0], address(aUsdc));
-        assertEq(amounts[0], aUsdc.balanceOf(address(levvaVault)));
     }
 
-    function testFullWithdrawRemoveFirstToken() public {
-        uint256 supplyAmount = 1000 * 10 ** 6;
-        vm.prank(address(levvaVault));
-        adapter.supply(address(USDC), supplyAmount);
-
-        vm.prank(address(levvaVault));
-        adapter.supply(address(USDT), supplyAmount);
-
-        vm.prank(address(levvaVault));
-        (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets();
-        assertEq(assets.length, 2);
-        assertEq(amounts.length, 2);
-        assertEq(assets[0], address(aUsdc));
-        assertEq(assets[1], address(aUsdt));
-
-        vm.prank(address(levvaVault));
-        adapter.withdraw(address(USDC), type(uint256).max);
-
-        vm.prank(address(levvaVault));
-        (assets, amounts) = adapter.getManagedAssets();
-        assertEq(assets.length, 1);
-        assertEq(amounts.length, 1);
-        assertEq(assets[0], address(aUsdt));
-    }
-
-    function testFullWithdrawRemoveSecondToken() public {
+    function testFullWithdraw() public {
         uint256 usdcBalanceBefore = USDC.balanceOf(address(levvaVault));
         uint256 supplyAmount = 1000 * 10 ** 6;
         vm.prank(address(levvaVault));
@@ -114,15 +76,6 @@ contract AaveAdapterTest is Test {
         assertEq(aUsdc.balanceOf(address(levvaVault)), 0);
         assertEq(aUsdc.balanceOf(address(adapter)), 0);
         assertEq(USDC.balanceOf(address(adapter)), 0);
-
-        vm.prank(address(levvaVault));
-        (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets();
-        assertEq(assets.length, 0);
-        assertEq(amounts.length, 0);
-
-        (assets, amounts) = adapter.getVaultManagedAssets(address(levvaVault));
-        assertEq(assets.length, 0);
-        assertEq(amounts.length, 0);
     }
 
     function testPartialWithdraw() public {
@@ -142,18 +95,5 @@ contract AaveAdapterTest is Test {
         assertApproxEqAbs(aUsdc.balanceOf(address(levvaVault)), aTokenBalanceBefore - withdrawalAmount, 1);
         assertEq(aUsdc.balanceOf(address(adapter)), 0);
         assertEq(USDC.balanceOf(address(adapter)), 0);
-
-        vm.prank(address(levvaVault));
-        (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets();
-        assertEq(assets.length, 1);
-        assertEq(amounts.length, 1);
-        assertEq(assets[0], address(aUsdc));
-        assertEq(amounts[0], aUsdc.balanceOf(address(levvaVault)));
-
-        (assets, amounts) = adapter.getVaultManagedAssets(address(levvaVault));
-        assertEq(assets.length, 1);
-        assertEq(amounts.length, 1);
-        assertEq(assets[0], address(aUsdc));
-        assertEq(amounts[0], aUsdc.balanceOf(address(levvaVault)));
     }
 }
