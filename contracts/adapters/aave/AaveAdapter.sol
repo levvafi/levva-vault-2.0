@@ -3,9 +3,9 @@ pragma solidity 0.8.28;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {WadRayMath} from "@aave/core-v3/contracts/protocol/libraries/math/WadRayMath.sol";
 import {IPool} from "@aave/core-v3/contracts/interfaces/IPool.sol";
 import {IPoolAddressesProvider} from "@aave/core-v3/contracts/interfaces/IPoolAddressesProvider.sol";
+import {IScaledBalanceToken} from "@aave/core-v3/contracts/interfaces/IScaledBalanceToken.sol";
 
 import {IAdapterCallback} from "../../interfaces/IAdapterCallback.sol";
 import {Asserts} from "../../libraries/Asserts.sol";
@@ -16,79 +16,99 @@ import {AdapterBase} from "../AdapterBase.sol";
 contract AaveAdapter is AdapterBase, IExternalPositionAdapter {
     using SafeERC20 for IERC20;
     using Asserts for address;
-    using WadRayMath for uint256;
 
     bytes4 public constant getAdapterId = bytes4(keccak256("AaveAdapter"));
 
     IPoolAddressesProvider public immutable aavePoolAddressProvider;
     mapping(address vault => mapping(address aToken => uint256)) vaultATokenPosition;
     mapping(address vault => address[]) vaultATokens;
-    mapping(address vault => uint256[]) vaultATokenAmounts;
 
     constructor(address _aavePoolAddressProvider) {
         _aavePoolAddressProvider.assertNotZeroAddress();
         aavePoolAddressProvider = IPoolAddressesProvider(_aavePoolAddressProvider);
     }
 
-    function supply(address asset, uint256 supplyTokenAmount) external {
+    function supply(address asset, uint256 amount) external {
         IPool aavePool = IPool(aavePoolAddressProvider.getPool());
 
-        IERC20(asset).forceApprove(address(aavePool), supplyTokenAmount);
-        aavePool.supply(asset, supplyTokenAmount, msg.sender, 0);
+        IAdapterCallback(msg.sender).adapterCallback(address(this), asset, amount);
+        IERC20(asset).forceApprove(address(aavePool), amount);
+        aavePool.supply(asset, amount, msg.sender, 0);
 
-        _increaseATokenAmount(_getAToken(aavePool, asset), supplyTokenAmount);
+        _addAToken(_getAToken(aavePool, asset));
     }
 
-    function withdraw(address asset, uint256 aTokenAmount) external {
+    function withdraw(address asset, uint256 amount) external {
         IPool aavePool = IPool(aavePoolAddressProvider.getPool());
-        aavePool.withdraw(asset, aTokenAmount, msg.sender);
-        _decreaseATokenAmount(_getAToken(aavePool, asset), aTokenAmount);
+
+        address aToken = _getAToken(aavePool, asset);
+        uint256 toTransfer = amount == type(uint256).max ? IERC20(aToken).balanceOf(msg.sender) : amount;
+        IAdapterCallback(msg.sender).adapterCallback(address(this), aToken, toTransfer);
+        IERC20(asset).forceApprove(aToken, toTransfer);
+
+        aavePool.withdraw(asset, amount, msg.sender);
+
+        _removeAToken(_getAToken(aavePool, asset));
     }
 
     /// @inheritdoc IExternalPositionAdapter
     function getManagedAssets() external view returns (address[] memory assets, uint256[] memory amounts) {
-        assets = vaultATokens[msg.sender];
-        amounts = vaultATokenAmounts[msg.sender];
+        return _getVaultManagedAssets(msg.sender);
+    }
+
+    function getVaultManagedAssets(address vault)
+        external
+        view
+        returns (address[] memory assets, uint256[] memory amounts)
+    {
+        return _getVaultManagedAssets(vault);
     }
 
     /// @inheritdoc IExternalPositionAdapter
     /// @dev no debt functionality
     function getDebtAssets() external pure returns (address[] memory assets, uint256[] memory amounts) {}
 
-    function _increaseATokenAmount(address aToken, uint256 delta) private {
-        uint256 aTokenPosition = vaultATokenPosition[msg.sender][aToken];
-        if (aTokenPosition == 0) {
-            vaultATokens[msg.sender].push(aToken);
-            vaultATokenAmounts[msg.sender].push(delta);
-            vaultATokenPosition[msg.sender][aToken] = vaultATokens[msg.sender].length;
-            return;
-        }
-
-        vaultATokenAmounts[msg.sender][aTokenPosition - 1] += delta;
+    function supportsInterface(bytes4 interfaceId) public pure override returns (bool) {
+        return type(IExternalPositionAdapter).interfaceId == interfaceId || super.supportsInterface(interfaceId);
     }
 
-    function _decreaseATokenAmount(address aToken, uint256 delta) private {
+    function _addAToken(address aToken) private {
         uint256 aTokenPosition = vaultATokenPosition[msg.sender][aToken];
-        if (aTokenPosition == 0) revert();
+        if (aTokenPosition != 0) return;
 
-        uint256 aTokenIndex = aTokenPosition - 1;
-        uint256 currentAmount = vaultATokenAmounts[msg.sender][aTokenIndex];
+        vaultATokens[msg.sender].push(aToken);
+        vaultATokenPosition[msg.sender][aToken] = vaultATokens[msg.sender].length;
+    }
 
-        if (currentAmount != delta) {
-            uint256 aTokensLastIndex = vaultATokens[msg.sender].length - 1;
-            if (aTokenIndex != aTokensLastIndex) {
-                vaultATokens[msg.sender][aTokenIndex] = vaultATokens[msg.sender][aTokensLastIndex];
-                vaultATokenAmounts[msg.sender][aTokenIndex] = vaultATokenAmounts[msg.sender][aTokensLastIndex];
-            }
+    function _removeAToken(address aToken) private {
+        if (IScaledBalanceToken(aToken).scaledBalanceOf(msg.sender) != 0) return;
 
-            delete vaultATokens[msg.sender][aTokensLastIndex];
-            delete vaultATokenAmounts[msg.sender][aTokensLastIndex];
-        } else {
-            vaultATokenAmounts[msg.sender][aTokenIndex] = currentAmount - delta;
+        uint256 aTokenIndex = vaultATokenPosition[msg.sender][aToken] - 1;
+        uint256 aTokensLastIndex = vaultATokens[msg.sender].length - 1;
+        if (aTokenIndex != aTokensLastIndex) {
+            vaultATokens[msg.sender][aTokenIndex] = vaultATokens[msg.sender][aTokensLastIndex];
         }
+
+        vaultATokens[msg.sender].pop();
     }
 
     function _getAToken(IPool pool, address asset) private view returns (address) {
         return pool.getReserveData(asset).aTokenAddress;
+    }
+
+    function _getVaultManagedAssets(address vault)
+        private
+        view
+        returns (address[] memory assets, uint256[] memory amounts)
+    {
+        assets = vaultATokens[vault];
+        uint256 assetsLength = assets.length;
+        amounts = new uint256[](assetsLength);
+
+        unchecked {
+            for (uint256 i; i < assetsLength; ++i) {
+                amounts[i] = IERC20(assets[i]).balanceOf(vault);
+            }
+        }
     }
 }
