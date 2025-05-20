@@ -9,6 +9,7 @@
     "lint": "forge fmt && prettier --write ./test hardhat.config.ts"
   },
   "devDependencies": {
+    "@aave/core-v3": "^1.19.3",
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.7",
     "@nomicfoundation/hardhat-ethers": "^3.0.0",
     "@nomicfoundation/hardhat-foundry": "^1.1.3",
