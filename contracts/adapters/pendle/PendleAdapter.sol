@@ -12,6 +12,8 @@ import {
     TokenOutput
 } from "@pendle/core-v2/contracts/interfaces/IPAllActionTypeV3.sol";
 
+import {IPSwapAggregator, SwapDataExtra} from "@pendle/core-v2/contracts/router/swap-aggregator/IPSwapAggregator.sol";
+
 import {IPMarket} from "@pendle/core-v2/contracts/interfaces/IPMarket.sol";
 import {IPPrincipalToken} from "@pendle/core-v2/contracts/interfaces/IPPrincipalToken.sol";
 import {IPYieldToken} from "@pendle/core-v2/contracts/interfaces/IPYieldToken.sol";
@@ -232,6 +234,32 @@ contract PendleAdapter is AdapterBase {
         if (netPtOut < minNewPtOut) {
             revert PendleAdapter__SlippageProtection();
         }
+    }
+
+    /// @notice Swap token to token. Not supported PT,YT, LP
+    /// @param pendleSwap Address of pendleSwapAggregator
+    /// @param swap swap data
+    /// @param netSwap swap amount
+    function swapTokenToToken(IPSwapAggregator pendleSwap, SwapDataExtra calldata swap, uint256 netSwap) external {
+        _ensureIsValidAsset(address(swap.tokenOut));
+
+        SwapDataExtra[] memory swaps = new SwapDataExtra[](1);
+        swaps[0] = swap;
+
+        uint256[] memory netSwaps = new uint256[](1);
+        netSwaps[0] = netSwap;
+
+        address pendleRouter = s_pendleRouter;
+
+        IAdapterCallback(msg.sender).adapterCallback(address(this), swap.tokenIn, netSwap);
+        IERC20(swap.tokenIn).forceApprove(pendleRouter, netSwap);
+
+        (uint256[] memory netOut) = IPAllActionV3(pendleRouter).swapTokensToTokens(pendleSwap, swaps, netSwaps);
+        if (netOut[0] < swap.minOut) {
+            revert PendleAdapter__SlippageProtection();
+        }
+
+        IERC20(swap.tokenOut).safeTransfer(msg.sender, netOut[0]);
     }
 
     /// @dev Creates default ApproxParams for on-chain approximation

@@ -13,6 +13,7 @@ import {
     SwapData,
     TokenOutput
 } from "@pendle/core-v2/contracts/interfaces/IPAllActionTypeV3.sol";
+import {IPSwapAggregator, SwapDataExtra} from "@pendle/core-v2/contracts/router/swap-aggregator/IPSwapAggregator.sol";
 
 /// @dev Mintable ERC20 token.
 contract PendleRouterMock {
@@ -99,5 +100,18 @@ contract PendleRouterMock {
         IERC20(s_redeemPt).transferFrom(msg.sender, address(this), ptIn);
         IERC20(output.tokenOut).transfer(receiver, tokenOut);
         return (tokenOut, 0);
+    }
+
+    function swapTokensToTokens(
+        IPSwapAggregator, /*pendleSwap*/
+        SwapDataExtra[] calldata swaps,
+        uint256[] calldata netSwaps
+    ) external payable returns (uint256[] memory netOutFromSwaps) {
+        uint256 netOut = swaps[0].minOut - s_offset;
+        netOutFromSwaps = new uint256[](1);
+        netOutFromSwaps[0] = netOut;
+
+        IERC20(swaps[0].tokenIn).transferFrom(msg.sender, address(this), netSwaps[0]);
+        IERC20(swaps[0].tokenOut).transfer(msg.sender, netOut);
     }
 }
