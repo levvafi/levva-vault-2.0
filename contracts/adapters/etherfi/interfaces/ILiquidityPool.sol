@@ -11,4 +11,6 @@ interface ILiquidityPool {
     function withdrawRequestNFT() external view returns (address);
 
     function eETH() external view returns (address);
+
+    function getTotalPooledEther() external view returns (uint256);
 }
