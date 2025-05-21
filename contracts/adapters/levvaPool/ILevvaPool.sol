@@ -26,6 +26,18 @@ interface ILevvaPool {
         Long
     }
 
+    /// @dev Accrue interest doesn't happen in emergency mode.
+    /// @notice System mode. By default Regular, otherwise ShortEmergency/LongEmergency
+    enum Mode {
+        Regular,
+        /// Short positions collateral does not cover debt. All short positions get liquidated
+        /// Long and lend positions should use emergencyWithdraw() to get back their tokens
+        ShortEmergency,
+        /// Long positions collateral does not enough to cover debt. All long positions get liquidated
+        /// Short and lend positions should use emergencyWithdraw() to get back their tokens
+        LongEmergency
+    }
+
     struct Position {
         /// @dev Type of a given position
         PositionType _type;
@@ -110,4 +122,6 @@ interface ILevvaPool {
     function getBasePrice() external view returns (FixedPoint memory);
 
     function defaultSwapCallData() external view returns (uint32);
+
+    function mode() external view returns (Mode);
 }

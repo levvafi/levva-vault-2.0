@@ -10,7 +10,7 @@ abstract contract AdapterBase is IERC165, IAdapter {
 
     /// @notice Implementation of ERC165, supports IAdapter and IERC165
     /// @param interfaceId interface identifier
-    function supportsInterface(bytes4 interfaceId) external pure returns (bool) {
+    function supportsInterface(bytes4 interfaceId) public pure virtual returns (bool) {
         return interfaceId == type(IAdapter).interfaceId || interfaceId == type(IERC165).interfaceId;
     }
 
