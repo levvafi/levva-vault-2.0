@@ -4,8 +4,8 @@ pragma solidity 0.8.28;
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {IERC20} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ERC721Holder} from "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 
 import {IAdapterCallback} from "../../interfaces/IAdapterCallback.sol";
 import {IWETH9} from "../../interfaces/IWETH9.sol";
@@ -14,7 +14,8 @@ import {AdapterBase} from "../AdapterBase.sol";
 import {ILiquidityPool} from "./interfaces/ILiquidityPool.sol";
 import {IWithdrawRequestNFT} from "./interfaces/IWithdrawRequestNFT.sol";
 
-abstract contract EtherfiEthAdapter is AdapterBase {
+abstract contract AbstractEtherfiEthAdapter is AdapterBase, ERC721Holder {
+    using SafeERC20 for IERC20;
     using SafeERC20 for IWETH9;
     using Asserts for address;
 
@@ -42,15 +43,19 @@ abstract contract EtherfiEthAdapter is AdapterBase {
         liquidityPool = ILiquidityPool(_liquidityPool);
     }
 
+    receive() external payable {}
+
     function deposit(uint256 amount) external returns (uint256 output) {
         ILiquidityPool _liquidityPool = liquidityPool;
-        _ensureIsValidAsset(_liquidityPool.eETH());
+        address eETH = _liquidityPool.eETH();
+        _ensureIsValidAsset(eETH);
 
         IWETH9 _weth = weth;
         IAdapterCallback(msg.sender).adapterCallback(address(this), address(_weth), amount);
         _weth.withdraw(amount);
 
         output = _liquidityPool.deposit{value: amount}();
+        IERC20(eETH).safeTransfer(msg.sender, amount);
     }
 
     function requestWithdraw(uint256 amount) external returns (uint256 requestId) {
@@ -59,7 +64,7 @@ abstract contract EtherfiEthAdapter is AdapterBase {
 
         IAdapterCallback(msg.sender).adapterCallback(address(this), address(eETH), amount);
 
-        eETH.approve(address(_liquidityPool), amount);
+        eETH.forceApprove(address(_liquidityPool), amount);
         requestId = _liquidityPool.requestWithdraw(address(this), amount);
         _enqueueWithdrawalRequest(requestId, amount);
     }
@@ -76,11 +81,10 @@ abstract contract EtherfiEthAdapter is AdapterBase {
         }
 
         withdrawRequestNFT.claimWithdraw(request.requestId);
+        withdrawn = address(this).balance;
 
-        _weth.deposit{value: request.amount}();
-        _weth.safeTransfer(msg.sender, request.amount);
-
-        return request.amount;
+        _weth.deposit{value: withdrawn}();
+        _weth.safeTransfer(msg.sender, withdrawn);
     }
 
     function _enqueueWithdrawalRequest(uint256 requestId, uint256 amount) private {
