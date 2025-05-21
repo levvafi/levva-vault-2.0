@@ -10,7 +10,6 @@ import {IPoolAddressesProvider} from "@aave/core-v3/contracts/interfaces/IPoolAd
 
 import {LevvaVault} from "../../contracts/LevvaVault.sol";
 import {AaveAdapter} from "../../contracts/adapters/aave/AaveAdapter.sol";
-import {AbstractUniswapV3Adapter} from "../../contracts/adapters/uniswap/AbstractUniswapV3Adapter.sol";
 import {AdapterBase} from "../../contracts/adapters/AdapterBase.sol";
 import {EulerRouterMock} from "../mocks/EulerRouterMock.t.sol";
 
