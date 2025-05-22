@@ -376,18 +376,8 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
         view
         returns (FP96.FixedPoint memory)
     {
-        ILevvaPool.MarginlyParams memory params = pool.params();
-        FP96.FixedPoint memory secondsInYear = FP96.FixedPoint({inner: SECONDS_IN_YEAR_X96});
-
         FP96.FixedPoint memory systemLeverage = FP96.FixedPoint({inner: pool.systemLeverage().longX96});
-        FP96.FixedPoint memory onePlusIR =
-            FP96.fromRatio(params.interestRate, ONE).mul(systemLeverage).div(secondsInYear).add(FP96.one());
-        FP96.FixedPoint memory accruedRateDt = FP96.powTaylor(onePlusIR, secondsPassed);
-
-        FP96.FixedPoint memory onePlusFee = FP96.fromRatio(params.fee, ONE).div(secondsInYear).add(FP96.one());
-        FP96.FixedPoint memory feeDt = FP96.powTaylor(onePlusFee, secondsPassed);
-
-        return accruedRateDt.mul(feeDt);
+        return _estimateAccruedInterestFactor(pool, secondsPassed, systemLeverage);
     }
 
     function _estimateBaseAccruedInterestFactor(ILevvaPool pool, uint256 secondsPassed)
@@ -395,10 +385,18 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
         view
         returns (FP96.FixedPoint memory)
     {
+        FP96.FixedPoint memory systemLeverage = FP96.FixedPoint({inner: pool.systemLeverage().shortX96});
+        return _estimateAccruedInterestFactor(pool, secondsPassed, systemLeverage);
+    }
+
+    function _estimateAccruedInterestFactor(
+        ILevvaPool pool,
+        uint256 secondsPassed,
+        FP96.FixedPoint memory systemLeverage
+    ) private view returns (FP96.FixedPoint memory) {
         ILevvaPool.MarginlyParams memory params = pool.params();
         FP96.FixedPoint memory secondsInYear = FP96.FixedPoint({inner: SECONDS_IN_YEAR_X96});
 
-        FP96.FixedPoint memory systemLeverage = FP96.FixedPoint({inner: pool.systemLeverage().shortX96});
         FP96.FixedPoint memory onePlusIR =
             FP96.fromRatio(params.interestRate, ONE).mul(systemLeverage).div(secondsInYear).add(FP96.one());
         FP96.FixedPoint memory accruedRateDt = FP96.powTaylor(onePlusIR, secondsPassed);
