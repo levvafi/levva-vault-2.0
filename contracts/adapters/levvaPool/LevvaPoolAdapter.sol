@@ -205,10 +205,14 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
             if (position._type == ILevvaPool.PositionType.Short || position.discountedBaseAmount == 0) {
                 //isQuote
                 assets[i] = pool.quoteToken();
-                amounts[i] = _estimateCollateral(pool, true, position.discountedQuoteAmount);
+                uint256 discountedBaseDebt =
+                    position._type == ILevvaPool.PositionType.Short ? position.discountedBaseAmount : 0;
+                amounts[i] = _estimateCollateral(pool, true, position.discountedQuoteAmount, discountedBaseDebt);
             } else {
                 assets[i] = pool.baseToken();
-                amounts[i] = _estimateCollateral(pool, false, position.discountedBaseAmount);
+                uint256 discountedQuoteDebt =
+                    position._type == ILevvaPool.PositionType.Long ? position.discountedQuoteAmount : 0;
+                amounts[i] = _estimateCollateral(pool, false, position.discountedBaseAmount, discountedQuoteDebt);
             }
 
             unchecked {
@@ -287,69 +291,51 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
     /// @dev https://github.com/eq-lab/marginly/blob/main/packages/contracts/contracts/MarginlyPool.sol#L1019
     /// @dev Instead of calling MarginlyPool.reinit() we make calculations on our side
     /// @dev Reinit simulation without margin calls
-    function _estimateCollateral(ILevvaPool pool, bool isQuote, uint256 discountedCollateral)
+    function _estimateCollateral(ILevvaPool pool, bool isQuote, uint256 discountedCollateral, uint256 discountedDebt)
         private
         view
         returns (uint256)
     {
         uint256 secondsPassed = block.timestamp - pool.lastReinitTimestampSeconds();
-        if (secondsPassed == 0) {
-            if (isQuote) {
-                return pool.quoteCollateralCoeff().mul(discountedCollateral)
-                    - pool.quoteDelevCoeff().mul(pool.discountedBaseDebt());
-            } else {
-                return pool.baseCollateralCoeff().mul(discountedCollateral)
-                    - pool.baseDelevCoeff().mul(pool.discountedQuoteDebt());
-            }
-        }
-
-        ILevvaPool.MarginlyParams memory params = pool.params();
-
-        FP96.FixedPoint memory secondsInYear = FP96.FixedPoint({inner: SECONDS_IN_YEAR_X96});
-        FP96.FixedPoint memory interestRate = FP96.fromRatio(params.interestRate, ONE);
 
         if (isQuote) {
             FP96.FixedPoint memory quoteCollateralCoeff = pool.quoteCollateralCoeff();
+            FP96.FixedPoint memory quoteDelevCoeff = pool.quoteDelevCoeff();
 
-            uint256 realQuoteDebt;
-            {
-                //stack too deep
-                FP96.FixedPoint memory systemLeverage = FP96.FixedPoint({inner: pool.systemLeverage().longX96});
-                FP96.FixedPoint memory onePlusIR = interestRate.mul(systemLeverage).div(secondsInYear).add(FP96.one());
-
-                // AR(dt) =  (1 + ir)^dt
-                FP96.FixedPoint memory accruedRateDt = FP96.powTaylor(onePlusIR, secondsPassed);
-                uint256 realQuoteDebtPrev = pool.quoteDebtCoeff().mul(pool.discountedQuoteDebt());
-                realQuoteDebt = accruedRateDt.sub(FP96.one()).mul(realQuoteDebtPrev);
+            uint256 currentQuoteCollateral =
+                quoteCollateralCoeff.mul(discountedCollateral) - quoteDelevCoeff.mul(discountedDebt);
+            if (secondsPassed == 0) {
+                return currentQuoteCollateral;
             }
-            uint256 delevPart = pool.quoteDelevCoeff().mul(pool.discountedBaseDebt());
-            uint256 realQuoteCollateral = quoteCollateralCoeff.mul(pool.discountedQuoteCollateral()) - delevPart;
 
-            FP96.FixedPoint memory factor = FP96.one().add(FP96.fromRatio(realQuoteDebt, realQuoteCollateral));
+            FP96.FixedPoint memory quoteDebtDeltaFactor = _estimateQuoteDebtDeltaFactor(pool, secondsPassed);
+            uint256 realQuoteDebtDelta =
+                quoteDebtDeltaFactor.sub(FP96.one()).mul(pool.quoteDebtCoeff().mul(pool.discountedQuoteDebt()));
+            uint256 realQuoteCollateral = quoteCollateralCoeff.mul(pool.discountedQuoteCollateral())
+                - quoteDelevCoeff.mul(pool.discountedBaseDebt());
 
-            //quoteCollateralCoeff.mul(disQuoteCollateral).sub(quoteDelevCoeff.mul(disBaseDebt));
-            return quoteCollateralCoeff.mul(factor).mul(discountedCollateral) - delevPart;
+            FP96.FixedPoint memory factor = FP96.one().add(FP96.fromRatio(realQuoteDebtDelta, realQuoteCollateral));
+
+            return factor.mul(currentQuoteCollateral);
         } else {
             FP96.FixedPoint memory baseCollateralCoeff = pool.baseCollateralCoeff();
+            FP96.FixedPoint memory baseDelevCoeff = pool.baseDelevCoeff();
+            uint256 currentBaseCollateral =
+                baseCollateralCoeff.mul(discountedCollateral) - baseDelevCoeff.mul(discountedDebt);
 
-            uint256 realBaseDebt;
-            {
-                //stack too deep
-                FP96.FixedPoint memory systemLeverage = FP96.FixedPoint({inner: pool.systemLeverage().shortX96});
-                FP96.FixedPoint memory onePlusIR = interestRate.mul(systemLeverage).div(secondsInYear).add(FP96.one());
-
-                // AR(dt) =  (1 + ir)^dt
-                FP96.FixedPoint memory accruedRateDt = FP96.powTaylor(onePlusIR, secondsPassed);
-                uint256 realBaseDebtPrev = pool.baseDebtCoeff().mul(pool.discountedBaseDebt());
-                realBaseDebt = accruedRateDt.sub(FP96.one()).mul(realBaseDebtPrev);
+            if (secondsPassed == 0) {
+                return currentBaseCollateral;
             }
-            uint256 delevPart = pool.baseDelevCoeff().mul(pool.discountedQuoteDebt());
-            uint256 realBaseCollateral = baseCollateralCoeff.mul(pool.discountedBaseCollateral()) - delevPart;
 
-            FP96.FixedPoint memory factor = FP96.one().add(FP96.fromRatio(realBaseDebt, realBaseCollateral));
+            FP96.FixedPoint memory baseDebtDeltaFactor = _estimateQuoteDebtDeltaFactor(pool, secondsPassed);
+            uint256 realBaseDebtDelta =
+                baseDebtDeltaFactor.sub(FP96.one()).mul(pool.baseDebtCoeff().mul(pool.discountedBaseDebt()));
+            uint256 realBaseCollateral = baseCollateralCoeff.mul(pool.discountedBaseCollateral())
+                - baseDelevCoeff.mul(pool.discountedQuoteDebt());
 
-            //baseCollateralCoeff.mul(disBaseCollateral).sub(baseDelevCoeff.mul(disQuoteDebt));
-            return baseCollateralCoeff.mul(factor).mul(discountedCollateral) - delevPart;
+            FP96.FixedPoint memory factor = FP96.one().add(FP96.fromRatio(realBaseDebtDelta, realBaseCollateral));
+
+            return factor.mul(currentBaseCollateral);
         }
     }
 
@@ -359,31 +345,10 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
             return isLong ? pool.quoteDebtCoeff() : pool.baseDebtCoeff();
         }
 
-        ILevvaPool.MarginlyParams memory params = pool.params();
-
-        FP96.FixedPoint memory secondsInYear = FP96.FixedPoint({inner: SECONDS_IN_YEAR_X96});
-        FP96.FixedPoint memory onePlusFee = FP96.fromRatio(params.fee, ONE).div(secondsInYear).add(FP96.one());
-        FP96.FixedPoint memory interestRate = FP96.fromRatio(params.interestRate, ONE);
-        FP96.FixedPoint memory feeDt = FP96.powTaylor(onePlusFee, secondsPassed);
-
         if (isLong) {
-            FP96.FixedPoint memory systemLeverage = FP96.FixedPoint({inner: pool.systemLeverage().longX96});
-            FP96.FixedPoint memory onePlusIR = interestRate.mul(systemLeverage).div(secondsInYear).add(FP96.one());
-
-            // AR(dt) =  (1 + ir)^dt
-            FP96.FixedPoint memory accruedRateDt = FP96.powTaylor(onePlusIR, secondsPassed);
-
-            // quoteDebtCoeff = quoteDebtCoeffPrev * accruedRateDt * feeDt
-            return pool.quoteDebtCoeff().mul(accruedRateDt).mul(feeDt);
+            return pool.quoteDebtCoeff().mul(_estimateQuoteDebtDeltaFactor(pool, secondsPassed));
         } else {
-            FP96.FixedPoint memory systemLeverage = FP96.FixedPoint({inner: pool.systemLeverage().shortX96});
-            FP96.FixedPoint memory onePlusIR = interestRate.mul(systemLeverage).div(secondsInYear).add(FP96.one());
-
-            // AR(dt) =  (1 + ir)^dt
-            FP96.FixedPoint memory accruedRateDt = FP96.powTaylor(onePlusIR, secondsPassed);
-
-            // baseDebtCoeff = baseDebtCoeffPrev * accruedRateDt * feeDt
-            return pool.baseDebtCoeff().mul(accruedRateDt).mul(feeDt);
+            return pool.baseDebtCoeff().mul(_estimateBaseDebtDeltaFactor(pool, secondsPassed));
         }
     }
 
@@ -405,5 +370,43 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
         returns (uint256)
     {
         return eulerOracle.getQuote(baseAmount, baseToken, quoteToken);
+    }
+
+    function _estimateQuoteDebtDeltaFactor(ILevvaPool pool, uint256 secondsPassed)
+        private
+        view
+        returns (FP96.FixedPoint memory)
+    {
+        ILevvaPool.MarginlyParams memory params = pool.params();
+        FP96.FixedPoint memory secondsInYear = FP96.FixedPoint({inner: SECONDS_IN_YEAR_X96});
+
+        FP96.FixedPoint memory systemLeverage = FP96.FixedPoint({inner: pool.systemLeverage().longX96});
+        FP96.FixedPoint memory onePlusIR =
+            FP96.fromRatio(params.interestRate, ONE).mul(systemLeverage).div(secondsInYear).add(FP96.one());
+        FP96.FixedPoint memory accruedRateDt = FP96.powTaylor(onePlusIR, secondsPassed);
+
+        FP96.FixedPoint memory onePlusFee = FP96.fromRatio(params.fee, ONE).div(secondsInYear).add(FP96.one());
+        FP96.FixedPoint memory feeDt = FP96.powTaylor(onePlusFee, secondsPassed);
+
+        return accruedRateDt.mul(feeDt);
+    }
+
+    function _estimateBaseDebtDeltaFactor(ILevvaPool pool, uint256 secondsPassed)
+        private
+        view
+        returns (FP96.FixedPoint memory)
+    {
+        ILevvaPool.MarginlyParams memory params = pool.params();
+        FP96.FixedPoint memory secondsInYear = FP96.FixedPoint({inner: SECONDS_IN_YEAR_X96});
+
+        FP96.FixedPoint memory systemLeverage = FP96.FixedPoint({inner: pool.systemLeverage().shortX96});
+        FP96.FixedPoint memory onePlusIR =
+            FP96.fromRatio(params.interestRate, ONE).mul(systemLeverage).div(secondsInYear).add(FP96.one());
+        FP96.FixedPoint memory accruedRateDt = FP96.powTaylor(onePlusIR, secondsPassed);
+
+        FP96.FixedPoint memory onePlusFee = FP96.fromRatio(params.fee, ONE).div(secondsInYear).add(FP96.one());
+        FP96.FixedPoint memory feeDt = FP96.powTaylor(onePlusFee, secondsPassed);
+
+        return accruedRateDt.mul(feeDt);
     }
 }
