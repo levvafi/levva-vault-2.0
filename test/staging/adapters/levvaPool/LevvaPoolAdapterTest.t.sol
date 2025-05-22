@@ -9,6 +9,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {LevvaPoolAdapter} from "../../../../contracts/adapters/levvaPool/LevvaPoolAdapter.sol";
+import {AdapterBase} from "../../../../contracts/adapters/AdapterBase.sol";
 import {ILevvaPool} from "../../../../contracts/adapters/levvaPool/ILevvaPool.sol";
 import {FP96} from "../../../../contracts/adapters/levvaPool/FP96.sol";
 import {EulerRouterMock} from "../../../mocks/EulerRouterMock.t.sol";
@@ -53,6 +54,8 @@ contract LevvaPoolAdapterTest is Test {
         );
 
         vault = LevvaVault(address(new ERC1967Proxy(address(levvaVaultImplementation), data)));
+        vault.addTrackedAsset(address(weETH));
+        vault.addTrackedAsset(address(PT_weETH));
 
         adapter = new LevvaPoolAdapter(address(vault));
         vault.addAdapter(address(adapter));
@@ -238,6 +241,28 @@ contract LevvaPoolAdapterTest is Test {
         adapter.deposit(address(0), 0, 0, address(0), 0, 0);
     }
 
+    function test_depositBaseQuoteShouldFailWhenNotSupported() public {
+        ILevvaPool pool = ILevvaPool(weETH_WETH_POOL);
+        uint256 depositAmount = 1e18;
+
+        vm.startPrank(address(vault));
+        adapter.deposit(address(weETH), depositAmount, 0, address(pool), 0, 0);
+
+        vm.expectRevert(LevvaPoolAdapter.LevvaPoolAdapter__NotSupported.selector);
+        adapter.deposit(address(WETH), depositAmount, 0, address(pool), 0, 0);
+    }
+
+    function test_depositQuoteBaseShouldFailWhenNotSupported() public {
+        ILevvaPool pool = ILevvaPool(weETH_WETH_POOL);
+        uint256 depositAmount = 1e18;
+
+        vm.startPrank(address(vault));
+        adapter.deposit(address(WETH), depositAmount, 0, address(pool), 0, 0);
+
+        vm.expectRevert(LevvaPoolAdapter.LevvaPoolAdapter__NotSupported.selector);
+        adapter.deposit(address(weETH), depositAmount, 0, address(pool), 0, 0);
+    }
+
     function test_partialWithdraw() public {
         // deposit first
         ILevvaPool pool = ILevvaPool(PT_weETH_WETH_POOL);
@@ -316,6 +341,13 @@ contract LevvaPoolAdapterTest is Test {
     function test_withdrawShouldFailWhenNotAuthorized() public {
         vm.expectRevert(LevvaPoolAdapter.LevvaPoolAdapter__NotAuthorized.selector);
         adapter.withdraw(address(0), 0, address(0));
+    }
+
+    function test_withdrawShouldFailWhenTokenNotValid() public {
+        vm.prank(address(vault));
+        address asset = address(111);
+        vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, asset));
+        adapter.withdraw(asset, 0, address(0));
     }
 
     function test_closePosition() public {
@@ -679,6 +711,28 @@ contract LevvaPoolAdapterTest is Test {
 
         address[] memory pools = adapter.getPools();
         assertEq(pools.length, 0);
+    }
+
+    function test_emergencyWithdrawShouldFailWhenInvalidAsset() public {
+        //deposit base
+        LevvaPoolMock pool = new LevvaPoolMock(address(weETH), address(WETH));
+        deal(address(weETH), address(pool), 10e18);
+        deal(address(WETH), address(pool), 10e18);
+
+        uint256 depositAmount = 1e18;
+        deal(address(weETH), address(vault), depositAmount * 2);
+        vm.prank(address(vault));
+        adapter.deposit(address(weETH), depositAmount, 0, address(pool), 0, 0);
+
+        pool.setPosition(ILevvaPool.PositionType.Lend, depositAmount, 0);
+        pool.setMode(ILevvaPool.Mode.ShortEmergency);
+
+        //emergencyWithdraw
+        deal(address(weETH), address(vault), 0);
+        vault.removeTrackedAsset(address(weETH));
+        vm.prank(address(vault));
+        vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, address(weETH)));
+        adapter.emergencyWithdraw(address(pool));
     }
 
     function _showAssets() private view {

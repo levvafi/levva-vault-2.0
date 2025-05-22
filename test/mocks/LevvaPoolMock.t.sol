@@ -45,12 +45,7 @@ contract LevvaPoolMock {
                 revert("Not emergency mode");
             }
 
-            position = ILevvaPool.Position({
-                _type: ILevvaPool.PositionType.Uninitialized,
-                heapPosition: 0,
-                discountedBaseAmount: 0,
-                discountedQuoteAmount: 0
-            });
+            delete position;
         } else if (call == ILevvaPool.CallType.DepositBase) {
             IERC20(baseToken).transferFrom(msg.sender, address(this), amount);
         } else if (call == ILevvaPool.CallType.DepositQuote) {

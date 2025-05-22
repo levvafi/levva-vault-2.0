@@ -37,6 +37,8 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
 
     error LevvaPoolAdapter__NotAuthorized();
     error LevvaPoolAdapter__OracleNotExists(address base, address quote);
+    error LevvaPoolAdapter__WrongLevvaPoolMode();
+    error LevvaPoolAdapter__NotSupported();
 
     constructor(address vault) {
         vault.assertNotZeroAddress();
@@ -70,6 +72,16 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
         address quoteToken = ILevvaPool(pool).quoteToken();
         ILevvaPool.CallType callType =
             asset == quoteToken ? ILevvaPool.CallType.DepositQuote : ILevvaPool.CallType.DepositBase;
+
+        //Both token deposits not supported
+        ILevvaPool.Position memory position = ILevvaPool(pool).positions(address(this));
+        if (position._type == ILevvaPool.PositionType.Lend) {
+            if (position.discountedBaseAmount != 0) {
+                if (callType == ILevvaPool.CallType.DepositQuote) revert LevvaPoolAdapter__NotSupported();
+            } else {
+                if (callType == ILevvaPool.CallType.DepositBase) revert LevvaPoolAdapter__NotSupported();
+            }
+        }
 
         if (callType == ILevvaPool.CallType.DepositQuote && positionAmount < 0) {
             // depositQuote and long
@@ -130,6 +142,7 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
     /// @param amount The amount to withdraw
     /// @param pool The pool to withdraw from
     function withdraw(address asset, uint256 amount, address pool) external onlyVault returns (uint256 amountOut) {
+        _ensureIsValidAsset(asset);
         ILevvaPool.CallType callType = ILevvaPool(pool).quoteToken() == asset
             ? ILevvaPool.CallType.WithdrawQuote
             : ILevvaPool.CallType.WithdrawBase;
@@ -163,7 +176,11 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
                 return;
             }
             asset = IERC20(ILevvaPool(pool).quoteToken());
+        } else {
+            revert LevvaPoolAdapter__WrongLevvaPoolMode();
         }
+
+        _ensureIsValidAsset(address(asset));
 
         ILevvaPool(pool).execute(ILevvaPool.CallType.EmergencyWithdraw, 0, int256(0), 0, false, address(0), 0);
 
@@ -185,15 +202,14 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
             ILevvaPool pool = ILevvaPool(s_pools[i]);
             ILevvaPool.Position memory position = pool.positions(address(this));
 
-            bool isQuote = position._type == ILevvaPool.PositionType.Lend && position.discountedQuoteAmount != 0
-                || position._type == ILevvaPool.PositionType.Short;
-
-            FP96.FixedPoint memory collateralCoeff = _estimateCollateralCoeff(pool, isQuote);
-
-            assets[i] = isQuote ? pool.quoteToken() : pool.baseToken();
-            amounts[i] = isQuote
-                ? position.discountedQuoteAmount.mulDiv(collateralCoeff.inner, X96_ONE)
-                : position.discountedBaseAmount.mulDiv(collateralCoeff.inner, X96_ONE);
+            if (position._type == ILevvaPool.PositionType.Short || position.discountedBaseAmount == 0) {
+                //isQuote
+                assets[i] = pool.quoteToken();
+                amounts[i] = _estimateCollateral(pool, true, position.discountedQuoteAmount);
+            } else {
+                assets[i] = pool.baseToken();
+                amounts[i] = _estimateCollateral(pool, false, position.discountedBaseAmount);
+            }
 
             unchecked {
                 ++i;
@@ -211,15 +227,12 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
             ILevvaPool pool = ILevvaPool(s_pools[i]);
             ILevvaPool.Position memory position = pool.positions(address(this));
 
-            if (position._type > ILevvaPool.PositionType.Lend) {
-                // Short or Long position
-                bool isLong = position._type == ILevvaPool.PositionType.Long;
-                FP96.FixedPoint memory debtCoeff = _estimateDebtCoeff(pool, isLong);
-
-                assets[i] = isLong ? pool.quoteToken() : pool.baseToken();
-                amounts[i] = isLong
-                    ? position.discountedQuoteAmount.mulDiv(debtCoeff.inner, X96_ONE)
-                    : position.discountedBaseAmount.mulDiv(debtCoeff.inner, X96_ONE);
+            if (position._type == ILevvaPool.PositionType.Long) {
+                assets[i] = pool.quoteToken();
+                amounts[i] = _estimateDebtCoeff(pool, true).mul(position.discountedQuoteAmount);
+            } else if (position._type == ILevvaPool.PositionType.Short) {
+                assets[i] = pool.baseToken();
+                amounts[i] = _estimateDebtCoeff(pool, false).mul(position.discountedBaseAmount);
             }
 
             unchecked {
@@ -274,10 +287,20 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
     /// @dev https://github.com/eq-lab/marginly/blob/main/packages/contracts/contracts/MarginlyPool.sol#L1019
     /// @dev Instead of calling MarginlyPool.reinit() we make calculations on our side
     /// @dev Reinit simulation without margin calls
-    function _estimateCollateralCoeff(ILevvaPool pool, bool isQuote) private view returns (FP96.FixedPoint memory) {
+    function _estimateCollateral(ILevvaPool pool, bool isQuote, uint256 discountedCollateral)
+        private
+        view
+        returns (uint256)
+    {
         uint256 secondsPassed = block.timestamp - pool.lastReinitTimestampSeconds();
         if (secondsPassed == 0) {
-            return isQuote ? pool.quoteCollateralCoeff() : pool.baseCollateralCoeff();
+            if (isQuote) {
+                return pool.quoteCollateralCoeff().mul(discountedCollateral)
+                    - pool.quoteDelevCoeff().mul(pool.discountedBaseDebt());
+            } else {
+                return pool.baseCollateralCoeff().mul(discountedCollateral)
+                    - pool.baseDelevCoeff().mul(pool.discountedQuoteDebt());
+            }
         }
 
         ILevvaPool.MarginlyParams memory params = pool.params();
@@ -287,36 +310,46 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
 
         if (isQuote) {
             FP96.FixedPoint memory quoteCollateralCoeff = pool.quoteCollateralCoeff();
-            FP96.FixedPoint memory systemLeverage = FP96.FixedPoint({inner: pool.systemLeverage().longX96});
-            FP96.FixedPoint memory onePlusIR = interestRate.mul(systemLeverage).div(secondsInYear).add(FP96.one());
 
-            // AR(dt) =  (1 + ir)^dt
-            FP96.FixedPoint memory accruedRateDt = FP96.powTaylor(onePlusIR, secondsPassed);
+            uint256 realQuoteDebt;
+            {
+                //stack too deep
+                FP96.FixedPoint memory systemLeverage = FP96.FixedPoint({inner: pool.systemLeverage().longX96});
+                FP96.FixedPoint memory onePlusIR = interestRate.mul(systemLeverage).div(secondsInYear).add(FP96.one());
 
-            uint256 realQuoteDebtPrev = pool.quoteDebtCoeff().mul(pool.discountedQuoteDebt());
-            uint256 realQuoteDebt = accruedRateDt.sub(FP96.one()).mul(realQuoteDebtPrev);
-            uint256 realQuoteCollateral = quoteCollateralCoeff.mul(pool.discountedQuoteCollateral())
-                - pool.quoteDelevCoeff().mul(pool.discountedBaseDebt());
+                // AR(dt) =  (1 + ir)^dt
+                FP96.FixedPoint memory accruedRateDt = FP96.powTaylor(onePlusIR, secondsPassed);
+                uint256 realQuoteDebtPrev = pool.quoteDebtCoeff().mul(pool.discountedQuoteDebt());
+                realQuoteDebt = accruedRateDt.sub(FP96.one()).mul(realQuoteDebtPrev);
+            }
+            uint256 delevPart = pool.quoteDelevCoeff().mul(pool.discountedBaseDebt());
+            uint256 realQuoteCollateral = quoteCollateralCoeff.mul(pool.discountedQuoteCollateral()) - delevPart;
 
             FP96.FixedPoint memory factor = FP96.one().add(FP96.fromRatio(realQuoteDebt, realQuoteCollateral));
 
-            return quoteCollateralCoeff.mul(factor);
+            //quoteCollateralCoeff.mul(disQuoteCollateral).sub(quoteDelevCoeff.mul(disBaseDebt));
+            return quoteCollateralCoeff.mul(factor).mul(discountedCollateral) - delevPart;
         } else {
             FP96.FixedPoint memory baseCollateralCoeff = pool.baseCollateralCoeff();
-            FP96.FixedPoint memory systemLeverage = FP96.FixedPoint({inner: pool.systemLeverage().shortX96});
-            FP96.FixedPoint memory onePlusIR = interestRate.mul(systemLeverage).div(secondsInYear).add(FP96.one());
 
-            // AR(dt) =  (1 + ir)^dt
-            FP96.FixedPoint memory accruedRateDt = FP96.powTaylor(onePlusIR, secondsPassed);
+            uint256 realBaseDebt;
+            {
+                //stack too deep
+                FP96.FixedPoint memory systemLeverage = FP96.FixedPoint({inner: pool.systemLeverage().shortX96});
+                FP96.FixedPoint memory onePlusIR = interestRate.mul(systemLeverage).div(secondsInYear).add(FP96.one());
 
-            uint256 realBaseDebtPrev = pool.baseDebtCoeff().mul(pool.discountedBaseDebt());
-            uint256 realBaseDebt = accruedRateDt.sub(FP96.one()).mul(realBaseDebtPrev);
-            uint256 realBaseCollateral = baseCollateralCoeff.mul(pool.discountedBaseCollateral())
-                - pool.baseDelevCoeff().mul(pool.discountedQuoteDebt());
+                // AR(dt) =  (1 + ir)^dt
+                FP96.FixedPoint memory accruedRateDt = FP96.powTaylor(onePlusIR, secondsPassed);
+                uint256 realBaseDebtPrev = pool.baseDebtCoeff().mul(pool.discountedBaseDebt());
+                realBaseDebt = accruedRateDt.sub(FP96.one()).mul(realBaseDebtPrev);
+            }
+            uint256 delevPart = pool.baseDelevCoeff().mul(pool.discountedQuoteDebt());
+            uint256 realBaseCollateral = baseCollateralCoeff.mul(pool.discountedBaseCollateral()) - delevPart;
 
             FP96.FixedPoint memory factor = FP96.one().add(FP96.fromRatio(realBaseDebt, realBaseCollateral));
 
-            return baseCollateralCoeff.mul(factor);
+            //baseCollateralCoeff.mul(disBaseCollateral).sub(baseDelevCoeff.mul(disQuoteDebt));
+            return baseCollateralCoeff.mul(factor).mul(discountedCollateral) - delevPart;
         }
     }
 
