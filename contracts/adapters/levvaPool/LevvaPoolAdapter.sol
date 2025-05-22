@@ -28,7 +28,6 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
     using Math for uint256;
 
     uint256 private constant SECONDS_IN_YEAR_X96 = 2500250661360148260042022567123353600;
-    uint256 private constant X96_ONE = 2 ** 96;
     uint24 private constant ONE = 1e6;
 
     address private immutable i_vault;
