@@ -308,9 +308,9 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
                 return currentQuoteCollateral;
             }
 
-            FP96.FixedPoint memory quoteDebtDeltaFactor = _estimateQuoteDebtDeltaFactor(pool, secondsPassed);
+            FP96.FixedPoint memory quoteAccruedInterestFactor = _estimateQuoteAccruedInterestFactor(pool, secondsPassed);
             uint256 realQuoteDebtDelta =
-                quoteDebtDeltaFactor.sub(FP96.one()).mul(pool.quoteDebtCoeff().mul(pool.discountedQuoteDebt()));
+                quoteAccruedInterestFactor.sub(FP96.one()).mul(pool.quoteDebtCoeff().mul(pool.discountedQuoteDebt()));
             uint256 realQuoteCollateral = quoteCollateralCoeff.mul(pool.discountedQuoteCollateral())
                 - quoteDelevCoeff.mul(pool.discountedBaseDebt());
 
@@ -327,9 +327,9 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
                 return currentBaseCollateral;
             }
 
-            FP96.FixedPoint memory baseDebtDeltaFactor = _estimateQuoteDebtDeltaFactor(pool, secondsPassed);
+            FP96.FixedPoint memory baseAccruedInterestFactor = _estimateQuoteAccruedInterestFactor(pool, secondsPassed);
             uint256 realBaseDebtDelta =
-                baseDebtDeltaFactor.sub(FP96.one()).mul(pool.baseDebtCoeff().mul(pool.discountedBaseDebt()));
+                baseAccruedInterestFactor.sub(FP96.one()).mul(pool.baseDebtCoeff().mul(pool.discountedBaseDebt()));
             uint256 realBaseCollateral = baseCollateralCoeff.mul(pool.discountedBaseCollateral())
                 - baseDelevCoeff.mul(pool.discountedQuoteDebt());
 
@@ -346,9 +346,9 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
         }
 
         if (isLong) {
-            return pool.quoteDebtCoeff().mul(_estimateQuoteDebtDeltaFactor(pool, secondsPassed));
+            return pool.quoteDebtCoeff().mul(_estimateQuoteAccruedInterestFactor(pool, secondsPassed));
         } else {
-            return pool.baseDebtCoeff().mul(_estimateBaseDebtDeltaFactor(pool, secondsPassed));
+            return pool.baseDebtCoeff().mul(_estimateBaseAccruedInterestFactor(pool, secondsPassed));
         }
     }
 
@@ -372,7 +372,7 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
         return eulerOracle.getQuote(baseAmount, baseToken, quoteToken);
     }
 
-    function _estimateQuoteDebtDeltaFactor(ILevvaPool pool, uint256 secondsPassed)
+    function _estimateQuoteAccruedInterestFactor(ILevvaPool pool, uint256 secondsPassed)
         private
         view
         returns (FP96.FixedPoint memory)
@@ -391,7 +391,7 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
         return accruedRateDt.mul(feeDt);
     }
 
-    function _estimateBaseDebtDeltaFactor(ILevvaPool pool, uint256 secondsPassed)
+    function _estimateBaseAccruedInterestFactor(ILevvaPool pool, uint256 secondsPassed)
         private
         view
         returns (FP96.FixedPoint memory)
