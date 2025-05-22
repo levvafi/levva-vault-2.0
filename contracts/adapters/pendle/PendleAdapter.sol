@@ -58,7 +58,7 @@ contract PendleAdapter is AdapterBase {
         ApproxParams calldata approxParams,
         TokenInput calldata tokenInput,
         uint256 minPtOut
-    ) external {
+    ) external returns (uint256 netPtOut) {
         (, IPPrincipalToken ptToken,) = IPMarket(market).readTokens();
         _ensureIsValidAsset(address(ptToken));
         IAdapterCallback(msg.sender).adapterCallback(address(this), tokenInput.tokenIn, tokenInput.netTokenIn);
@@ -66,7 +66,7 @@ contract PendleAdapter is AdapterBase {
         address pendleRouter = s_pendleRouter;
         IERC20(tokenInput.tokenIn).forceApprove(pendleRouter, tokenInput.netTokenIn);
 
-        (uint256 netPtOut,,) = IPAllActionV3(pendleRouter).swapExactTokenForPt(
+        (netPtOut,,) = IPAllActionV3(pendleRouter).swapExactTokenForPt(
             msg.sender, market, minPtOut, approxParams, tokenInput, _createEmptyLimitOrderData()
         );
 
@@ -80,7 +80,10 @@ contract PendleAdapter is AdapterBase {
     /// @param exactPtIn exact amount of PT to swap
     /// @param tokenOut token output data
     /// @dev Market should be non expired
-    function swapExactPtForToken(address market, uint256 exactPtIn, TokenOutput calldata tokenOut) external {
+    function swapExactPtForToken(address market, uint256 exactPtIn, TokenOutput calldata tokenOut)
+        external
+        returns (uint256 netTokenOut)
+    {
         _ensureIsValidAsset(tokenOut.tokenOut);
         (, IPPrincipalToken ptToken,) = IPMarket(market).readTokens();
 
@@ -90,7 +93,7 @@ contract PendleAdapter is AdapterBase {
         address pendleRouter = s_pendleRouter;
         IERC20(ptToken).forceApprove(pendleRouter, exactPtIn);
 
-        (uint256 netTokenOut,,) = IPAllActionV3(pendleRouter).swapExactPtForToken(
+        (netTokenOut,,) = IPAllActionV3(pendleRouter).swapExactPtForToken(
             msg.sender, market, exactPtIn, tokenOut, _createEmptyLimitOrderData()
         );
 
@@ -109,7 +112,7 @@ contract PendleAdapter is AdapterBase {
         ApproxParams calldata approxParams,
         TokenInput calldata tokenInput,
         uint256 minLpOut
-    ) external {
+    ) external returns (uint256 netLpOut) {
         _ensureIsValidAsset(market);
 
         IAdapterCallback(msg.sender).adapterCallback(address(this), tokenInput.tokenIn, tokenInput.netTokenIn);
@@ -117,7 +120,7 @@ contract PendleAdapter is AdapterBase {
         address pendleRouter = s_pendleRouter;
         IERC20(tokenInput.tokenIn).forceApprove(pendleRouter, tokenInput.netTokenIn);
 
-        (uint256 netLpOut,,) = IPAllActionV3(pendleRouter).addLiquiditySingleToken(
+        (netLpOut,,) = IPAllActionV3(pendleRouter).addLiquiditySingleToken(
             msg.sender, market, minLpOut, approxParams, tokenInput, _createEmptyLimitOrderData()
         );
 
@@ -130,7 +133,10 @@ contract PendleAdapter is AdapterBase {
     /// @param market pendle market address
     /// @param lpAmount amount of LP token to remove
     /// @param tokenOut token output data
-    function removeLiquiditySingleToken(address market, uint256 lpAmount, TokenOutput calldata tokenOut) external {
+    function removeLiquiditySingleToken(address market, uint256 lpAmount, TokenOutput calldata tokenOut)
+        external
+        returns (uint256 netTokenOut)
+    {
         _ensureIsValidAsset(tokenOut.tokenOut);
 
         IAdapterCallback(msg.sender).adapterCallback(address(this), market, lpAmount);
@@ -139,7 +145,7 @@ contract PendleAdapter is AdapterBase {
         //market itself is the lp token
         IERC20(market).forceApprove(pendleRouter, lpAmount);
 
-        (uint256 netTokenOut,,) = IPAllActionV3(pendleRouter).removeLiquiditySingleToken(
+        (netTokenOut,,) = IPAllActionV3(pendleRouter).removeLiquiditySingleToken(
             msg.sender, market, lpAmount, tokenOut, _createEmptyLimitOrderData()
         );
 
@@ -154,7 +160,10 @@ contract PendleAdapter is AdapterBase {
     /// @param ptIn amount of PT to redeem
     /// @param tokenOut token output data
     /// @dev Works only for expired markets. Swap PT for Token if market is expired
-    function redeemPt(address market, uint256 ptIn, TokenOutput calldata tokenOut) external {
+    function redeemPt(address market, uint256 ptIn, TokenOutput calldata tokenOut)
+        external
+        returns (uint256 netTokenOut)
+    {
         _ensureIsValidAsset(tokenOut.tokenOut);
         if (!IPMarket(market).isExpired()) {
             revert PendleAdapter__MarketNotExpired();
@@ -168,8 +177,7 @@ contract PendleAdapter is AdapterBase {
         address pendleRouter = s_pendleRouter;
         IERC20(ptToken).forceApprove(pendleRouter, ptIn);
 
-        (uint256 netTokenOut,) =
-            IPAllActionV3(pendleRouter).redeemPyToToken(msg.sender, address(ytToken), ptIn, tokenOut);
+        (netTokenOut,) = IPAllActionV3(pendleRouter).redeemPyToToken(msg.sender, address(ytToken), ptIn, tokenOut);
 
         if (netTokenOut < tokenOut.minTokenOut) {
             revert PendleAdapter__SlippageProtection();
@@ -185,6 +193,7 @@ contract PendleAdapter is AdapterBase {
     /// @param minNewPtOut minimum amount of new PT to receive
     function rollOverPt(address oldMarket, address newMarket, address token, uint256 ptAmount, uint256 minNewPtOut)
         external
+        returns (uint256 netPtOut)
     {
         (, IPPrincipalToken oldPtToken, IPYieldToken ytToken) = IPMarket(oldMarket).readTokens();
         {
@@ -227,7 +236,7 @@ contract PendleAdapter is AdapterBase {
         });
 
         IERC20(tokenOut.tokenOut).forceApprove(pendleRouter, netTokenOut);
-        (uint256 netPtOut,,) = IPAllActionV3(pendleRouter).swapExactTokenForPt(
+        (netPtOut,,) = IPAllActionV3(pendleRouter).swapExactTokenForPt(
             msg.sender, newMarket, minNewPtOut, _createDefaultApproxParams(), tokenInput, _createEmptyLimitOrderData()
         );
 
@@ -240,7 +249,10 @@ contract PendleAdapter is AdapterBase {
     /// @param pendleSwap Address of pendleSwapAggregator
     /// @param swap swap data
     /// @param netSwap swap amount
-    function swapTokenToToken(IPSwapAggregator pendleSwap, SwapDataExtra calldata swap, uint256 netSwap) external {
+    function swapTokenToToken(IPSwapAggregator pendleSwap, SwapDataExtra calldata swap, uint256 netSwap)
+        external
+        returns (uint256)
+    {
         _ensureIsValidAsset(address(swap.tokenOut));
 
         SwapDataExtra[] memory swaps = new SwapDataExtra[](1);
@@ -260,6 +272,7 @@ contract PendleAdapter is AdapterBase {
         }
 
         IERC20(swap.tokenOut).safeTransfer(msg.sender, netOut[0]);
+        return netOut[0];
     }
 
     /// @dev Creates default ApproxParams for on-chain approximation
