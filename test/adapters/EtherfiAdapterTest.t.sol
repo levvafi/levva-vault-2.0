@@ -31,6 +31,9 @@ contract EtherfiAdapterTest is Test {
     ILiquidityPool private constant ETHERFI_LIQUIDITY_POOL = ILiquidityPool(0x308861A430be4cce5502d0A12724771Fc6DaF216);
     IERC20 private constant USDC = IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
     IERC20 private constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+    IERC20 private constant WBTC = IERC20(0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599);
+    IERC20 private constant EBTC = IERC20(0x657e8C867D8B37dCC18fA4Caead9C45EB088C642);
+    address LAYER_ZERO_TELLER = 0x6Ee3aaCcf9f2321E49063C4F8da775DdBd407268;
     IERC20 private eETH;
 
     string private mainnetRpcUrl = vm.envString("ETH_RPC_URL");
@@ -46,6 +49,8 @@ contract EtherfiAdapterTest is Test {
         EulerRouterMock oracle = new EulerRouterMock();
         oracle.setPrice(oracle.ONE().mulDiv(2000, 10 ** 12), address(WETH), address(USDC));
         oracle.setPrice(oracle.ONE().mulDiv(2000, 10 ** 12), address(eETH), address(USDC));
+        oracle.setPrice(oracle.ONE().mulDiv(100_000, 10 ** 2), address(WBTC), address(USDC));
+        oracle.setPrice(oracle.ONE().mulDiv(100_000, 10 ** 2), address(EBTC), address(USDC));
 
         LevvaVault levvaVaultImplementation = new LevvaVault();
         bytes memory data = abi.encodeWithSelector(
@@ -53,14 +58,19 @@ contract EtherfiAdapterTest is Test {
         );
         levvaVault = LevvaVault(address(new ERC1967Proxy(address(levvaVaultImplementation), data)));
 
-        adapter = new EtherfiAdapter(address(WETH), address(ETHERFI_LIQUIDITY_POOL));
+        adapter = new EtherfiAdapter(
+            address(WETH), address(ETHERFI_LIQUIDITY_POOL), address(WBTC), address(EBTC), LAYER_ZERO_TELLER
+        );
         levvaVault.addAdapter(address(adapter));
         assertNotEq(levvaVault.externalPositionAdapterPosition(address(adapter)), 0);
 
         deal(address(WETH), address(levvaVault), 10 ether);
+        deal(address(WBTC), address(levvaVault), 10 ** 8);
 
         levvaVault.addTrackedAsset(address(eETH));
         levvaVault.addTrackedAsset(address(WETH));
+        levvaVault.addTrackedAsset(address(EBTC));
+        levvaVault.addTrackedAsset(address(WBTC));
     }
 
     function testDepositEth() public {
@@ -208,6 +218,18 @@ contract EtherfiAdapterTest is Test {
         vm.prank(address(levvaVault));
         vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, WETH));
         adapter.claimWithdraw();
+    }
+
+    function testDepositBtc() public {
+        uint256 wbtcBalanceBefore = WBTC.balanceOf(address(levvaVault));
+        uint256 depositAmount = 10 ** 8;
+        vm.prank(address(levvaVault));
+        adapter.depositBtc(depositAmount);
+
+        assertEq(wbtcBalanceBefore - WBTC.balanceOf(address(levvaVault)), depositAmount);
+        assertApproxEqAbs(EBTC.balanceOf(address(levvaVault)), depositAmount, 1);
+        assertEq(WBTC.balanceOf(address(adapter)), 0);
+        assertEq(EBTC.balanceOf(address(adapter)), 0);
     }
 
     function _assertNoDebtAssets() private {

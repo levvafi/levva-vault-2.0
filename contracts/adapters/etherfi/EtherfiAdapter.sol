@@ -3,11 +3,15 @@ pragma solidity 0.8.28;
 
 import {IExternalPositionAdapter} from "../../interfaces/IExternalPositionAdapter.sol";
 import {AbstractEtherfiEthAdapter} from "./AbstractEtherfiEthAdapter.sol";
+import {AbstractEtherfiBtcAdapter} from "./AbstractEtherfiBtcAdapter.sol";
 
-contract EtherfiAdapter is AbstractEtherfiEthAdapter {
+contract EtherfiAdapter is AbstractEtherfiEthAdapter, AbstractEtherfiBtcAdapter {
     bytes4 public constant getAdapterId = bytes4(keccak256("EtherfiAdapter"));
 
-    constructor(address weth, address liquidityPool) AbstractEtherfiEthAdapter(weth, liquidityPool) {}
+    constructor(address weth, address liquidityPool, address wbtc, address ebtc, address teller)
+        AbstractEtherfiEthAdapter(weth, liquidityPool)
+        AbstractEtherfiBtcAdapter(wbtc, ebtc, teller)
+    {}
 
     function supportsInterface(bytes4 interfaceId) public pure override returns (bool) {
         return interfaceId == type(IExternalPositionAdapter).interfaceId || super.supportsInterface(interfaceId);
