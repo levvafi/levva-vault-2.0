@@ -9,6 +9,7 @@ import {IPool} from "@aave/core-v3/contracts/interfaces/IPool.sol";
 import {IPoolAddressesProvider} from "@aave/core-v3/contracts/interfaces/IPoolAddressesProvider.sol";
 
 import {LevvaVault} from "../../contracts/LevvaVault.sol";
+import {AdapterActionExecutor} from "../../contracts/base/AdapterActionExecutor.sol";
 import {AaveAdapter} from "../../contracts/adapters/aave/AaveAdapter.sol";
 import {AbstractUniswapV3Adapter} from "../../contracts/adapters/uniswap/AbstractUniswapV3Adapter.sol";
 import {AdapterBase} from "../../contracts/adapters/AdapterBase.sol";
@@ -27,7 +28,9 @@ contract AaveAdapterTest is Test {
     string private mainnetRpcUrl = vm.envString("ETH_RPC_URL");
 
     AaveAdapter private adapter;
+    bytes4 private adapterId;
     LevvaVault private levvaVault;
+    address vaultManager = makeAddr("VAULT_MANAGER");
 
     function setUp() public {
         vm.createSelectFork(vm.rpcUrl(mainnetRpcUrl), FORK_BLOCK);
@@ -46,8 +49,11 @@ contract AaveAdapterTest is Test {
         );
         levvaVault = LevvaVault(address(new ERC1967Proxy(address(levvaVaultImplementation), data)));
 
-        adapter = new AaveAdapter(address(AAVE_POOL_PROVIDER));
-        levvaVault.addAdapter(address(adapter));
+        adapter = new AaveAdapter();
+        adapterId = adapter.getAdapterId();
+        levvaVault.addAdapter(
+            address(adapter), abi.encodeWithSelector(AaveAdapter.initialize.selector, address(AAVE_POOL_PROVIDER))
+        );
         assertEq(levvaVault.externalPositionAdapterPosition(address(adapter)), 0);
 
         deal(address(USDC), address(levvaVault), 10 ** 12);
@@ -55,13 +61,16 @@ contract AaveAdapterTest is Test {
 
         levvaVault.addTrackedAsset(address(USDT));
         levvaVault.addTrackedAsset(address(aUsdc));
+
+        levvaVault.addVaultManager(vaultManager, true);
+        vm.deal(vaultManager, 1 ether);
     }
 
     function testSupply() public {
         uint256 usdcBalanceBefore = USDC.balanceOf(address(levvaVault));
         uint256 supplyAmount = 1000 * 10 ** 6;
-        vm.prank(address(levvaVault));
-        adapter.supply(address(USDC), supplyAmount);
+        vm.prank(vaultManager);
+        _supply(address(USDC), supplyAmount);
 
         assertEq(usdcBalanceBefore - USDC.balanceOf(address(levvaVault)), supplyAmount);
         assertApproxEqAbs(aUsdc.balanceOf(address(levvaVault)), supplyAmount, 1);
@@ -72,19 +81,18 @@ contract AaveAdapterTest is Test {
     function testSupplyNotTrackedAsset() public {
         uint256 supplyAmount = 1000 * 10 ** 6;
 
-        vm.prank(address(levvaVault));
+        vm.prank(vaultManager);
         vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, aUsdt));
-        adapter.supply(address(USDT), supplyAmount);
+        _supply(address(USDT), supplyAmount);
     }
 
     function testFullWithdraw() public {
         uint256 usdcBalanceBefore = USDC.balanceOf(address(levvaVault));
         uint256 supplyAmount = 1000 * 10 ** 6;
-        vm.prank(address(levvaVault));
-        adapter.supply(address(USDC), supplyAmount);
+        vm.startPrank(vaultManager);
+        _supply(address(USDC), supplyAmount);
 
-        vm.prank(address(levvaVault));
-        adapter.withdraw(address(USDC), type(uint256).max);
+        _withdraw(address(USDC), type(uint256).max);
 
         assertApproxEqAbs(usdcBalanceBefore, USDC.balanceOf(address(levvaVault)), 1);
         assertEq(aUsdc.balanceOf(address(levvaVault)), 0);
@@ -95,13 +103,12 @@ contract AaveAdapterTest is Test {
     function testPartialWithdraw() public {
         uint256 usdcBalanceBefore = USDC.balanceOf(address(levvaVault));
         uint256 supplyAmount = 1000 * 10 ** 6;
-        vm.prank(address(levvaVault));
-        adapter.supply(address(USDC), supplyAmount);
+        vm.startPrank(vaultManager);
+        _supply(address(USDC), supplyAmount);
 
         uint256 aTokenBalanceBefore = aUsdc.balanceOf(address(levvaVault));
         uint256 withdrawalAmount = aTokenBalanceBefore / 2;
-        vm.prank(address(levvaVault));
-        adapter.withdraw(address(USDC), withdrawalAmount);
+        _withdraw(address(USDC), withdrawalAmount);
 
         assertApproxEqAbs(
             usdcBalanceBefore - (aTokenBalanceBefore - withdrawalAmount), USDC.balanceOf(address(levvaVault)), 1
@@ -115,13 +122,31 @@ contract AaveAdapterTest is Test {
         levvaVault.addTrackedAsset(address(aUsdt));
 
         uint256 supplyAmount = USDT.balanceOf(address(levvaVault));
-        vm.prank(address(levvaVault));
-        adapter.supply(address(USDT), supplyAmount);
+        vm.prank(vaultManager);
+        _supply(address(USDT), supplyAmount);
 
         levvaVault.removeTrackedAsset(address(USDT));
 
-        vm.prank(address(levvaVault));
+        vm.prank(vaultManager);
         vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, USDT));
-        adapter.withdraw(address(USDT), type(uint256).max);
+        _withdraw(address(USDT), type(uint256).max);
+    }
+
+    function _supply(address asset, uint256 amount) private {
+        AdapterActionExecutor.AdapterActionArg[] memory args = new LevvaVault.AdapterActionArg[](1);
+        args[0] = AdapterActionExecutor.AdapterActionArg({
+            adapterId: adapterId,
+            data: abi.encodeWithSelector(AaveAdapter.supply.selector, asset, amount)
+        });
+        levvaVault.executeAdapterAction(args);
+    }
+
+    function _withdraw(address asset, uint256 amount) private {
+        AdapterActionExecutor.AdapterActionArg[] memory args = new LevvaVault.AdapterActionArg[](1);
+        args[0] = AdapterActionExecutor.AdapterActionArg({
+            adapterId: adapterId,
+            data: abi.encodeWithSelector(AaveAdapter.withdraw.selector, asset, amount)
+        });
+        levvaVault.executeAdapterAction(args);
     }
 }

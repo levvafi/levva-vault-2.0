@@ -100,7 +100,7 @@ contract PendleAdapterTest is Test {
         vault.addTrackedAsset(address(PT_MARKET_1));
         vault.addTrackedAsset(address(PT_MARKET_2));
 
-        vault.addAdapter(address(pendleAdapter));
+        vault.addAdapter(address(pendleAdapter),"");
 
         deal(address(USDC), address(vault), 10000e6);
         deal(address(USDT), address(vault), 10000e6);

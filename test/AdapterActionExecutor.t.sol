@@ -15,7 +15,7 @@ contract AdapterActionExecutorTest is TestSetUp {
         vm.expectEmit(address(levvaVault));
         emit AdapterActionExecutor.NewAdapterAdded(adapter.getAdapterId(), address(adapter));
 
-        levvaVault.addAdapter(address(adapter));
+        levvaVault.addAdapter(address(adapter), "");
         assertEq(address(levvaVault.getAdapter(adapter.getAdapterId())), address(adapter));
         assertEq(levvaVault.externalPositionAdapterPosition(address(adapter)), 0);
     }
@@ -29,7 +29,7 @@ contract AdapterActionExecutorTest is TestSetUp {
         vm.expectEmit(address(levvaVault));
         emit AdapterActionExecutor.NewExternalPositionAdapterAdded(address(externalPositionAdapter), 1);
 
-        levvaVault.addAdapter(address(externalPositionAdapter));
+        levvaVault.addAdapter(address(externalPositionAdapter), "");
 
         assertEq(
             address(levvaVault.getAdapter(externalPositionAdapter.getAdapterId())), address(externalPositionAdapter)
@@ -40,23 +40,23 @@ contract AdapterActionExecutorTest is TestSetUp {
     function testAddAdapterOnlyOwner() public {
         vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, NO_ACCESS));
         vm.prank(NO_ACCESS);
-        levvaVault.addAdapter(address(adapter));
+        levvaVault.addAdapter(address(adapter),"");
     }
 
     function testAddAdapterAlreadyExists() public {
-        levvaVault.addAdapter(address(adapter));
+        levvaVault.addAdapter(address(adapter),"");
 
         vm.expectRevert(abi.encodeWithSelector(AdapterActionExecutor.AdapterAlreadyExists.selector, address(adapter)));
-        levvaVault.addAdapter(address(adapter));
+        levvaVault.addAdapter(address(adapter),"");
     }
 
     function testAddAdapterWrongAddress() public {
         vm.expectRevert(abi.encodeWithSelector(AdapterActionExecutor.WrongAddress.selector));
-        levvaVault.addAdapter(address(asset));
+        levvaVault.addAdapter(address(asset),"");
     }
 
     function testRemoveAdapter() public {
-        levvaVault.addAdapter(address(adapter));
+        levvaVault.addAdapter(address(adapter),"");
 
         vm.expectEmit(address(levvaVault));
         emit AdapterActionExecutor.AdapterRemoved(adapter.getAdapterId());
@@ -66,7 +66,7 @@ contract AdapterActionExecutorTest is TestSetUp {
     }
 
     function testRemoveExternalPositionAdapterLast() public {
-        levvaVault.addAdapter(address(externalPositionAdapter));
+        levvaVault.addAdapter(address(externalPositionAdapter),"");
 
         vm.expectEmit(address(levvaVault));
         emit AdapterActionExecutor.AdapterRemoved(externalPositionAdapter.getAdapterId());
@@ -85,8 +85,8 @@ contract AdapterActionExecutorTest is TestSetUp {
             new ExternalPositionAdapterMock(address(externalPositionManagedAsset), address(externalPositionDebtAsset));
         secondExternalPositionAdapter.setAdapterId(bytes4(keccak256("SecondExternalPositionAdapterMock")));
 
-        levvaVault.addAdapter(address(externalPositionAdapter));
-        levvaVault.addAdapter(address(secondExternalPositionAdapter));
+        levvaVault.addAdapter(address(externalPositionAdapter),"");
+        levvaVault.addAdapter(address(secondExternalPositionAdapter),"");
 
         assertEq(levvaVault.externalPositionAdapterPosition(address(externalPositionAdapter)), 1);
         assertEq(levvaVault.externalPositionAdapterPosition(address(secondExternalPositionAdapter)), 2);
@@ -107,7 +107,7 @@ contract AdapterActionExecutorTest is TestSetUp {
     }
 
     function testRemoveAdapterOnlyOwner() public {
-        levvaVault.addAdapter(address(adapter));
+        levvaVault.addAdapter(address(adapter),"");
         vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, NO_ACCESS));
         vm.prank(NO_ACCESS);
         levvaVault.removeAdapter(address(adapter));
@@ -119,8 +119,8 @@ contract AdapterActionExecutorTest is TestSetUp {
     }
 
     function testExecuteAdapterAction() public {
-        levvaVault.addAdapter(address(adapter));
-        levvaVault.addAdapter(address(externalPositionAdapter));
+        levvaVault.addAdapter(address(adapter),"");
+        levvaVault.addAdapter(address(externalPositionAdapter),"");
 
         AdapterActionExecutor.AdapterActionArg[] memory args = new AdapterActionExecutor.AdapterActionArg[](2);
 
@@ -160,8 +160,8 @@ contract AdapterActionExecutorTest is TestSetUp {
     }
 
     function testExecuteAdapterActionOnlyRole() public {
-        levvaVault.addAdapter(address(adapter));
-        levvaVault.addAdapter(address(externalPositionAdapter));
+        levvaVault.addAdapter(address(adapter),"");
+        levvaVault.addAdapter(address(externalPositionAdapter),"");
 
         AdapterActionExecutor.AdapterActionArg[] memory args = new AdapterActionExecutor.AdapterActionArg[](2);
 
@@ -201,7 +201,7 @@ contract AdapterActionExecutorTest is TestSetUp {
     }
 
     function testAdapterCallback() public {
-        levvaVault.addAdapter(address(externalPositionAdapter));
+        levvaVault.addAdapter(address(externalPositionAdapter),"");
 
         uint256 amount = 10 ** 18;
         uint256 managedAssetAmount = amount * 3 / 2;
@@ -226,7 +226,7 @@ contract AdapterActionExecutorTest is TestSetUp {
     }
 
     function testAdapterCallbackForbidden() public {
-        levvaVault.addAdapter(address(externalPositionAdapter));
+        levvaVault.addAdapter(address(externalPositionAdapter),"");
 
         ExternalPositionAdapterMock fakeAdapter =
             new ExternalPositionAdapterMock(address(externalPositionManagedAsset), address(externalPositionDebtAsset));
@@ -239,7 +239,7 @@ contract AdapterActionExecutorTest is TestSetUp {
     }
 
     function testTotalAssets() public {
-        levvaVault.addAdapter(address(externalPositionAdapter));
+        levvaVault.addAdapter(address(externalPositionAdapter),"");
 
         uint256 expectedTotalAssets;
         assertEq(levvaVault.totalAssets(), expectedTotalAssets);

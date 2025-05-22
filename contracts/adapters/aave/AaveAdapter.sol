@@ -19,35 +19,46 @@ contract AaveAdapter is AdapterBase {
 
     bytes4 public constant getAdapterId = bytes4(keccak256("AaveAdapter"));
 
-    IPoolAddressesProvider public immutable aavePoolAddressProvider;
+    /// @custom:storage-location erc7201:levva.storage.AaveAdapterStorage
+    struct AaveAdapterStorage {
+        IPoolAddressesProvider aavePoolAddressProvider;
+    }
 
-    constructor(address _aavePoolAddressProvider) {
-        _aavePoolAddressProvider.assertNotZeroAddress();
-        aavePoolAddressProvider = IPoolAddressesProvider(_aavePoolAddressProvider);
+    // keccak256(abi.encode(uint256(keccak256("levva.storage.AaveAdapterStorage")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant AdapterAdapterStorageLocation =
+        0x10e3677d8185beaddb1f8b8d5deec589b0a3b430df8f87cd7942442cfd6f2000;
+
+    function _getAaveAdapterStorage() private pure returns (AaveAdapterStorage storage $) {
+        assembly {
+            $.slot := AdapterAdapterStorageLocation
+        }
+    }
+
+    function initialize(address aavePoolAddressProvider) external {
+        aavePoolAddressProvider.assertNotZeroAddress();
+        _getAaveAdapterStorage().aavePoolAddressProvider = IPoolAddressesProvider(aavePoolAddressProvider);
     }
 
     function supply(address asset, uint256 amount) external {
-        IPool aavePool = IPool(aavePoolAddressProvider.getPool());
+        IPool aavePool = IPool(_getAaveAdapterStorage().aavePoolAddressProvider.getPool());
 
         address aToken = _getAToken(aavePool, asset);
         _ensureIsValidAsset(aToken);
 
-        IAdapterCallback(msg.sender).adapterCallback(address(this), asset, amount);
         IERC20(asset).forceApprove(address(aavePool), amount);
-        aavePool.supply(asset, amount, msg.sender, 0);
+        aavePool.supply(asset, amount, address(this), 0);
     }
 
     function withdraw(address asset, uint256 amount) external {
         _ensureIsValidAsset(asset);
 
-        IPool aavePool = IPool(aavePoolAddressProvider.getPool());
+        IPool aavePool = IPool(_getAaveAdapterStorage().aavePoolAddressProvider.getPool());
         address aToken = _getAToken(aavePool, asset);
 
-        uint256 toTransfer = amount == type(uint256).max ? IERC20(aToken).balanceOf(msg.sender) : amount;
-        IAdapterCallback(msg.sender).adapterCallback(address(this), aToken, toTransfer);
+        uint256 toTransfer = amount == type(uint256).max ? IERC20(aToken).balanceOf(address(this)) : amount;
         IERC20(asset).forceApprove(aToken, toTransfer);
 
-        aavePool.withdraw(asset, amount, msg.sender);
+        aavePool.withdraw(asset, amount, address(this));
     }
 
     function _getAToken(IPool pool, address asset) private view returns (address) {

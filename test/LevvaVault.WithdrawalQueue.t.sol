@@ -17,7 +17,7 @@ contract LevvaVaultUserActionsTest is TestSetUp {
         super.setUp();
         asset.mint(USER, 10 * MIN_DEPOSIT);
 
-        levvaVault.addAdapter(address(externalPositionAdapter));
+        levvaVault.addAdapter(address(externalPositionAdapter),"");
     }
 
     function testEnqueueWithdrawal() public {

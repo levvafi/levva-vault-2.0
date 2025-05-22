@@ -89,7 +89,7 @@ contract CurveRouterAdapterTest is Test {
         vault.addTrackedAsset(address(wstETH));
         vault.addTrackedAsset(address(rsETH));
 
-        vault.addAdapter(address(curveRouterAdapter));
+        vault.addAdapter(address(curveRouterAdapter),"");
 
         deal(address(WETH), address(vault), 10000e18);
         deal(address(USDC), address(vault), 10000e6);

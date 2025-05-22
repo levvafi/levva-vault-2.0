@@ -48,7 +48,7 @@ contract UniswapAdapterTest is Test {
         levvaVault = LevvaVault(address(new ERC1967Proxy(address(levvaVaultImplementation), data)));
 
         adapter = new UniswapAdapter(UNISWAP_V3_ROUTER, UNISWAP_UNIVERSAL_ROUTER, PERMIT2);
-        levvaVault.addAdapter(address(adapter));
+        levvaVault.addAdapter(address(adapter), "");
 
         levvaVault.addTrackedAsset(address(WBTC));
         deal(address(USDC), address(levvaVault), 10 ** 18);

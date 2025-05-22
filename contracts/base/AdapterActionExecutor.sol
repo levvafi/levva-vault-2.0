@@ -12,7 +12,7 @@ import {IAdapterCallback} from "../interfaces/IAdapterCallback.sol";
 import {IEulerPriceOracle} from "../interfaces/IEulerPriceOracle.sol";
 import {OraclePriceProvider} from "./OraclePriceProvider.sol";
 
-abstract contract AdapterActionExecutor is IAdapterCallback, OraclePriceProvider {
+abstract contract AdapterActionExecutor is OraclePriceProvider {
     using SafeERC20 for IERC20;
 
     /// @custom:storage-location erc7201:levva.storage.AdapterActionExecutor
@@ -51,11 +51,6 @@ abstract contract AdapterActionExecutor is IAdapterCallback, OraclePriceProvider
     error AdapterAlreadyExists(address adapter);
     error Forbidden();
 
-    function adapterCallback(address receiver, address token, uint256 amount) external {
-        if (msg.sender != _getAdapterSafe(IAdapter(msg.sender).getAdapterId())) revert Forbidden();
-        IERC20(token).safeTransfer(receiver, amount);
-    }
-
     function executeAdapterAction(AdapterActionArg[] calldata actionArgs) external onlyVaultManager {
         uint256 length = actionArgs.length;
         uint256 i;
@@ -63,7 +58,7 @@ abstract contract AdapterActionExecutor is IAdapterCallback, OraclePriceProvider
             AdapterActionArg memory actionArg = actionArgs[i];
 
             address adapter = _getAdapterSafe(actionArg.adapterId);
-            bytes memory result = Address.functionCall(adapter, actionArg.data);
+            bytes memory result = Address.functionDelegateCall(adapter, actionArg.data);
 
             emit AdapterActionExecuted(actionArg.adapterId, actionArg.data, result);
 
@@ -73,12 +68,16 @@ abstract contract AdapterActionExecutor is IAdapterCallback, OraclePriceProvider
         }
     }
 
-    function addAdapter(address adapter) external onlyOwner {
+    function addAdapter(address adapter, bytes memory initializeCallData) external onlyOwner {
         if (!_isAdapter(adapter)) revert WrongAddress();
         _addAdapter(IAdapter(adapter));
 
         if (_isExternalPositionAdapter(adapter)) {
             _addExternalPositionAdapter(IExternalPositionAdapter(adapter));
+        }
+
+        if (initializeCallData.length > 0) {
+            Address.functionDelegateCall(adapter, initializeCallData);
         }
     }
 

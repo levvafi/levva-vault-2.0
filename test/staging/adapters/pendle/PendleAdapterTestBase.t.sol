@@ -49,7 +49,7 @@ abstract contract PendleAdapterTestBase is Test {
         );
 
         vault = LevvaVault(address(new ERC1967Proxy(address(levvaVaultImplementation), data)));
-        vault.addAdapter(address(pendleAdapter));
+        vault.addAdapter(address(pendleAdapter),"");
     }
 
     function _swapTokenToPt(
