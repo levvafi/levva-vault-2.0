@@ -13,7 +13,7 @@ import {ILiquidityPool} from "./interfaces/ILiquidityPool.sol";
 import {IWithdrawRequestNFT} from "./interfaces/IWithdrawRequestNFT.sol";
 import {IeETH} from "./interfaces/IeETH.sol";
 
-abstract contract AbstractEtherfiEthAdapter is AdapterBase, ERC721Holder, IExternalPositionAdapter {
+contract EtherfiETHAdapter is AdapterBase, ERC721Holder, IExternalPositionAdapter {
     using SafeERC20 for IeETH;
     using SafeERC20 for IWETH9;
     using Asserts for address;
@@ -23,6 +23,8 @@ abstract contract AbstractEtherfiEthAdapter is AdapterBase, ERC721Holder, IExter
         uint256 end;
         mapping(uint256 index => uint256) requests;
     }
+
+    bytes4 public constant getAdapterId = bytes4(keccak256("EtherfiETHAdapter"));
 
     error NoWithdrawRequestInQueue();
 
@@ -82,6 +84,27 @@ abstract contract AbstractEtherfiEthAdapter is AdapterBase, ERC721Holder, IExter
         _weth.safeTransfer(msg.sender, withdrawn);
     }
 
+    function supportsInterface(bytes4 interfaceId) public pure override returns (bool) {
+        return interfaceId == type(IExternalPositionAdapter).interfaceId || super.supportsInterface(interfaceId);
+    }
+
+    /// @inheritdoc IExternalPositionAdapter
+    function getManagedAssets() external view returns (address[] memory assets, uint256[] memory amounts) {
+        return _getManagedAssets(msg.sender);
+    }
+
+    function getManagedAssets(address vault)
+        external
+        view
+        returns (address[] memory assets, uint256[] memory amounts)
+    {
+        return _getManagedAssets(vault);
+    }
+
+    /// @inheritdoc IExternalPositionAdapter
+    /// @dev there is no debt assets
+    function getDebtAssets() external view returns (address[] memory assets, uint256[] memory amounts) {}
+
     function _enqueueWithdrawalRequest(uint256 requestId) private {
         WithdrawalQueue storage queue = queues[msg.sender];
         unchecked {
@@ -112,5 +135,17 @@ abstract contract AbstractEtherfiEthAdapter is AdapterBase, ERC721Holder, IExter
                 pendingEth += (request.amountOfEEth < amountForShares) ? request.amountOfEEth : amountForShares;
             }
         }
+    }
+
+    function _getManagedAssets(address vault)
+        private
+        view
+        returns (address[] memory assets, uint256[] memory amounts)
+    {
+        assets = new address[](1);
+        assets[0] = address(weth);
+
+        amounts = new uint256[](1);
+        amounts[0] = _getPendingEthAmount(vault);
     }
 }

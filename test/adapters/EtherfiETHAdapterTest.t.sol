@@ -8,8 +8,7 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {LevvaVault} from "../../contracts/LevvaVault.sol";
-import {EtherfiAdapter} from "../../contracts/adapters/etherfi/EtherfiAdapter.sol";
-import {AbstractEtherfiEthAdapter} from "../../contracts/adapters/etherfi/AbstractEtherfiEthAdapter.sol";
+import {EtherfiETHAdapter} from "../../contracts/adapters/etherfi/EtherfiETHAdapter.sol";
 import {AdapterBase} from "../../contracts/adapters/AdapterBase.sol";
 import {IAtomicQueue} from "../../contracts/adapters/etherfi/interfaces/IAtomicQueue.sol";
 import {ILiquidityPool} from "../../contracts/adapters/etherfi/interfaces/ILiquidityPool.sol";
@@ -35,27 +34,21 @@ interface IAtomicSolver {
     ) external;
 }
 
-contract EtherfiAdapterTest is Test {
+contract EtherfiETHAdapterTest is Test {
     using Math for uint256;
 
     uint256 public constant FORK_BLOCK = 22515980;
 
-    address ETHERFI_ADMIN = 0xcD425f44758a08BaAB3C4908f3e3dE5776e45d7a;
+    address private constant ETHERFI_ADMIN = 0xcD425f44758a08BaAB3C4908f3e3dE5776e45d7a;
     ILiquidityPool private constant ETHERFI_LIQUIDITY_POOL = ILiquidityPool(0x308861A430be4cce5502d0A12724771Fc6DaF216);
     IERC20 private constant USDC = IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
     IERC20 private constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
-    IERC20 private constant WBTC = IERC20(0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599);
-    IERC20 private constant EBTC = IERC20(0x657e8C867D8B37dCC18fA4Caead9C45EB088C642);
-    address private constant LAYER_ZERO_TELLER = 0x6Ee3aaCcf9f2321E49063C4F8da775DdBd407268;
-    address private constant ATOMIC_QUEUE = 0xD45884B592E316eB816199615A95C182F75dea07;
-    IAtomicSolver private constant ATOMIC_SOLVER = IAtomicSolver(0x989468982b08AEfA46E37CD0086142A86fa466D7);
-    address private constant SOLVER_ADMIN = 0xf8553c8552f906C19286F21711721E206EE4909E;
 
     IERC20 private eETH;
 
     string private mainnetRpcUrl = vm.envString("ETH_RPC_URL");
 
-    EtherfiAdapter private adapter;
+    EtherfiETHAdapter private adapter;
     LevvaVault private levvaVault;
 
     function setUp() public {
@@ -66,8 +59,6 @@ contract EtherfiAdapterTest is Test {
         EulerRouterMock oracle = new EulerRouterMock();
         oracle.setPrice(oracle.ONE().mulDiv(2000, 10 ** 12), address(WETH), address(USDC));
         oracle.setPrice(oracle.ONE().mulDiv(2000, 10 ** 12), address(eETH), address(USDC));
-        oracle.setPrice(oracle.ONE().mulDiv(100_000, 10 ** 2), address(WBTC), address(USDC));
-        oracle.setPrice(oracle.ONE().mulDiv(100_000, 10 ** 2), address(EBTC), address(USDC));
 
         LevvaVault levvaVaultImplementation = new LevvaVault();
         bytes memory data = abi.encodeWithSelector(
@@ -75,24 +66,14 @@ contract EtherfiAdapterTest is Test {
         );
         levvaVault = LevvaVault(address(new ERC1967Proxy(address(levvaVaultImplementation), data)));
 
-        adapter = new EtherfiAdapter(
-            address(WETH),
-            address(ETHERFI_LIQUIDITY_POOL),
-            address(WBTC),
-            address(EBTC),
-            LAYER_ZERO_TELLER,
-            ATOMIC_QUEUE
-        );
+        adapter = new EtherfiETHAdapter(address(WETH), address(ETHERFI_LIQUIDITY_POOL));
         levvaVault.addAdapter(address(adapter));
         assertNotEq(levvaVault.externalPositionAdapterPosition(address(adapter)), 0);
 
         deal(address(WETH), address(levvaVault), 10 ether);
-        deal(address(WBTC), address(levvaVault), 10 * 10 ** 8);
 
         levvaVault.addTrackedAsset(address(eETH));
         levvaVault.addTrackedAsset(address(WETH));
-        levvaVault.addTrackedAsset(address(EBTC));
-        levvaVault.addTrackedAsset(address(WBTC));
     }
 
     function testDepositEth() public {
@@ -218,7 +199,7 @@ contract EtherfiAdapterTest is Test {
 
     function testClaimNoRequests() public {
         vm.prank(address(levvaVault));
-        vm.expectRevert(abi.encodeWithSelector(AbstractEtherfiEthAdapter.NoWithdrawRequestInQueue.selector));
+        vm.expectRevert(abi.encodeWithSelector(EtherfiETHAdapter.NoWithdrawRequestInQueue.selector));
         adapter.claimWithdraw();
     }
 
@@ -240,98 +221,6 @@ contract EtherfiAdapterTest is Test {
         vm.prank(address(levvaVault));
         vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, WETH));
         adapter.claimWithdraw();
-    }
-
-    function testDepositBtc() public {
-        uint256 wbtcBalanceBefore = WBTC.balanceOf(address(levvaVault));
-        uint256 depositAmount = 10 ** 8;
-        vm.prank(address(levvaVault));
-        adapter.depositBtc(depositAmount);
-
-        assertEq(wbtcBalanceBefore - WBTC.balanceOf(address(levvaVault)), depositAmount);
-        assertApproxEqAbs(EBTC.balanceOf(address(levvaVault)), depositAmount, 1);
-        assertEq(WBTC.balanceOf(address(adapter)), 0);
-        assertEq(EBTC.balanceOf(address(adapter)), 0);
-    }
-
-    function testDepositBtcNotTrackedAssets() public {
-        levvaVault.removeTrackedAsset(address(EBTC));
-
-        uint256 depositAmount = 10 ** 8;
-        vm.prank(address(levvaVault));
-        vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, EBTC));
-        adapter.depositBtc(depositAmount);
-    }
-
-    function testRequestWithdrawBtc() public {
-        uint256 depositAmount = 2 * 10 ** 8;
-        vm.prank(address(levvaVault));
-        adapter.depositBtc(depositAmount);
-
-        uint88 price = 10 ** 8;
-        uint64 deadline = type(uint64).max;
-        uint256 withdrawAmount = depositAmount;
-
-        vm.prank(address(levvaVault));
-        adapter.requestWithdrawBtc(uint96(withdrawAmount), price, deadline);
-
-        IAtomicQueue.AtomicRequest memory request =
-            IAtomicQueue(ATOMIC_QUEUE).getUserAtomicRequest(address(adapter), EBTC, WBTC);
-
-        assertEq(request.deadline, deadline);
-        assertEq(request.atomicPrice, price);
-        assertEq(request.offerAmount, depositAmount);
-        assert(!request.inSolve);
-
-        assertEq(WBTC.balanceOf(address(adapter)), 0);
-        assertEq(EBTC.balanceOf(address(adapter)), depositAmount);
-
-        address[] memory users = new address[](1);
-        users[0] = address(adapter);
-
-        vm.prank(SOLVER_ADMIN);
-        ATOMIC_SOLVER.redeemSolve(ATOMIC_QUEUE, EBTC, WBTC, users, 0, type(uint256).max, LAYER_ZERO_TELLER);
-
-        uint256 expectedBalance = withdrawAmount.mulDiv(price, 10 ** 8);
-        assertEq(WBTC.balanceOf(address(adapter)), expectedBalance);
-        assertEq(EBTC.balanceOf(address(adapter)), 0);
-    }
-
-    function testRequestWithdrawBtcNotTrackedAsset() public {
-        uint256 depositAmount = WBTC.balanceOf(address(levvaVault));
-        vm.prank(address(levvaVault));
-        adapter.depositBtc(depositAmount);
-
-        levvaVault.removeTrackedAsset(address(WBTC));
-
-        vm.prank(address(levvaVault));
-        vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, WBTC));
-        adapter.requestWithdrawBtc(uint96(depositAmount), 10 ** 8, type(uint64).max);
-    }
-
-    function testCancelWithdrawBtc() public {
-        uint256 depositAmount = 10 ** 8;
-        vm.prank(address(levvaVault));
-        adapter.depositBtc(depositAmount);
-
-        vm.prank(address(levvaVault));
-        adapter.requestWithdrawBtc(uint96(depositAmount), 10 ** 8, type(uint64).max);
-
-        assertEq(WBTC.balanceOf(address(adapter)), 0);
-        assertEq(EBTC.balanceOf(address(adapter)), depositAmount);
-
-        vm.prank(address(levvaVault));
-        adapter.cancelWithdrawBtcRequest();
-
-        IAtomicQueue.AtomicRequest memory request =
-            IAtomicQueue(ATOMIC_QUEUE).getUserAtomicRequest(address(adapter), EBTC, WBTC);
-
-        assertEq(request.deadline, 0);
-        assertEq(request.atomicPrice, 0);
-        assertEq(request.offerAmount, 0);
-        assert(!request.inSolve);
-
-        assertEq(EBTC.allowance(address(adapter), ATOMIC_QUEUE), 0);
     }
 
     function _assertNoDebtAssets() private {

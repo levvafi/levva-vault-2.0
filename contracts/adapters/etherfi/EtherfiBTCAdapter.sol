@@ -12,9 +12,11 @@ import {AdapterBase} from "../AdapterBase.sol";
 import {ILayerZeroTellerWithRateLimiting} from "./interfaces/ILayerZeroTellerWithRateLimiting.sol";
 import {IAtomicQueue} from "./interfaces/IAtomicQueue.sol";
 
-abstract contract AbstractEtherfiBtcAdapter is AdapterBase, ERC721Holder, IExternalPositionAdapter {
+contract EtherfiBTCAdapter is AdapterBase, ERC721Holder {
     using SafeERC20 for IERC20;
     using Asserts for address;
+
+    bytes4 public constant getAdapterId = bytes4(keccak256("EtherfiBTCAdapter"));
 
     IERC20 public immutable wBTC;
     IERC20 public immutable eBTC;
