@@ -10,6 +10,7 @@ import {IExternalPositionAdapter} from "../../interfaces/IExternalPositionAdapte
 import {Asserts} from "../../libraries/Asserts.sol";
 import {AdapterBase} from "../AdapterBase.sol";
 import {ILayerZeroTellerWithRateLimiting} from "./interfaces/ILayerZeroTellerWithRateLimiting.sol";
+import {IAtomicQueue} from "./interfaces/IAtomicQueue.sol";
 
 abstract contract AbstractEtherfiBtcAdapter is AdapterBase, ERC721Holder, IExternalPositionAdapter {
     using SafeERC20 for IERC20;
@@ -18,25 +19,64 @@ abstract contract AbstractEtherfiBtcAdapter is AdapterBase, ERC721Holder, IExter
     IERC20 public immutable wBTC;
     IERC20 public immutable eBTC;
     ILayerZeroTellerWithRateLimiting public immutable teller;
+    IAtomicQueue public immutable atomicQueue;
 
-    constructor(address _wBTC, address _eBTC, address _teller) {
+    constructor(address _wBTC, address _eBTC, address _teller, address _atomicQueue) {
         _wBTC.assertNotZeroAddress();
         _eBTC.assertNotZeroAddress();
         _teller.assertNotZeroAddress();
+        _atomicQueue.assertNotZeroAddress();
 
         wBTC = IERC20(_wBTC);
         eBTC = IERC20(_eBTC);
         teller = ILayerZeroTellerWithRateLimiting(_teller);
+        atomicQueue = IAtomicQueue(_atomicQueue);
     }
 
     function depositBtc(uint256 amount) external returns (uint256 shares) {
         IERC20 _wBTC = wBTC;
         IERC20 _eBTC = eBTC;
 
+        _ensureIsValidAsset(address(_eBTC));
+
         IAdapterCallback(msg.sender).adapterCallback(address(this), address(_wBTC), amount);
         _wBTC.forceApprove(address(_eBTC), amount);
 
         shares = teller.deposit(_wBTC, amount, 0);
         _eBTC.safeTransfer(msg.sender, amount);
+    }
+
+    // TODO: there is no mechanism for transferring tokens back to vault after request is resolved or cancelled
+    //       I didn't bother to implement it cause then there must be some requests origins tracking
+    //       otherwise anyone can appropriate tokens
+    //       all of that won't be required in delegateCall approach anyway
+    function requestWithdrawBtc(uint96 amount, uint88 atomicPrice, uint64 deadline) external {
+        IERC20 _wBTC = wBTC;
+        IERC20 _eBTC = eBTC;
+        IAtomicQueue _atomicQueue = atomicQueue;
+
+        _ensureIsValidAsset(address(_wBTC));
+
+        IAtomicQueue.AtomicRequest memory currentRequest =
+            _atomicQueue.getUserAtomicRequest(address(this), _eBTC, _wBTC);
+        currentRequest.offerAmount = amount;
+        currentRequest.deadline = deadline;
+        currentRequest.atomicPrice = atomicPrice;
+
+        _atomicQueue.updateAtomicRequest(_eBTC, _wBTC, currentRequest);
+
+        IAdapterCallback(msg.sender).adapterCallback(address(this), address(_eBTC), amount);
+        _eBTC.forceApprove(address(_atomicQueue), amount);
+    }
+
+    function cancelWithdrawBtcRequest() external {
+        IERC20 _eBTC = eBTC;
+        IAtomicQueue _atomicQueue = atomicQueue;
+
+        IAtomicQueue.AtomicRequest memory defaultRequest =
+            IAtomicQueue.AtomicRequest({deadline: 0, atomicPrice: 0, offerAmount: 0, inSolve: false});
+
+        _atomicQueue.updateAtomicRequest(_eBTC, wBTC, defaultRequest);
+        _eBTC.forceApprove(address(_atomicQueue), 0);
     }
 }

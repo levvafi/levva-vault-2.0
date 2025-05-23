@@ -8,9 +8,9 @@ import {AbstractEtherfiBtcAdapter} from "./AbstractEtherfiBtcAdapter.sol";
 contract EtherfiAdapter is AbstractEtherfiEthAdapter, AbstractEtherfiBtcAdapter {
     bytes4 public constant getAdapterId = bytes4(keccak256("EtherfiAdapter"));
 
-    constructor(address weth, address liquidityPool, address wbtc, address ebtc, address teller)
+    constructor(address weth, address liquidityPool, address wbtc, address ebtc, address teller, address atomicQueue)
         AbstractEtherfiEthAdapter(weth, liquidityPool)
-        AbstractEtherfiBtcAdapter(wbtc, ebtc, teller)
+        AbstractEtherfiBtcAdapter(wbtc, ebtc, teller, atomicQueue)
     {}
 
     function supportsInterface(bytes4 interfaceId) public pure override returns (bool) {
