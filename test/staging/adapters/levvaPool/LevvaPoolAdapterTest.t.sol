@@ -23,6 +23,7 @@ contract LevvaPoolAdapterTest is Test {
     using FP96 for ILevvaPool.FixedPoint;
     using Math for uint256;
 
+    uint256 private constant X96_ONE = 2 ** 96;
     uint256 private constant FORK_BLOCK_NUMBER = 22497400;
 
     IERC20 private WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
@@ -198,6 +199,93 @@ contract LevvaPoolAdapterTest is Test {
         assertEq(debtAssets[0], address(weETH));
         assertEq(debtAmounts.length, 1);
         assertTrue(debtAmounts[0] > 0);
+    }
+
+    function test_depostiQuoteAndShortCoeffs() public {
+        ILevvaPool pool = ILevvaPool(weETH_WETH_POOL);
+        uint256 depositAmount = 1e18;
+        int256 shortAmount = 5e18;
+
+        uint256 swapCallData = pool.defaultSwapCallData();
+        uint256 limitPriceX96 = pool.getBasePrice().inner.mulDiv(90, 100);
+
+        vm.prank(address(vault));
+        adapter.deposit(address(WETH), depositAmount, shortAmount, address(pool), limitPriceX96, swapCallData);
+        //check coeffs before reinit
+        (, uint256[] memory amounts) = adapter.getManagedAssets();
+        (, uint256[] memory debtAmounts) = adapter.getDebtAssets();
+        uint256 quoteCollateral = amounts[0];
+        uint256 baseDebt = debtAmounts[0];
+
+        ILevvaPool.Position memory position = pool.positions(address(adapter));
+        assertEq(uint8(ILevvaPool.PositionType.Short), uint8(position._type));
+        uint256 actualQuoteCollateral =
+            pool.quoteCollateralCoeff().inner.mulDiv(position.discountedQuoteAmount, X96_ONE);
+        uint256 actualBaseDebt = pool.baseDebtCoeff().inner.mulDiv(position.discountedBaseAmount, X96_ONE);
+
+        assertEq(quoteCollateral, actualQuoteCollateral, "wrong quote collateral before reinit");
+        assertEq(baseDebt, actualBaseDebt, "wrong base debt before reinit");
+
+        skip(60 days);
+
+        //check coeffs after reinit
+        (, amounts) = adapter.getManagedAssets();
+        (, debtAmounts) = adapter.getDebtAssets();
+        quoteCollateral = amounts[0];
+        baseDebt = debtAmounts[0];
+
+        //reinit
+        pool.execute(ILevvaPool.CallType.Reinit, 0, 0, 0, false, address(0), 0);
+
+        position = pool.positions(address(adapter));
+        actualQuoteCollateral = pool.quoteCollateralCoeff().inner.mulDiv(position.discountedQuoteAmount, X96_ONE);
+        actualBaseDebt = pool.baseDebtCoeff().inner.mulDiv(position.discountedBaseAmount, X96_ONE);
+
+        assertEq(quoteCollateral, actualQuoteCollateral, "wrong quote collateral after reinit");
+        assertEq(baseDebt, actualBaseDebt, "wrong base debt after reinit");
+    }
+
+    function test_depositBaseAndLongCoeffs() public {
+        ILevvaPool pool = ILevvaPool(weETH_WETH_POOL);
+        uint256 depositAmount = 1e18;
+        int256 longAmount = 5e18;
+
+        uint256 swapCallData = pool.defaultSwapCallData();
+        uint256 limitPriceX96 = pool.getBasePrice().inner.mulDiv(110, 100);
+
+        vm.prank(address(vault));
+        adapter.deposit(address(weETH), depositAmount, longAmount, address(pool), limitPriceX96, swapCallData);
+        //check coeffs before reinit
+        (, uint256[] memory amounts) = adapter.getManagedAssets();
+        (, uint256[] memory debtAmounts) = adapter.getDebtAssets();
+        uint256 baseCollateral = amounts[0];
+        uint256 quoteDebt = debtAmounts[0];
+
+        ILevvaPool.Position memory position = pool.positions(address(adapter));
+        assertEq(uint8(ILevvaPool.PositionType.Long), uint8(position._type));
+        uint256 actualBaseCollateral = pool.baseCollateralCoeff().inner.mulDiv(position.discountedBaseAmount, X96_ONE);
+        uint256 actualQuoteDebt = pool.quoteDebtCoeff().inner.mulDiv(position.discountedQuoteAmount, X96_ONE);
+
+        assertEq(baseCollateral, actualBaseCollateral, "wrong base collateral before reinit");
+        assertEq(quoteDebt, actualQuoteDebt, "wrong base debt before reinit");
+
+        skip(60 days);
+
+        //check coeffs after reinit
+        (, amounts) = adapter.getManagedAssets();
+        (, debtAmounts) = adapter.getDebtAssets();
+        baseCollateral = amounts[0];
+        quoteDebt = debtAmounts[0];
+
+        //reinit
+        pool.execute(ILevvaPool.CallType.Reinit, 0, 0, 0, false, address(0), 0);
+
+        position = pool.positions(address(adapter));
+        actualBaseCollateral = pool.baseCollateralCoeff().inner.mulDiv(position.discountedBaseAmount, X96_ONE);
+        actualQuoteDebt = pool.quoteDebtCoeff().inner.mulDiv(position.discountedQuoteAmount, X96_ONE);
+
+        assertEq(baseCollateral, actualBaseCollateral, "wrong quote collateral after reinit");
+        assertEq(quoteDebt, actualQuoteDebt, "wrong quote debt after reinit");
     }
 
     function test_depositQuoteAndLongShouldFailWhenOracleNotExists() public {
