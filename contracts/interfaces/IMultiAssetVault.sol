@@ -5,4 +5,6 @@ import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 
 interface IMultiAssetVault is IERC4626 {
     function trackedAssetPosition(address trackedAsset) external view returns (uint256);
+
+    function oracle() external view returns (address);
 }

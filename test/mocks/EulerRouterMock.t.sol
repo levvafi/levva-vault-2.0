@@ -30,4 +30,9 @@ contract EulerRouterMock is IEulerPriceOracle, Test {
         prices[base][quote] = price;
         prices[quote][base] = ONE.mulDiv(ONE, price);
     }
+
+    function removePrice(address base, address quote) external {
+        delete prices[base][quote];
+        delete prices[quote][base];
+    }
 }
