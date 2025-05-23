@@ -326,7 +326,7 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
                 return currentBaseCollateral;
             }
 
-            FP96.FixedPoint memory baseAccruedInterestFactor = _estimateQuoteAccruedInterestFactor(pool, secondsPassed);
+            FP96.FixedPoint memory baseAccruedInterestFactor = _estimateBaseAccruedInterestFactor(pool, secondsPassed);
             uint256 realBaseDebtDelta =
                 baseAccruedInterestFactor.sub(FP96.one()).mul(pool.baseDebtCoeff().mul(pool.discountedBaseDebt()));
             uint256 realBaseCollateral = baseCollateralCoeff.mul(pool.discountedBaseCollateral())

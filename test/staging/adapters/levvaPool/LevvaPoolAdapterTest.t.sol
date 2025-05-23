@@ -203,6 +203,7 @@ contract LevvaPoolAdapterTest is Test {
 
     function test_depostiQuoteAndShortCoeffs() public {
         ILevvaPool pool = ILevvaPool(weETH_WETH_POOL);
+        _openPositionsInPool(weETH_WETH_POOL);
         uint256 depositAmount = 1e18;
         int256 shortAmount = 5e18;
 
@@ -247,6 +248,7 @@ contract LevvaPoolAdapterTest is Test {
 
     function test_depositBaseAndLongCoeffs() public {
         ILevvaPool pool = ILevvaPool(weETH_WETH_POOL);
+        _openPositionsInPool(weETH_WETH_POOL);
         uint256 depositAmount = 1e18;
         int256 longAmount = 5e18;
 
@@ -286,6 +288,76 @@ contract LevvaPoolAdapterTest is Test {
 
         assertEq(baseCollateral, actualBaseCollateral, "wrong quote collateral after reinit");
         assertEq(quoteDebt, actualQuoteDebt, "wrong quote debt after reinit");
+    }
+
+    function test_depositBaseCoeffs() public {
+        ILevvaPool pool = ILevvaPool(weETH_WETH_POOL);
+        _openPositionsInPool(weETH_WETH_POOL);
+        uint256 depositAmount = 1e18;
+
+        vm.prank(address(vault));
+        adapter.deposit(address(weETH), depositAmount, 0, address(pool), 0, 0);
+        //check coeffs before reinit
+        (, uint256[] memory amounts) = adapter.getManagedAssets();
+        uint256 baseCollateral = amounts[0];
+
+        ILevvaPool.Position memory position = pool.positions(address(adapter));
+        assertEq(uint8(ILevvaPool.PositionType.Lend), uint8(position._type));
+        uint256 actualBaseCollateral = pool.baseCollateralCoeff().inner.mulDiv(position.discountedBaseAmount, X96_ONE);
+
+        assertEq(baseCollateral, actualBaseCollateral, "wrong base collateral before reinit");
+
+        skip(30 days);
+
+        //check coeffs after reinit
+        (, amounts) = adapter.getManagedAssets();
+        baseCollateral = amounts[0];
+        uint256 blockTimestamp = block.timestamp;
+
+        //reinit
+        pool.execute(ILevvaPool.CallType.Reinit, 0, 0, 0, false, address(0), 0);
+
+        assertEq(block.timestamp, blockTimestamp);
+
+        position = pool.positions(address(adapter));
+        actualBaseCollateral = pool.baseCollateralCoeff().inner.mulDiv(position.discountedBaseAmount, X96_ONE);
+
+        assertEq(baseCollateral, actualBaseCollateral, "wrong base collateral after reinit");
+    }
+
+    function test_depositQuoteCoeffs() public {
+        ILevvaPool pool = ILevvaPool(weETH_WETH_POOL);
+        _openPositionsInPool(weETH_WETH_POOL);
+        uint256 depositAmount = 1e18;
+
+        vm.prank(address(vault));
+        adapter.deposit(address(WETH), depositAmount, 0, address(pool), 0, 0);
+        //check coeffs before reinit
+        (, uint256[] memory amounts) = adapter.getManagedAssets();
+        uint256 quoteCollateral = amounts[0];
+
+        ILevvaPool.Position memory position = pool.positions(address(adapter));
+        assertEq(uint8(ILevvaPool.PositionType.Lend), uint8(position._type));
+        uint256 actualQuoteCollateral = pool.quoteCollateralCoeff().inner.mulDiv(position.discountedQuoteAmount, X96_ONE);
+
+        assertEq(quoteCollateral, actualQuoteCollateral, "wrong base collateral before reinit");
+
+        skip(30 days);
+
+        //check coeffs after reinit
+        (, amounts) = adapter.getManagedAssets();
+        quoteCollateral = amounts[0];
+        uint256 blockTimestamp = block.timestamp;
+
+        //reinit
+        pool.execute(ILevvaPool.CallType.Reinit, 0, 0, 0, false, address(0), 0);
+
+        assertEq(block.timestamp, blockTimestamp);
+
+        position = pool.positions(address(adapter));
+        actualQuoteCollateral = pool.quoteCollateralCoeff().inner.mulDiv(position.discountedQuoteAmount, X96_ONE);
+
+        assertEq(quoteCollateral, actualQuoteCollateral, "wrong base collateral after reinit");
     }
 
     function test_depositQuoteAndLongShouldFailWhenOracleNotExists() public {
@@ -863,6 +935,47 @@ contract LevvaPoolAdapterTest is Test {
         console.log("   type: ", typeStr);
         console.log("   base  amount: ", position.discountedBaseAmount);
         console.log("   quote amount: ", position.discountedQuoteAmount);
+    }
+
+    function _openPositionsInPool(address pool) private {
+        ERC20 quoteToken = ERC20(ILevvaPool(pool).quoteToken());
+        ERC20 baseToken = ERC20(ILevvaPool(pool).baseToken());
+        address longer = makeAddr("LONGER");
+        address shorter = makeAddr("SHORTER");
+
+        uint256 quoteDepositAmount = 1 * 10 ** quoteToken.decimals();
+        uint256 baseDepositAmount = 1 * 10 ** baseToken.decimals();
+        int256 longAmount = 5 * int256(baseDepositAmount);
+        int256 shortAmount = 5 * int256(baseDepositAmount);
+
+        deal(address(quoteToken), address(shorter), quoteDepositAmount);
+        deal(address(baseToken), address(longer), baseDepositAmount);
+
+        startHoax(longer);
+        baseToken.approve(pool, baseDepositAmount);
+        ILevvaPool(pool).execute(
+            ILevvaPool.CallType.DepositBase,
+            baseDepositAmount,
+            longAmount,
+            ILevvaPool(pool).getBasePrice().inner.mulDiv(110, 100),
+            false,
+            address(0),
+            ILevvaPool(pool).defaultSwapCallData()
+        );
+        vm.stopPrank();
+
+        startHoax(shorter);
+        quoteToken.approve(pool, quoteDepositAmount);
+        ILevvaPool(pool).execute(
+            ILevvaPool.CallType.DepositQuote,
+            quoteDepositAmount,
+            shortAmount,
+            ILevvaPool(pool).getBasePrice().inner.mulDiv(90, 100),
+            false,
+            address(0),
+            ILevvaPool(pool).defaultSwapCallData()
+        );
+        vm.stopPrank();
     }
 
     function _fundLevvaPool(address pool) private {
