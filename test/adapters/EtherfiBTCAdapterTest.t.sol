@@ -79,7 +79,7 @@ contract EtherfiBTCAdapterTest is Test {
         uint256 wbtcBalanceBefore = WBTC.balanceOf(address(levvaVault));
         uint256 depositAmount = 10 ** 8;
         vm.prank(address(levvaVault));
-        adapter.depositBtc(depositAmount);
+        adapter.deposit(depositAmount, 0);
 
         assertEq(wbtcBalanceBefore - WBTC.balanceOf(address(levvaVault)), depositAmount);
         assertApproxEqAbs(EBTC.balanceOf(address(levvaVault)), depositAmount, 1);
@@ -93,20 +93,20 @@ contract EtherfiBTCAdapterTest is Test {
         uint256 depositAmount = 10 ** 8;
         vm.prank(address(levvaVault));
         vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, EBTC));
-        adapter.depositBtc(depositAmount);
+        adapter.deposit(depositAmount, 0);
     }
 
     function testRequestWithdrawBtc() public {
         uint256 depositAmount = 2 * 10 ** 8;
         vm.prank(address(levvaVault));
-        adapter.depositBtc(depositAmount);
+        adapter.deposit(depositAmount, 0);
 
         uint88 price = 10 ** 8;
         uint64 deadline = type(uint64).max;
         uint256 withdrawAmount = depositAmount;
 
         vm.prank(address(levvaVault));
-        adapter.requestWithdrawBtc(uint96(withdrawAmount), price, deadline);
+        adapter.requestWithdraw(uint96(withdrawAmount), price, deadline);
 
         IAtomicQueue.AtomicRequest memory request =
             IAtomicQueue(ATOMIC_QUEUE).getUserAtomicRequest(address(adapter), EBTC, WBTC);
@@ -133,28 +133,28 @@ contract EtherfiBTCAdapterTest is Test {
     function testRequestWithdrawBtcNotTrackedAsset() public {
         uint256 depositAmount = WBTC.balanceOf(address(levvaVault));
         vm.prank(address(levvaVault));
-        adapter.depositBtc(depositAmount);
+        adapter.deposit(depositAmount, 0);
 
         levvaVault.removeTrackedAsset(address(WBTC));
 
         vm.prank(address(levvaVault));
         vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, WBTC));
-        adapter.requestWithdrawBtc(uint96(depositAmount), 10 ** 8, type(uint64).max);
+        adapter.requestWithdraw(uint96(depositAmount), 10 ** 8, type(uint64).max);
     }
 
     function testCancelWithdrawBtc() public {
         uint256 depositAmount = 10 ** 8;
         vm.prank(address(levvaVault));
-        adapter.depositBtc(depositAmount);
+        adapter.deposit(depositAmount, 0);
 
         vm.prank(address(levvaVault));
-        adapter.requestWithdrawBtc(uint96(depositAmount), 10 ** 8, type(uint64).max);
+        adapter.requestWithdraw(uint96(depositAmount), 10 ** 8, type(uint64).max);
 
         assertEq(WBTC.balanceOf(address(adapter)), 0);
         assertEq(EBTC.balanceOf(address(adapter)), depositAmount);
 
         vm.prank(address(levvaVault));
-        adapter.cancelWithdrawBtcRequest();
+        adapter.cancelWithdrawRequest();
 
         IAtomicQueue.AtomicRequest memory request =
             IAtomicQueue(ATOMIC_QUEUE).getUserAtomicRequest(address(adapter), EBTC, WBTC);

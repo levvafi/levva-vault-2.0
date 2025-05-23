@@ -26,6 +26,9 @@ contract EtherfiETHAdapter is AdapterBase, ERC721Holder, IExternalPositionAdapte
 
     bytes4 public constant getAdapterId = bytes4(keccak256("EtherfiETHAdapter"));
 
+    event EtherfiETHRequestWithdraw(uint256 indexed requestId, uint256 withdrawn);
+    event EtherfiETHClaimWithdraw(uint256 indexed requestId, uint256 withdrawn);
+
     error NoWithdrawRequestInQueue();
 
     IWETH9 public immutable weth;
@@ -70,6 +73,8 @@ contract EtherfiETHAdapter is AdapterBase, ERC721Holder, IExternalPositionAdapte
         _eETH.forceApprove(address(_liquidityPool), amount);
         requestId = _liquidityPool.requestWithdraw(address(this), amount);
         _enqueueWithdrawalRequest(requestId);
+
+        emit EtherfiETHRequestWithdraw(requestId, amount);
     }
 
     function claimWithdraw() external returns (uint256 withdrawn) {
@@ -82,6 +87,18 @@ contract EtherfiETHAdapter is AdapterBase, ERC721Holder, IExternalPositionAdapte
 
         _weth.deposit{value: withdrawn}();
         _weth.safeTransfer(msg.sender, withdrawn);
+
+        emit EtherfiETHRequestWithdraw(requestId, withdrawn);
+    }
+
+    function claimPossible(address vault) external view returns (bool) {
+        WithdrawalQueue storage queue = queues[vault];
+        uint256 requestId = queue.requests[queue.start];
+
+        if (requestId == 0) return false;
+
+        IWithdrawRequestNFT _withdrawRequestNFT = withdrawRequestNFT;
+        return _withdrawRequestNFT.isFinalized(requestId) && _withdrawRequestNFT.isValid(requestId);
     }
 
     function supportsInterface(bytes4 interfaceId) public pure override returns (bool) {
@@ -128,8 +145,9 @@ contract EtherfiETHAdapter is AdapterBase, ERC721Holder, IExternalPositionAdapte
         uint256 totalPooledEthers = liquidityPool.getTotalPooledEther();
         uint256 totalShares = eETH.totalShares();
         WithdrawalQueue storage queue = queues[vault];
+        uint256 queueEnd = queue.end;
         unchecked {
-            for (uint256 i = queue.start; i < queue.end; ++i) {
+            for (uint256 i = queue.start; i < queueEnd; ++i) {
                 IWithdrawRequestNFT.WithdrawRequest memory request = _withdrawRequestNFT.getRequest(queue.requests[i]);
                 uint256 amountForShares = request.shareOfEEth * totalPooledEthers / totalShares;
                 pendingEth += (request.amountOfEEth < amountForShares) ? request.amountOfEEth : amountForShares;

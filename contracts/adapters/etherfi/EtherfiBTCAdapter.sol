@@ -3,7 +3,6 @@ pragma solidity 0.8.28;
 
 import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {ERC721Holder} from "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 
 import {IAdapterCallback} from "../../interfaces/IAdapterCallback.sol";
 import {IExternalPositionAdapter} from "../../interfaces/IExternalPositionAdapter.sol";
@@ -12,11 +11,14 @@ import {AdapterBase} from "../AdapterBase.sol";
 import {ILayerZeroTellerWithRateLimiting} from "./interfaces/ILayerZeroTellerWithRateLimiting.sol";
 import {IAtomicQueue} from "./interfaces/IAtomicQueue.sol";
 
-contract EtherfiBTCAdapter is AdapterBase, ERC721Holder {
+contract EtherfiBTCAdapter is AdapterBase {
     using SafeERC20 for IERC20;
     using Asserts for address;
 
     bytes4 public constant getAdapterId = bytes4(keccak256("EtherfiBTCAdapter"));
+
+    event EtherfiBTCRequestWithdraw(address indexed from, address indexed to, uint96 amount, uint88 atomicPrice, uint64 deadline);
+    event EtherfiBTCRequestCancel();
 
     IERC20 public immutable wBTC;
     IERC20 public immutable eBTC;
@@ -35,7 +37,7 @@ contract EtherfiBTCAdapter is AdapterBase, ERC721Holder {
         atomicQueue = IAtomicQueue(_atomicQueue);
     }
 
-    function depositBtc(uint256 amount) external returns (uint256 shares) {
+    function deposit(uint256 amount, uint256 minShare) external returns (uint256 shares) {
         IERC20 _wBTC = wBTC;
         IERC20 _eBTC = eBTC;
 
@@ -44,7 +46,7 @@ contract EtherfiBTCAdapter is AdapterBase, ERC721Holder {
         IAdapterCallback(msg.sender).adapterCallback(address(this), address(_wBTC), amount);
         _wBTC.forceApprove(address(_eBTC), amount);
 
-        shares = teller.deposit(_wBTC, amount, 0);
+        shares = teller.deposit(_wBTC, amount, minShare);
         _eBTC.safeTransfer(msg.sender, amount);
     }
 
@@ -52,7 +54,7 @@ contract EtherfiBTCAdapter is AdapterBase, ERC721Holder {
     //       I didn't bother to implement it cause then there must be some requests origins tracking
     //       otherwise anyone can appropriate tokens
     //       all of that won't be required in delegateCall approach anyway
-    function requestWithdrawBtc(uint96 amount, uint88 atomicPrice, uint64 deadline) external {
+    function requestWithdraw(uint96 amount, uint88 atomicPrice, uint64 deadline) external {
         IERC20 _wBTC = wBTC;
         IERC20 _eBTC = eBTC;
         IAtomicQueue _atomicQueue = atomicQueue;
@@ -69,16 +71,19 @@ contract EtherfiBTCAdapter is AdapterBase, ERC721Holder {
 
         IAdapterCallback(msg.sender).adapterCallback(address(this), address(_eBTC), amount);
         _eBTC.forceApprove(address(_atomicQueue), amount);
+
+        emit EtherfiBTCRequestWithdraw(address(_eBTC), address(_wBTC), amount, atomicPrice, deadline);
     }
 
-    function cancelWithdrawBtcRequest() external {
+    function cancelWithdrawRequest() external {
         IERC20 _eBTC = eBTC;
         IAtomicQueue _atomicQueue = atomicQueue;
 
-        IAtomicQueue.AtomicRequest memory defaultRequest =
-            IAtomicQueue.AtomicRequest({deadline: 0, atomicPrice: 0, offerAmount: 0, inSolve: false});
+        IAtomicQueue.AtomicRequest memory defaultRequest;
 
         _atomicQueue.updateAtomicRequest(_eBTC, wBTC, defaultRequest);
         _eBTC.forceApprove(address(_atomicQueue), 0);
+
+        emit EtherfiBTCRequestCancel();
     }
 }

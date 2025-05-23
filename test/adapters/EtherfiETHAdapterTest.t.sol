@@ -154,14 +154,19 @@ contract EtherfiETHAdapterTest is Test {
 
         vm.prank(address(levvaVault));
         adapter.requestWithdraw(depositAmount);
+        assert(!adapter.claimPossible(address(levvaVault)));
 
         IWithdrawRequestNFTAdmin nft = IWithdrawRequestNFTAdmin(ETHERFI_LIQUIDITY_POOL.withdrawRequestNFT());
         uint256 lastRequest = nft.nextRequestId() - 1;
         vm.prank(ETHERFI_ADMIN);
         nft.finalizeRequests(lastRequest);
 
+       assert(adapter.claimPossible(address(levvaVault)));
+
         vm.prank(address(levvaVault));
         adapter.claimWithdraw();
+
+        assert(!adapter.claimPossible(address(levvaVault)));
 
         assertApproxEqAbs(WETH.balanceOf(address(levvaVault)), wethBalanceBefore, 1);
         assertEq(eETH.balanceOf(address(levvaVault)), 0);
