@@ -47,6 +47,8 @@ contract EtherfiBTCAdapterTest is Test {
     IAtomicSolver private constant ATOMIC_SOLVER = IAtomicSolver(0x989468982b08AEfA46E37CD0086142A86fa466D7);
     address private constant SOLVER_ADMIN = 0xf8553c8552f906C19286F21711721E206EE4909E;
 
+    address private NO_ACCESS = makeAddr("NO_ACCESS");
+
     string private mainnetRpcUrl = vm.envString("ETH_RPC_URL");
 
     EtherfiBTCAdapter private adapter;
@@ -90,6 +92,13 @@ contract EtherfiBTCAdapterTest is Test {
         _assertAdapterAssets(0, 0);
     }
 
+    function testDepositBtcNoAccess() public {
+        uint256 depositAmount = 10 ** 8;
+        vm.prank(NO_ACCESS);
+        vm.expectRevert(abi.encodeWithSelector(EtherfiBTCAdapter.NoAccess.selector));
+        adapter.deposit(depositAmount, 0);
+    }
+
     function testDepositBtcNotTrackedAssets() public {
         levvaVault.removeTrackedAsset(address(EBTC));
 
@@ -125,6 +134,13 @@ contract EtherfiBTCAdapterTest is Test {
         _assertAdapterAssets(0, depositAmount);
     }
 
+    function testRequestWithdrawBtcNoAccess() public {
+        uint256 withdrawAmount = 10 ** 8;
+        vm.prank(NO_ACCESS);
+        vm.expectRevert(abi.encodeWithSelector(EtherfiBTCAdapter.NoAccess.selector));
+        adapter.requestWithdraw(uint96(withdrawAmount), 10 ** 8, type(uint64).max);
+    }
+
     function testClaimWithdrawBtc() public {
         uint256 depositAmount = 2 * 10 ** 8;
         vm.prank(address(levvaVault));
@@ -153,6 +169,12 @@ contract EtherfiBTCAdapterTest is Test {
         assertEq(EBTC.balanceOf(address(adapter)), 0);
 
         _assertAdapterAssets(0, 0);
+    }
+
+    function testClaimWithdrawBtcNoAccess() public {
+        vm.prank(NO_ACCESS);
+        vm.expectRevert(abi.encodeWithSelector(EtherfiBTCAdapter.NoAccess.selector));
+        adapter.claimWithdraw();
     }
 
     function testClaimWithdrawBtcNotTrackedAsset() public {
@@ -195,6 +217,12 @@ contract EtherfiBTCAdapterTest is Test {
         assert(!request.inSolve);
 
         assertEq(EBTC.allowance(address(adapter), ATOMIC_QUEUE), 0);
+    }
+
+    function testCancelWithdrawRequestBtcNoAccess() public {
+        vm.prank(NO_ACCESS);
+        vm.expectRevert(abi.encodeWithSelector(EtherfiBTCAdapter.NoAccess.selector));
+        adapter.cancelWithdrawRequest();
     }
 
     function testCancelWithdrawBtcNotTrackedAsset() public {
