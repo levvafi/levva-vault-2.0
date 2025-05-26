@@ -12,9 +12,11 @@ import {AdapterBase} from "../AdapterBase.sol";
 import {ILiquidityPool} from "./interfaces/ILiquidityPool.sol";
 import {IWithdrawRequestNFT} from "./interfaces/IWithdrawRequestNFT.sol";
 import {IeETH} from "./interfaces/IeETH.sol";
+import {IweETH} from "./interfaces/IweETH.sol";
 
 contract EtherfiETHAdapter is AdapterBase, ERC721Holder, IExternalPositionAdapter {
     using SafeERC20 for IeETH;
+    using SafeERC20 for IweETH;
     using SafeERC20 for IWETH9;
     using Asserts for address;
 
@@ -35,46 +37,54 @@ contract EtherfiETHAdapter is AdapterBase, ERC721Holder, IExternalPositionAdapte
     ILiquidityPool public immutable liquidityPool;
 
     IeETH public immutable eETH;
+    IweETH public immutable weETH;
     IWithdrawRequestNFT public immutable withdrawRequestNFT;
 
     mapping(address vault => WithdrawalQueue) queues;
 
-    constructor(address _weth, address _liquidityPool) {
+    constructor(address _weth, address _weeth, address _liquidityPool) {
         _weth.assertNotZeroAddress();
         _liquidityPool.assertNotZeroAddress();
 
         weth = IWETH9(_weth);
         liquidityPool = ILiquidityPool(_liquidityPool);
         eETH = IeETH(ILiquidityPool(_liquidityPool).eETH());
+        weETH = IweETH(_weeth);
         withdrawRequestNFT = IWithdrawRequestNFT(ILiquidityPool(_liquidityPool).withdrawRequestNFT());
     }
 
     receive() external payable {}
 
-    function deposit(uint256 amount) external returns (uint256 output) {
+    function deposit(uint256 wethAmount) external returns (uint256 weETHAmount) {
+        IweETH _weETH = weETH;
+        _ensureIsValidAsset(address(_weETH));
+
         ILiquidityPool _liquidityPool = liquidityPool;
-        IeETH _eETH = eETH;
-        _ensureIsValidAsset(address(_eETH));
-
         IWETH9 _weth = weth;
-        IAdapterCallback(msg.sender).adapterCallback(address(this), address(_weth), amount);
-        _weth.withdraw(amount);
 
-        output = _liquidityPool.deposit{value: amount}();
-        _eETH.safeTransfer(msg.sender, amount);
+        IAdapterCallback(msg.sender).adapterCallback(address(this), address(_weth), wethAmount);
+        _weth.withdraw(wethAmount);
+
+        _liquidityPool.deposit{value: wethAmount}();
+        eETH.forceApprove(address(_weETH), wethAmount);
+        weETHAmount = _weETH.wrap(wethAmount);
+        _weETH.safeTransfer(msg.sender, weETHAmount);
     }
 
-    function requestWithdraw(uint256 amount) external returns (uint256 requestId) {
+    function requestWithdraw(uint256 weethAmount) external returns (uint256 requestId) {
         ILiquidityPool _liquidityPool = liquidityPool;
         IeETH _eETH = eETH;
+        IweETH _weETH = weETH;
 
-        IAdapterCallback(msg.sender).adapterCallback(address(this), address(_eETH), amount);
+        IAdapterCallback(msg.sender).adapterCallback(address(this), address(_weETH), weethAmount);
 
-        _eETH.forceApprove(address(_liquidityPool), amount);
-        requestId = _liquidityPool.requestWithdraw(address(this), amount);
+        uint256 eethAmount = _weETH.unwrap(weethAmount);
+        _eETH.forceApprove(address(_liquidityPool), eethAmount);
+
+        requestId = _liquidityPool.requestWithdraw(address(this), eethAmount);
         _enqueueWithdrawalRequest(requestId);
 
-        emit EtherfiETHRequestWithdraw(requestId, amount);
+        emit EtherfiETHRequestWithdraw(requestId, weethAmount);
     }
 
     function claimWithdraw() external returns (uint256 withdrawn) {

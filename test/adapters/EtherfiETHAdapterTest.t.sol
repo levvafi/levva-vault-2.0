@@ -43,6 +43,7 @@ contract EtherfiETHAdapterTest is Test {
     ILiquidityPool private constant ETHERFI_LIQUIDITY_POOL = ILiquidityPool(0x308861A430be4cce5502d0A12724771Fc6DaF216);
     IERC20 private constant USDC = IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
     IERC20 private constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+    IERC20 private constant WEETH = IERC20(0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee);
 
     IERC20 private eETH;
 
@@ -58,7 +59,7 @@ contract EtherfiETHAdapterTest is Test {
 
         EulerRouterMock oracle = new EulerRouterMock();
         oracle.setPrice(oracle.ONE().mulDiv(2000, 10 ** 12), address(WETH), address(USDC));
-        oracle.setPrice(oracle.ONE().mulDiv(2000, 10 ** 12), address(eETH), address(USDC));
+        oracle.setPrice(oracle.ONE().mulDiv(2500, 10 ** 12), address(WEETH), address(USDC));
 
         LevvaVault levvaVaultImplementation = new LevvaVault();
         bytes memory data = abi.encodeWithSelector(
@@ -66,13 +67,13 @@ contract EtherfiETHAdapterTest is Test {
         );
         levvaVault = LevvaVault(address(new ERC1967Proxy(address(levvaVaultImplementation), data)));
 
-        adapter = new EtherfiETHAdapter(address(WETH), address(ETHERFI_LIQUIDITY_POOL));
+        adapter = new EtherfiETHAdapter(address(WETH), address(WEETH), address(ETHERFI_LIQUIDITY_POOL));
         levvaVault.addAdapter(address(adapter));
         assertNotEq(levvaVault.externalPositionAdapterPosition(address(adapter)), 0);
 
         deal(address(WETH), address(levvaVault), 10 ether);
 
-        levvaVault.addTrackedAsset(address(eETH));
+        levvaVault.addTrackedAsset(address(WEETH));
         levvaVault.addTrackedAsset(address(WETH));
     }
 
@@ -81,12 +82,15 @@ contract EtherfiETHAdapterTest is Test {
 
         uint256 depositAmount = 1 ether;
         vm.prank(address(levvaVault));
-        adapter.deposit(depositAmount);
+        uint256 weETHAmount = adapter.deposit(depositAmount);
 
         assertEq(wethBalanceBefore - WETH.balanceOf(address(levvaVault)), depositAmount);
-        assertApproxEqAbs(eETH.balanceOf(address(levvaVault)), depositAmount, 1);
+        assertEq(eETH.balanceOf(address(levvaVault)), 0);
+        assertEq(WEETH.balanceOf(address(levvaVault)), weETHAmount);
+
         assertEq(WETH.balanceOf(address(adapter)), 0);
         assertEq(eETH.balanceOf(address(adapter)), 0);
+        assertEq(WEETH.balanceOf(address(adapter)), 0);
 
         vm.prank(address(levvaVault));
         (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets();
@@ -105,11 +109,11 @@ contract EtherfiETHAdapterTest is Test {
     }
 
     function testDepositEthNotTrackedAsset() public {
-        levvaVault.removeTrackedAsset(address(eETH));
+        levvaVault.removeTrackedAsset(address(WEETH));
 
         uint256 depositAmount = 1 ether;
         vm.prank(address(levvaVault));
-        vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, eETH));
+        vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, WEETH));
         adapter.deposit(depositAmount);
     }
 
@@ -117,31 +121,34 @@ contract EtherfiETHAdapterTest is Test {
         uint256 wethBalanceBefore = WETH.balanceOf(address(levvaVault));
         uint256 depositAmount = 1 ether;
         vm.prank(address(levvaVault));
-        adapter.deposit(depositAmount);
+        uint256 weethAmount = adapter.deposit(depositAmount);
 
         vm.prank(address(levvaVault));
-        uint256 requestId = adapter.requestWithdraw(depositAmount);
+        uint256 requestId = adapter.requestWithdraw(weethAmount);
 
         IWithdrawRequestNFTAdmin nft = IWithdrawRequestNFTAdmin(ETHERFI_LIQUIDITY_POOL.withdrawRequestNFT());
         assertEq(requestId, nft.nextRequestId() - 1);
 
         assertEq(wethBalanceBefore - WETH.balanceOf(address(levvaVault)), depositAmount);
         assertEq(eETH.balanceOf(address(levvaVault)), 0);
+        assertEq(WEETH.balanceOf(address(levvaVault)), 0);
+
         assertEq(WETH.balanceOf(address(adapter)), 0);
         assertEq(eETH.balanceOf(address(adapter)), 0);
+        assertEq(WEETH.balanceOf(address(adapter)), 0);
 
         vm.prank(address(levvaVault));
         (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets();
         assertEq(assets.length, 1);
         assertEq(amounts.length, 1);
         assertEq(assets[0], address(WETH));
-        assertApproxEqAbs(amounts[0], depositAmount, 1);
+        assertApproxEqAbs(amounts[0], depositAmount, 2);
 
         (assets, amounts) = adapter.getManagedAssets(address(levvaVault));
         assertEq(assets.length, 1);
         assertEq(amounts.length, 1);
         assertEq(assets[0], address(WETH));
-        assertApproxEqAbs(amounts[0], depositAmount, 1);
+        assertApproxEqAbs(amounts[0], depositAmount, 2);
 
         _assertNoDebtAssets();
     }
@@ -150,10 +157,10 @@ contract EtherfiETHAdapterTest is Test {
         uint256 wethBalanceBefore = WETH.balanceOf(address(levvaVault));
         uint256 depositAmount = 1 ether;
         vm.prank(address(levvaVault));
-        adapter.deposit(depositAmount);
+        uint256 weethAmount = adapter.deposit(depositAmount);
 
         vm.prank(address(levvaVault));
-        adapter.requestWithdraw(depositAmount);
+        adapter.requestWithdraw(weethAmount);
         assert(!adapter.claimPossible(address(levvaVault)));
 
         IWithdrawRequestNFTAdmin nft = IWithdrawRequestNFTAdmin(ETHERFI_LIQUIDITY_POOL.withdrawRequestNFT());
@@ -161,14 +168,14 @@ contract EtherfiETHAdapterTest is Test {
         vm.prank(ETHERFI_ADMIN);
         nft.finalizeRequests(lastRequest);
 
-       assert(adapter.claimPossible(address(levvaVault)));
+        assert(adapter.claimPossible(address(levvaVault)));
 
         vm.prank(address(levvaVault));
         adapter.claimWithdraw();
 
         assert(!adapter.claimPossible(address(levvaVault)));
 
-        assertApproxEqAbs(WETH.balanceOf(address(levvaVault)), wethBalanceBefore, 1);
+        assertApproxEqAbs(WETH.balanceOf(address(levvaVault)), wethBalanceBefore, 2);
         assertEq(eETH.balanceOf(address(levvaVault)), 0);
         assertEq(WETH.balanceOf(address(adapter)), 0);
         assertEq(eETH.balanceOf(address(adapter)), 0);
@@ -192,10 +199,10 @@ contract EtherfiETHAdapterTest is Test {
     function testClaimWithdrawEthNotFinalized() public {
         uint256 depositAmount = 1 ether;
         vm.prank(address(levvaVault));
-        adapter.deposit(depositAmount);
+        uint256 weethAmount = adapter.deposit(depositAmount);
 
         vm.prank(address(levvaVault));
-        adapter.requestWithdraw(depositAmount);
+        adapter.requestWithdraw(weethAmount);
 
         vm.prank(address(levvaVault));
         vm.expectRevert("Request is not finalized");
@@ -211,10 +218,10 @@ contract EtherfiETHAdapterTest is Test {
     function testClaimEthNotTrackedAsset() public {
         uint256 depositAmount = WETH.balanceOf(address(levvaVault));
         vm.prank(address(levvaVault));
-        adapter.deposit(depositAmount);
+        uint256 weethAmount = adapter.deposit(depositAmount);
 
         vm.prank(address(levvaVault));
-        adapter.requestWithdraw(depositAmount);
+        adapter.requestWithdraw(weethAmount);
 
         IWithdrawRequestNFTAdmin nft = IWithdrawRequestNFTAdmin(ETHERFI_LIQUIDITY_POOL.withdrawRequestNFT());
         uint256 lastRequest = nft.nextRequestId() - 1;

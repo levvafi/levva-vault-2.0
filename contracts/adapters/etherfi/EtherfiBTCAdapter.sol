@@ -17,7 +17,9 @@ contract EtherfiBTCAdapter is AdapterBase {
 
     bytes4 public constant getAdapterId = bytes4(keccak256("EtherfiBTCAdapter"));
 
-    event EtherfiBTCRequestWithdraw(address indexed from, address indexed to, uint96 amount, uint88 atomicPrice, uint64 deadline);
+    event EtherfiBTCRequestWithdraw(
+        address indexed from, address indexed to, uint96 amount, uint88 atomicPrice, uint64 deadline
+    );
     event EtherfiBTCRequestCancel();
 
     IERC20 public immutable wBTC;
