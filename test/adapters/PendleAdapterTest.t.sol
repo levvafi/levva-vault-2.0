@@ -27,6 +27,7 @@ import {
     SwapData,
     TokenOutput
 } from "@pendle/core-v2/contracts/interfaces/IPAllActionTypeV3.sol";
+import {IPSwapAggregator, SwapDataExtra} from "@pendle/core-v2/contracts/router/swap-aggregator/IPSwapAggregator.sol";
 
 contract PendleAdapterTest is Test {
     using Math for uint256;
@@ -74,6 +75,7 @@ contract PendleAdapterTest is Test {
         deal(address(PT_TOKEN_2), address(pendleRouter), 10000e18);
         deal(address(USDC), address(pendleRouter), 10000e6);
         deal(address(USDT), address(pendleRouter), 10000e6);
+        deal(address(WETH), address(pendleRouter), 10000e18);
         deal(address(PT_MARKET_1), address(pendleRouter), 10000e18);
         deal(address(PT_MARKET_2), address(pendleRouter), 10000e18);
 
@@ -372,6 +374,44 @@ contract PendleAdapterTest is Test {
         hoax(address(vault));
         vm.expectRevert(PendleAdapter.PendleAdapter__SlippageProtection.selector);
         pendleAdapter.rollOverPt(PT_MARKET_1, PT_MARKET_2, address(USDC), ptIn, minNetPtTokenOut);
+    }
+
+    function testSwapTokenToToken() public {
+        uint256 amountIn = 1000e6;
+
+        SwapData memory swap;
+        SwapDataExtra memory swapDataExtra =
+            SwapDataExtra({tokenIn: address(USDC), tokenOut: address(WETH), minOut: 33e16, swapData: swap});
+
+        hoax(address(vault));
+        pendleAdapter.swapTokenToToken(IPSwapAggregator(address(1)), swapDataExtra, amountIn);
+    }
+
+    function testSwapTokenToTokenShouldFailWhenTokenNotTracked() public {
+        deal(address(USDT), address(vault), 0);
+        vault.removeTrackedAsset(address(USDT));
+        uint256 amountIn = 1000e6;
+
+        SwapData memory swap;
+        SwapDataExtra memory swapDataExtra =
+            SwapDataExtra({tokenIn: address(USDC), tokenOut: address(USDT), minOut: 33e16, swapData: swap});
+
+        hoax(address(vault));
+        vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, address(USDT)));
+        pendleAdapter.swapTokenToToken(IPSwapAggregator(address(1)), swapDataExtra, amountIn);
+    }
+
+    function testSwapTokenToTokenShouldFailWhenSlippage() public {
+        pendleRouter.addOffset(1);
+        uint256 amountIn = 1000e6;
+
+        SwapData memory swap;
+        SwapDataExtra memory swapDataExtra =
+            SwapDataExtra({tokenIn: address(USDC), tokenOut: address(WETH), minOut: 33e16, swapData: swap});
+
+        hoax(address(vault));
+        vm.expectRevert(PendleAdapter.PendleAdapter__SlippageProtection.selector);
+        pendleAdapter.swapTokenToToken(IPSwapAggregator(address(1)), swapDataExtra, amountIn);
     }
 
     function _createTokenInputSimple(address tokenIn, uint256 netTokenIn) private pure returns (TokenInput memory) {

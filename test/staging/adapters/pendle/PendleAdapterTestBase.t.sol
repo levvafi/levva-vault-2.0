@@ -17,6 +17,7 @@ import {
     SwapType,
     TokenOutput
 } from "@pendle/core-v2/contracts/interfaces/IPAllActionTypeV3.sol";
+import {IPSwapAggregator, SwapDataExtra} from "@pendle/core-v2/contracts/router/swap-aggregator/IPSwapAggregator.sol";
 import {IPMarket} from "@pendle/core-v2/contracts/interfaces/IPMarket.sol";
 import {IPPrincipalToken} from "@pendle/core-v2/contracts/interfaces/IPPrincipalToken.sol";
 import {EulerRouterMock} from "../../../mocks/EulerRouterMock.t.sol";
@@ -141,6 +142,20 @@ abstract contract PendleAdapterTestBase is Test {
         console.log("Rolled over ", ERC20(oldPt).symbol(), " to ", ERC20(newPt).symbol());
         console.log("Send = ", ptAmount);
         console.log("Received = ", newPtBalance);
+    }
+
+    function _swapTokenToToken(IPSwapAggregator pendleSwap, SwapDataExtra memory swapData, uint256 netIn) internal {
+        deal(swapData.tokenIn, address(vault), netIn);
+        uint256 balanceBefore = IERC20(swapData.tokenOut).balanceOf(address(vault));
+
+        vm.prank(address(vault));
+        pendleAdapter.swapTokenToToken(pendleSwap, swapData, netIn);
+
+        uint256 balanceAfter = IERC20(swapData.tokenOut).balanceOf(address(vault));
+
+        console.log("Swap ", ERC20(swapData.tokenIn).symbol(), " to ", ERC20(swapData.tokenOut).symbol());
+        console.log("TokenIn = ", netIn);
+        console.log("TokenOut = ", balanceAfter - balanceBefore);
     }
 
     /// @dev Creates a TokenInput struct without using any swap aggregator
