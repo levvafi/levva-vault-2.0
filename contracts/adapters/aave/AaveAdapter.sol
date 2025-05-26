@@ -34,9 +34,13 @@ contract AaveAdapter is AdapterBase {
         }
     }
 
-    function initialize(address aavePoolAddressProvider) external {
+    function initialize(address aavePoolAddressProvider) external onlyOwner {
         aavePoolAddressProvider.assertNotZeroAddress();
         _getAaveAdapterStorage().aavePoolAddressProvider = IPoolAddressesProvider(aavePoolAddressProvider);
+    }
+
+    function getPoolAddressProvider() external view returns (address) {
+        return address(_getAaveAdapterStorage().aavePoolAddressProvider);
     }
 
     function supply(address asset, uint256 amount) external {

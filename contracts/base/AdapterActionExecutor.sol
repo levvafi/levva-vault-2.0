@@ -50,6 +50,15 @@ abstract contract AdapterActionExecutor is OraclePriceProvider {
     error UnknownExternalPositionAdapter();
     error AdapterAlreadyExists(address adapter);
     error Forbidden();
+    error AdapterViewResult(bytes result);
+
+    ///@dev This function is used to call view methods on adapters
+    ///@dev The result of the call is returned as bytes inside custom error AdapterViewResult
+    function callAdapterView(bytes4 adapterId, bytes calldata data) external returns (bytes memory) {
+        address adapter = _getAdapterSafe(adapterId);
+        bytes memory result = Address.functionDelegateCall(adapter, data);
+        revert AdapterViewResult(result);
+    }
 
     function executeAdapterAction(AdapterActionArg[] calldata actionArgs) external onlyVaultManager {
         uint256 length = actionArgs.length;

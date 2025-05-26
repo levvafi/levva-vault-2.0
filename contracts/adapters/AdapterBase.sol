@@ -4,8 +4,9 @@ pragma solidity 0.8.28;
 import {IERC165} from "@openzeppelin/contracts/interfaces/IERC165.sol";
 import {IAdapter} from "../interfaces/IAdapter.sol";
 import {IMultiAssetVault} from "../interfaces/IMultiAssetVault.sol";
+import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 
-abstract contract AdapterBase is IERC165, IAdapter {
+abstract contract AdapterBase is Ownable2StepUpgradeable, IERC165, IAdapter {
     error AdapterBase__InvalidToken(address token);
 
     /// @notice Implementation of ERC165, supports IAdapter and IERC165

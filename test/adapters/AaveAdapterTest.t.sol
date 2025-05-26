@@ -132,6 +132,14 @@ contract AaveAdapterTest is Test {
         _withdraw(address(USDT), type(uint256).max);
     }
 
+    function testGetPoolAddressProvider() public {
+        bytes memory callData = abi.encodeWithSelector(AaveAdapter.getPoolAddressProvider.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(AdapterActionExecutor.AdapterViewResult.selector, abi.encode(AAVE_POOL_PROVIDER))
+        );
+        levvaVault.callAdapterView(adapterId, callData);
+    }
+
     function _supply(address asset, uint256 amount) private {
         AdapterActionExecutor.AdapterActionArg[] memory args = new LevvaVault.AdapterActionArg[](1);
         args[0] = AdapterActionExecutor.AdapterActionArg({
