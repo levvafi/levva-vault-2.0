@@ -65,7 +65,8 @@ contract EtherfiBTCAdapterTest is Test {
         );
         levvaVault = LevvaVault(address(new ERC1967Proxy(address(levvaVaultImplementation), data)));
 
-        adapter = new EtherfiBTCAdapter(address(WBTC), address(EBTC), LAYER_ZERO_TELLER, ATOMIC_QUEUE);
+        adapter =
+            new EtherfiBTCAdapter(address(levvaVault), address(WBTC), address(EBTC), LAYER_ZERO_TELLER, ATOMIC_QUEUE);
         levvaVault.addAdapter(address(adapter));
         assertEq(levvaVault.externalPositionAdapterPosition(address(adapter)), 0);
 
@@ -85,6 +86,8 @@ contract EtherfiBTCAdapterTest is Test {
         assertApproxEqAbs(EBTC.balanceOf(address(levvaVault)), depositAmount, 1);
         assertEq(WBTC.balanceOf(address(adapter)), 0);
         assertEq(EBTC.balanceOf(address(adapter)), 0);
+
+        _assertAdapterAssets(0, 0);
     }
 
     function testDepositBtcNotTrackedAssets() public {
@@ -119,27 +122,54 @@ contract EtherfiBTCAdapterTest is Test {
         assertEq(WBTC.balanceOf(address(adapter)), 0);
         assertEq(EBTC.balanceOf(address(adapter)), depositAmount);
 
-        address[] memory users = new address[](1);
-        users[0] = address(adapter);
-
-        vm.prank(SOLVER_ADMIN);
-        ATOMIC_SOLVER.redeemSolve(ATOMIC_QUEUE, EBTC, WBTC, users, 0, type(uint256).max, LAYER_ZERO_TELLER);
-
-        uint256 expectedBalance = withdrawAmount.mulDiv(price, 10 ** 8);
-        assertEq(WBTC.balanceOf(address(adapter)), expectedBalance);
-        assertEq(EBTC.balanceOf(address(adapter)), 0);
+        _assertAdapterAssets(0, depositAmount);
     }
 
-    function testRequestWithdrawBtcNotTrackedAsset() public {
+    function testClaimWithdrawBtc() public {
+        uint256 depositAmount = 2 * 10 ** 8;
+        vm.prank(address(levvaVault));
+        adapter.deposit(depositAmount, 0);
+
+        uint88 price = 10 ** 8;
+        uint64 deadline = type(uint64).max;
+        uint256 withdrawAmount = depositAmount;
+
+        vm.prank(address(levvaVault));
+        adapter.requestWithdraw(uint96(withdrawAmount), price, deadline);
+
+        _prankResolve();
+
+        uint256 expectedBalance = withdrawAmount.mulDiv(price, 10 ** 8);
+        _assertAdapterAssets(expectedBalance, 0);
+
+        uint256 balanceBefore = WBTC.balanceOf(address(levvaVault));
+
+        vm.prank(address(levvaVault));
+        adapter.claimWithdraw();
+
+        assertEq(WBTC.balanceOf(address(levvaVault)) - balanceBefore, expectedBalance);
+        assertEq(EBTC.balanceOf(address(levvaVault)), 0);
+        assertEq(WBTC.balanceOf(address(adapter)), 0);
+        assertEq(EBTC.balanceOf(address(adapter)), 0);
+
+        _assertAdapterAssets(0, 0);
+    }
+
+    function testClaimWithdrawBtcNotTrackedAsset() public {
         uint256 depositAmount = WBTC.balanceOf(address(levvaVault));
         vm.prank(address(levvaVault));
         adapter.deposit(depositAmount, 0);
+
+        vm.prank(address(levvaVault));
+        adapter.requestWithdraw(uint96(depositAmount), 10 ** 8, type(uint64).max);
+
+        _prankResolve();
 
         levvaVault.removeTrackedAsset(address(WBTC));
 
         vm.prank(address(levvaVault));
         vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, WBTC));
-        adapter.requestWithdraw(uint96(depositAmount), 10 ** 8, type(uint64).max);
+        adapter.claimWithdraw();
     }
 
     function testCancelWithdrawBtc() public {
@@ -165,5 +195,56 @@ contract EtherfiBTCAdapterTest is Test {
         assert(!request.inSolve);
 
         assertEq(EBTC.allowance(address(adapter), ATOMIC_QUEUE), 0);
+    }
+
+    function testCancelWithdrawBtcNotTrackedAsset() public {
+        uint256 depositAmount = WBTC.balanceOf(address(levvaVault));
+        vm.prank(address(levvaVault));
+        adapter.deposit(depositAmount, 0);
+
+        vm.prank(address(levvaVault));
+        adapter.requestWithdraw(uint96(depositAmount), 10 ** 8, type(uint64).max);
+
+        levvaVault.removeTrackedAsset(address(EBTC));
+
+        vm.prank(address(levvaVault));
+        vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, EBTC));
+        adapter.cancelWithdrawRequest();
+    }
+
+    function _assertAdapterAssets(uint256 expectedWbtc, uint256 expectedEbtc) private {
+        vm.prank(address(levvaVault));
+        (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets();
+        assertEq(assets.length, 2);
+        assertEq(amounts.length, 2);
+        assertEq(assets[0], address(WBTC));
+        assertEq(assets[1], address(EBTC));
+        assertEq(amounts[0], expectedWbtc);
+        assertEq(amounts[1], expectedEbtc);
+
+        (assets, amounts) = adapter.getManagedAssets(address(levvaVault));
+        assertEq(assets.length, 2);
+        assertEq(amounts.length, 2);
+        assertEq(assets[0], address(WBTC));
+        assertEq(assets[1], address(EBTC));
+        assertEq(amounts[0], expectedWbtc);
+        assertEq(amounts[1], expectedEbtc);
+
+        _assertNoDebtAssets();
+    }
+
+    function _assertNoDebtAssets() private {
+        vm.prank(address(levvaVault));
+        (address[] memory assets, uint256[] memory amounts) = adapter.getDebtAssets();
+        assertEq(assets.length, 0);
+        assertEq(amounts.length, 0);
+    }
+
+    function _prankResolve() private {
+        address[] memory users = new address[](1);
+        users[0] = address(adapter);
+
+        vm.prank(SOLVER_ADMIN);
+        ATOMIC_SOLVER.redeemSolve(ATOMIC_QUEUE, EBTC, WBTC, users, 0, type(uint256).max, LAYER_ZERO_TELLER);
     }
 }
