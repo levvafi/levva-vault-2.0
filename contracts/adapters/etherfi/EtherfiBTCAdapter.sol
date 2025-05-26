@@ -63,10 +63,6 @@ contract EtherfiBTCAdapter is AdapterBase, IExternalPositionAdapter {
         _eBTC.safeTransfer(msg.sender, amount);
     }
 
-    // TODO: there is no mechanism for transferring tokens back to vault after request is resolved or cancelled
-    //       I didn't bother to implement it cause then there must be some requests origins tracking
-    //       otherwise anyone can appropriate tokens
-    //       all of that won't be required in delegateCall approach anyway
     function requestWithdraw(uint96 amount, uint88 atomicPrice, uint64 deadline) external onlyVault {
         IERC20 _wBTC = wBTC;
         IERC20 _eBTC = eBTC;
@@ -89,14 +85,6 @@ contract EtherfiBTCAdapter is AdapterBase, IExternalPositionAdapter {
     function claimWithdraw() external onlyVault returns (uint256 wbtcClaimed) {
         IERC20 _wBTC = wBTC;
         _ensureIsValidAsset(address(_wBTC));
-
-        IERC20 _eBTC = eBTC;
-        IAtomicQueue _atomicQueue = atomicQueue;
-
-        IAtomicQueue.AtomicRequest memory defaultRequest;
-
-        _atomicQueue.updateAtomicRequest(_eBTC, wBTC, defaultRequest);
-        _eBTC.forceApprove(address(_atomicQueue), 0);
 
         wbtcClaimed = _wBTC.balanceOf(address(this));
         _wBTC.safeTransfer(msg.sender, wbtcClaimed);
