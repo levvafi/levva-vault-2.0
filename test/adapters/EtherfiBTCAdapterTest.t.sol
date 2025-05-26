@@ -240,6 +240,24 @@ contract EtherfiBTCAdapterTest is Test {
         adapter.cancelWithdrawRequest();
     }
 
+    function testGetManagedAssetsSenderNotVault() public {
+        uint256 wbtcAmount = 10 * 10 ** 8;
+        uint256 ebtcAmount = 10 ** 8;
+        deal(address(WBTC), address(adapter), wbtcAmount);
+        deal(address(EBTC), address(adapter), ebtcAmount);
+
+        _assertAdapterAssets(wbtcAmount, ebtcAmount);
+
+        vm.prank(NO_ACCESS);
+        (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets();
+        assertEq(assets.length, 2);
+        assertEq(amounts.length, 2);
+        assertEq(assets[0], address(WBTC));
+        assertEq(assets[1], address(EBTC));
+        assertEq(amounts[0], 0);
+        assertEq(amounts[1], 0);
+    }
+
     function _assertAdapterAssets(uint256 expectedWbtc, uint256 expectedEbtc) private {
         vm.prank(address(levvaVault));
         (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets();
