@@ -51,7 +51,7 @@ contract ResolvAdapterTest is Test {
     }
 
     function testSetup() public view {
-        assertEq(address(adapter.wstUSR()), address(WSTUSR));
+        assertEq(adapter.wstUSR(), address(WSTUSR));
         assertEq(adapter.USR(), address(USR));
     }
 
