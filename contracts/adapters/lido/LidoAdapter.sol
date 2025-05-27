@@ -48,7 +48,7 @@ contract LidoAdapter is AdapterBase, IExternalPositionAdapter {
     receive() external payable {}
 
     function supportsInterface(bytes4 interfaceId) public pure override returns (bool) {
-        return super.supportsInterface(interfaceId) || interfaceId == type(IExternalPositionAdapter).interfaceId;
+        return interfaceId == type(IExternalPositionAdapter).interfaceId || super.supportsInterface(interfaceId);
     }
 
     /// @notice Stake WETH to receive wstETH
@@ -148,9 +148,8 @@ contract LidoAdapter is AdapterBase, IExternalPositionAdapter {
             return (assets, amounts);
         }
 
-        IWstETH wstETH = i_wstETH;
         assets = new address[](1);
-        assets[0] = address(wstETH);
+        assets[0] = address(i_WETH);
 
         amounts = new uint256[](1);
 
@@ -169,8 +168,6 @@ contract LidoAdapter is AdapterBase, IExternalPositionAdapter {
                 amounts[0] += statuses[i].amountOfStETH;
             }
         }
-
-        amounts[0] = wstETH.getWstETHByStETH(amounts[0]);
     }
 
     function getDebtAssets() external view returns (address[] memory assets, uint256[] memory amounts) {}
@@ -217,8 +214,6 @@ contract LidoAdapter is AdapterBase, IExternalPositionAdapter {
         if (queueStart == queue.end) revert LidoAdapter__NoWithdrawRequestInQueue();
 
         requestId = queue.requests[queueStart];
-        unchecked {
-            delete queue.requests[queueStart];
-        }
+        delete queue.requests[queueStart];
     }
 }

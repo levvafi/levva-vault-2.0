@@ -17,6 +17,7 @@ import {EulerRouterMock} from "../mocks/EulerRouterMock.t.sol";
 import {Asserts} from "../../contracts/libraries/Asserts.sol";
 import {IExternalPositionAdapter} from "../../contracts/interfaces/IExternalPositionAdapter.sol";
 import {IAdapter} from "../../contracts/interfaces/IAdapter.sol";
+import {IWstETH} from "../../contracts/adapters/lido/IWstETH.sol";
 
 contract LidoAdapterTest is Test {
     uint256 public constant FORK_BLOCK = 22567800;
@@ -120,14 +121,16 @@ contract LidoAdapterTest is Test {
 
         uint256 expectedRequestId = LidoWithdrawalQueue.getLastRequestId() + 1;
         uint256 withdrawalAmount = 2 ether;
+        uint256 withdrawalStEthAmount = IWstETH(address(WSTETH)).getStETHByWstETH(withdrawalAmount);
         vm.expectEmit(true, true, false, false);
         emit LidoAdapter.WithdrawalRequested(expectedRequestId, withdrawalAmount);
         adapter.requestWithdrawal(withdrawalAmount);
 
         (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets();
         assertEq(assets.length, 1);
+        assertEq(assets[0], address(WETH));
         assertEq(amounts.length, 1);
-        assertApproxEqAbs(amounts[0], withdrawalAmount, 1);
+        assertApproxEqAbs(amounts[0], withdrawalStEthAmount, 1);
 
         (address[] memory debtAssets, uint256[] memory debtAmounts) = adapter.getDebtAssets();
         assertEq(debtAssets.length, 0);
@@ -145,6 +148,7 @@ contract LidoAdapterTest is Test {
         adapter.stake(amount);
 
         uint256 withdrawalAmount = 2500 ether;
+        uint256 withdrawalStEthAmount = IWstETH(address(WSTETH)).getStETHByWstETH(withdrawalAmount);
         uint256 lastRequestId = LidoWithdrawalQueue.getLastRequestId();
         vm.expectEmit(true, false, false, false);
         emit LidoAdapter.WithdrawalRequested(lastRequestId + 1, withdrawalAmount);
@@ -163,8 +167,9 @@ contract LidoAdapterTest is Test {
 
         (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets();
         assertEq(assets.length, 1);
+        assertEq(assets[0], address(WETH));
         assertEq(amounts.length, 1);
-        assertApproxEqAbs(amounts[0], withdrawalAmount, 10);
+        assertApproxEqAbs(amounts[0], withdrawalStEthAmount, 10);
     }
 
     function test_claimWithdrawal1() public {
