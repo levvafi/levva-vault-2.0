@@ -141,7 +141,10 @@ contract EtherfiETHAdapter is AdapterBase, ERC721Holder, IExternalPositionAdapte
 
     function _dequeueWithdrawalRequest() private returns (uint256 requestId) {
         WithdrawalQueue storage queue = queues[msg.sender];
-        uint256 queueStart = queue.start++;
+        uint256 queueStart;
+        unchecked {
+            queueStart = queue.start++;
+        }
         if (queueStart == queue.end) revert NoWithdrawRequestInQueue();
 
         requestId = queue.requests[queueStart];

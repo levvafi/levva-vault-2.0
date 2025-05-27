@@ -210,7 +210,10 @@ contract LidoAdapter is AdapterBase, IExternalPositionAdapter {
 
     function _dequeueWithdrawalRequest() private returns (uint256 requestId) {
         WithdrawalQueue storage queue = s_queues[msg.sender];
-        uint256 queueStart = queue.start++;
+        uint256 queueStart;
+        unchecked {
+            queueStart = queue.start++;
+        }
         if (queueStart == queue.end) revert LidoAdapter__NoWithdrawRequestInQueue();
 
         requestId = queue.requests[queueStart];
