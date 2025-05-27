@@ -145,9 +145,7 @@ contract EtherfiETHAdapter is AdapterBase, ERC721Holder, IExternalPositionAdapte
         if (queueStart == queue.end) revert NoWithdrawRequestInQueue();
 
         requestId = queue.requests[queueStart];
-        unchecked {
-            delete queue.requests[queueStart];
-        }
+        delete queue.requests[queueStart];
     }
 
     function _getPendingEthAmount(address vault) internal view returns (uint256 pendingEth) {
