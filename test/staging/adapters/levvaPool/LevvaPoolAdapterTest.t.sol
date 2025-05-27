@@ -941,42 +941,45 @@ contract LevvaPoolAdapterTest is Test {
     function _openPositionsInPool(address pool) private {
         ERC20 quoteToken = ERC20(ILevvaPool(pool).quoteToken());
         ERC20 baseToken = ERC20(ILevvaPool(pool).baseToken());
-        address longer = makeAddr("LONGER");
-        address shorter = makeAddr("SHORTER");
 
         uint256 quoteDepositAmount = 1 * 10 ** quoteToken.decimals();
         uint256 baseDepositAmount = 1 * 10 ** baseToken.decimals();
-        int256 longAmount = 5 * int256(baseDepositAmount);
-        int256 shortAmount = 5 * int256(baseDepositAmount);
 
-        deal(address(quoteToken), address(shorter), quoteDepositAmount);
-        deal(address(baseToken), address(longer), baseDepositAmount);
+        {
+            address longer = makeAddr("LONGER");
+            int256 longAmount = 5 * int256(baseDepositAmount);
+            deal(address(baseToken), address(longer), baseDepositAmount);
+            startHoax(longer);
+            baseToken.approve(pool, baseDepositAmount);
+            ILevvaPool(pool).execute(
+                ILevvaPool.CallType.DepositBase,
+                baseDepositAmount,
+                longAmount,
+                ILevvaPool(pool).getBasePrice().inner.mulDiv(110, 100),
+                false,
+                address(0),
+                ILevvaPool(pool).defaultSwapCallData()
+            );
+            vm.stopPrank();
+        }
 
-        startHoax(longer);
-        baseToken.approve(pool, baseDepositAmount);
-        ILevvaPool(pool).execute(
-            ILevvaPool.CallType.DepositBase,
-            baseDepositAmount,
-            longAmount,
-            ILevvaPool(pool).getBasePrice().inner.mulDiv(110, 100),
-            false,
-            address(0),
-            ILevvaPool(pool).defaultSwapCallData()
-        );
-        vm.stopPrank();
-
-        startHoax(shorter);
-        quoteToken.approve(pool, quoteDepositAmount);
-        ILevvaPool(pool).execute(
-            ILevvaPool.CallType.DepositQuote,
-            quoteDepositAmount,
-            shortAmount,
-            ILevvaPool(pool).getBasePrice().inner.mulDiv(90, 100),
-            false,
-            address(0),
-            ILevvaPool(pool).defaultSwapCallData()
-        );
-        vm.stopPrank();
+        {
+            address shorter = makeAddr("SHORTER");
+            int256 shortAmount = 5 * int256(baseDepositAmount);
+            deal(address(quoteToken), address(shorter), quoteDepositAmount);
+            startHoax(shorter);
+            quoteToken.approve(pool, quoteDepositAmount);
+            ILevvaPool(pool).execute(
+                ILevvaPool.CallType.DepositQuote,
+                quoteDepositAmount,
+                shortAmount,
+                ILevvaPool(pool).getBasePrice().inner.mulDiv(90, 100),
+                false,
+                address(0),
+                ILevvaPool(pool).defaultSwapCallData()
+            );
+            vm.stopPrank();
+        }
     }
 
     function _fundLevvaPool(address pool) private {
