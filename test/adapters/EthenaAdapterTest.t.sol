@@ -49,7 +49,7 @@ contract EthenaAdapterTest is Test {
 
         adapter = new EthenaAdapter(address(levvaVault), address(S_USDE));
         levvaVault.addAdapter(address(adapter));
-        assertEq(levvaVault.externalPositionAdapterPosition(address(adapter)), 0);
+        assertNotEq(levvaVault.externalPositionAdapterPosition(address(adapter)), 0);
 
         deal(address(USDE), address(levvaVault), 10 ** 12);
 
@@ -200,25 +200,29 @@ contract EthenaAdapterTest is Test {
 
         vm.prank(NO_ACCESS);
         (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets();
-        assertEq(assets.length, 1);
-        assertEq(amounts.length, 1);
-        assertEq(assets[0], address(USDE));
-        assertEq(amounts[0], 0);
+        assertEq(assets.length, 0);
+        assertEq(amounts.length, 0);
     }
 
     function _assertAdapterAssets(uint256 expectedUsde) private {
+        uint256 expectedLength = expectedUsde == 0 ? 0 : 1;
+
         vm.prank(address(levvaVault));
         (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets();
-        assertEq(assets.length, 1);
-        assertEq(amounts.length, 1);
-        assertEq(assets[0], address(USDE));
-        assertEq(amounts[0], expectedUsde);
+        assertEq(assets.length, expectedLength);
+        assertEq(amounts.length, expectedLength);
+        if (expectedLength != 0) {
+            assertEq(assets[0], address(USDE));
+            assertEq(amounts[0], expectedUsde);
+        }
 
         (assets, amounts) = adapter.getManagedAssets(address(levvaVault));
-        assertEq(assets.length, 1);
-        assertEq(amounts.length, 1);
-        assertEq(assets[0], address(USDE));
-        assertEq(amounts[0], expectedUsde);
+        assertEq(assets.length, expectedLength);
+        assertEq(amounts.length, expectedLength);
+        if (expectedLength != 0) {
+            assertEq(assets[0], address(USDE));
+            assertEq(amounts[0], expectedUsde);
+        }
 
         _assertNoDebtAssets();
     }

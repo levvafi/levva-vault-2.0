@@ -16,9 +16,12 @@ contract EthenaAdapter is ERC4626AdapterBase, IExternalPositionAdapter {
 
     bytes4 public constant getAdapterId = bytes4(keccak256("EthenaAdapter"));
 
-    address public immutable levvaVault;
+    event EthenaCooldown(uint256 shares, uint256 assets, uint256 timestamp);
+    event EthenaUnstake();
 
     error NoAccess();
+
+    address public immutable levvaVault;
 
     modifier onlyVault() {
         if (msg.sender != levvaVault) revert NoAccess();
@@ -34,7 +37,8 @@ contract EthenaAdapter is ERC4626AdapterBase, IExternalPositionAdapter {
         IStakedUSDe _stakedUSDe = stakedUSDe();
 
         IAdapterCallback(msg.sender).adapterCallback(address(this), address(_stakedUSDe), shares);
-        return _stakedUSDe.cooldownShares(shares);
+        assets = _stakedUSDe.cooldownShares(shares);
+        emit EthenaCooldown(shares, assets, block.timestamp);
     }
 
     function unstake() external onlyVault {
@@ -42,6 +46,7 @@ contract EthenaAdapter is ERC4626AdapterBase, IExternalPositionAdapter {
         _ensureIsValidAsset(_stakedUSDe.asset());
 
         _stakedUSDe.unstake(msg.sender);
+        emit EthenaUnstake();
     }
 
     function USDe() public view returns (address) {
@@ -50,6 +55,10 @@ contract EthenaAdapter is ERC4626AdapterBase, IExternalPositionAdapter {
 
     function stakedUSDe() public view returns (IStakedUSDe) {
         return IStakedUSDe(_vault);
+    }
+
+    function supportsInterface(bytes4 interfaceId) public pure override returns (bool) {
+        return interfaceId == type(IExternalPositionAdapter).interfaceId || super.supportsInterface(interfaceId);
     }
 
     /// @inheritdoc IExternalPositionAdapter
@@ -74,12 +83,15 @@ contract EthenaAdapter is ERC4626AdapterBase, IExternalPositionAdapter {
         view
         returns (address[] memory assets, uint256[] memory amounts)
     {
-        assets = new address[](1);
-        assets[0] = USDe();
+        if (vault != levvaVault) return (assets, amounts);
 
-        amounts = new uint256[](1);
-        if (vault == levvaVault) {
-            amounts[0] = stakedUSDe().cooldowns(address(this)).underlyingAmount;
+        uint256 cooldownAmount = stakedUSDe().cooldowns(address(this)).underlyingAmount;
+        if (cooldownAmount != 0) {
+            assets = new address[](1);
+            assets[0] = USDe();
+
+            amounts = new uint256[](1);
+            amounts[0] = cooldownAmount;
         }
     }
 }
