@@ -187,6 +187,25 @@ contract EthenaAdapterTest is Test {
         adapter.redeem(expectedLpTokens);
     }
 
+    function testGetManagedAssetsSenderNotVault() public {
+        uint256 depositAmount = 1000 * 10 ** 6;
+        vm.prank(address(levvaVault));
+        uint256 expectedLpTokens = adapter.deposit(depositAmount);
+
+        vm.prank(address(levvaVault));
+        adapter.cooldownShares(expectedLpTokens);
+
+        assertNotEq(S_USDE.convertToAssets(expectedLpTokens), 0);
+        _assertAdapterAssets(S_USDE.convertToAssets(expectedLpTokens));
+
+        vm.prank(NO_ACCESS);
+        (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets();
+        assertEq(assets.length, 1);
+        assertEq(amounts.length, 1);
+        assertEq(assets[0], address(USDE));
+        assertEq(amounts[0], 0);
+    }
+
     function _assertAdapterAssets(uint256 expectedUsde) private {
         vm.prank(address(levvaVault));
         (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets();
