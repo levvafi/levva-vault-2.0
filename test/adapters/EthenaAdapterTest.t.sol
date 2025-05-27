@@ -13,6 +13,11 @@ import {EthenaAdapter} from "../../contracts/adapters/ethena/EthenaAdapter.sol";
 import {AdapterBase} from "../../contracts/adapters/AdapterBase.sol";
 import {EulerRouterMock} from "../mocks/EulerRouterMock.t.sol";
 
+interface IStakedUSDeAdmin {
+    function setCooldownDuration(uint24 duration) external;
+    function owner() external view returns (address);
+}
+
 contract EthenaAdapterTest is Test {
     using Math for uint256;
 
@@ -52,6 +57,11 @@ contract EthenaAdapterTest is Test {
         levvaVault.addTrackedAsset(address(S_USDE));
     }
 
+    function testSetup() public view {
+        assertEq(address(adapter.stakedUSDe()), address(S_USDE));
+        assertEq(adapter.USDe(), address(USDE));
+    }
+
     function testDeposit() public {
         uint256 usdeBalanceBefore = USDE.balanceOf(address(levvaVault));
         uint256 depositAmount = 1000 * 10 ** 6;
@@ -62,6 +72,8 @@ contract EthenaAdapterTest is Test {
         assertEq(S_USDE.balanceOf(address(levvaVault)), expectedLpTokens);
         assertEq(USDE.balanceOf(address(adapter)), 0);
         assertEq(S_USDE.balanceOf(address(adapter)), 0);
+
+        _assertAdapterAssets(0);
     }
 
     function testDepositNotTrackedAsset() public {
@@ -85,6 +97,8 @@ contract EthenaAdapterTest is Test {
         assertEq(S_USDE.balanceOf(address(levvaVault)), 0);
         assertEq(USDE.balanceOf(address(adapter)), 0);
         assertEq(S_USDE.balanceOf(address(adapter)), 0);
+
+        _assertAdapterAssets(S_USDE.convertToAssets(expectedLpTokens));
     }
 
     function testCooldownOnlyVault() public {
@@ -111,6 +125,8 @@ contract EthenaAdapterTest is Test {
         assertEq(S_USDE.balanceOf(address(levvaVault)), 0);
         assertEq(USDE.balanceOf(address(adapter)), 0);
         assertEq(S_USDE.balanceOf(address(adapter)), 0);
+
+        _assertAdapterAssets(0);
     }
 
     function testUnstakeOnlyVault() public {
@@ -134,5 +150,64 @@ contract EthenaAdapterTest is Test {
         vm.prank(address(levvaVault));
         vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, USDE));
         adapter.unstake();
+    }
+
+    function testRedeem() public {
+        uint256 usdeBalanceBefore = USDE.balanceOf(address(levvaVault));
+        uint256 depositAmount = 1000 * 10 ** 6;
+        vm.prank(address(levvaVault));
+        uint256 expectedLpTokens = adapter.deposit(depositAmount);
+
+        vm.prank(IStakedUSDeAdmin(address(S_USDE)).owner());
+        IStakedUSDeAdmin(address(S_USDE)).setCooldownDuration(0);
+
+        vm.prank(address(levvaVault));
+        adapter.redeem(expectedLpTokens);
+
+        assertApproxEqAbs(USDE.balanceOf(address(levvaVault)), usdeBalanceBefore, 1);
+        assertEq(S_USDE.balanceOf(address(levvaVault)), 0);
+        assertEq(USDE.balanceOf(address(adapter)), 0);
+        assertEq(S_USDE.balanceOf(address(adapter)), 0);
+
+        _assertAdapterAssets(0);
+    }
+
+    function testRedeemNotTrackedAsset() public {
+        uint256 depositAmount = USDE.balanceOf(address(levvaVault));
+        vm.prank(address(levvaVault));
+        uint256 expectedLpTokens = adapter.deposit(depositAmount);
+
+        vm.prank(IStakedUSDeAdmin(address(S_USDE)).owner());
+        IStakedUSDeAdmin(address(S_USDE)).setCooldownDuration(0);
+
+        levvaVault.removeTrackedAsset(address(USDE));
+
+        vm.prank(address(levvaVault));
+        vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, USDE));
+        adapter.redeem(expectedLpTokens);
+    }
+
+    function _assertAdapterAssets(uint256 expectedUsde) private {
+        vm.prank(address(levvaVault));
+        (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets();
+        assertEq(assets.length, 1);
+        assertEq(amounts.length, 1);
+        assertEq(assets[0], address(USDE));
+        assertEq(amounts[0], expectedUsde);
+
+        (assets, amounts) = adapter.getManagedAssets(address(levvaVault));
+        assertEq(assets.length, 1);
+        assertEq(amounts.length, 1);
+        assertEq(assets[0], address(USDE));
+        assertEq(amounts[0], expectedUsde);
+
+        _assertNoDebtAssets();
+    }
+
+    function _assertNoDebtAssets() private {
+        vm.prank(address(levvaVault));
+        (address[] memory assets, uint256[] memory amounts) = adapter.getDebtAssets();
+        assertEq(assets.length, 0);
+        assertEq(amounts.length, 0);
     }
 }

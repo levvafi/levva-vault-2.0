@@ -15,18 +15,20 @@ abstract contract ERC4626AdapterBase is AdapterBase {
     using Asserts for address;
 
     address internal immutable _vault;
+    address internal immutable _asset;
 
     constructor(address vault) {
         vault.assertNotZeroAddress();
 
         _vault = vault;
+        _asset = IERC4626(_vault).asset();
     }
 
     function deposit(uint256 assets) external virtual returns (uint256 shares) {
         IERC4626 vault = IERC4626(_vault);
         _ensureIsValidAsset(address(_vault));
 
-        address asset = vault.asset();
+        address asset = _asset;
         IAdapterCallback(msg.sender).adapterCallback(address(this), asset, assets);
         IERC20(asset).forceApprove(address(vault), assets);
 
@@ -34,8 +36,8 @@ abstract contract ERC4626AdapterBase is AdapterBase {
     }
 
     function redeem(uint256 shares) external virtual returns (uint256 withdrawn) {
+        _ensureIsValidAsset(_asset);
         IERC4626 vault = IERC4626(_vault);
-        _ensureIsValidAsset(vault.asset());
 
         IAdapterCallback(msg.sender).adapterCallback(address(this), address(vault), shares);
         vault.forceApprove(address(_vault), shares);

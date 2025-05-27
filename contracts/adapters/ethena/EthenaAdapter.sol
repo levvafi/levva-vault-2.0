@@ -2,13 +2,15 @@
 pragma solidity 0.8.28;
 
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 
 import {IAdapterCallback} from "../../interfaces/IAdapterCallback.sol";
+import {IExternalPositionAdapter} from "../../interfaces/IExternalPositionAdapter.sol";
 import {Asserts} from "../../libraries/Asserts.sol";
 import {ERC4626AdapterBase} from "../ERC4626AdapterBase.sol";
 import {IStakedUSDe} from "./interfaces/IStakedUSDe.sol";
 
-contract EthenaAdapter is ERC4626AdapterBase {
+contract EthenaAdapter is ERC4626AdapterBase, IExternalPositionAdapter {
     using SafeERC20 for IStakedUSDe;
     using Asserts for address;
 
@@ -42,7 +44,42 @@ contract EthenaAdapter is ERC4626AdapterBase {
         _stakedUSDe.unstake(msg.sender);
     }
 
+    function USDe() public view returns (address) {
+        return _asset;
+    }
+
     function stakedUSDe() public view returns (IStakedUSDe) {
         return IStakedUSDe(_vault);
+    }
+
+    /// @inheritdoc IExternalPositionAdapter
+    function getManagedAssets() external view returns (address[] memory assets, uint256[] memory amounts) {
+        return _getManagedAssets(msg.sender);
+    }
+
+    function getManagedAssets(address vault)
+        external
+        view
+        returns (address[] memory assets, uint256[] memory amounts)
+    {
+        return _getManagedAssets(vault);
+    }
+
+    /// @inheritdoc IExternalPositionAdapter
+    /// @dev there is no debt assets
+    function getDebtAssets() external view returns (address[] memory assets, uint256[] memory amounts) {}
+
+    function _getManagedAssets(address vault)
+        private
+        view
+        returns (address[] memory assets, uint256[] memory amounts)
+    {
+        assets = new address[](1);
+        assets[0] = USDe();
+
+        amounts = new uint256[](1);
+        if (vault == levvaVault) {
+            amounts[0] = stakedUSDe().cooldowns(address(this)).underlyingAmount;
+        }
     }
 }
