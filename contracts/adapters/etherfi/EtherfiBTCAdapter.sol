@@ -109,6 +109,10 @@ contract EtherfiBTCAdapter is AdapterBase, IExternalPositionAdapter {
         emit EtherfiBTCRequestCancel(ebtcReturned);
     }
 
+    function supportsInterface(bytes4 interfaceId) public pure override returns (bool) {
+        return interfaceId == type(IExternalPositionAdapter).interfaceId || super.supportsInterface(interfaceId);
+    }
+
     /// @inheritdoc IExternalPositionAdapter
     function getManagedAssets() external view returns (address[] memory assets, uint256[] memory amounts) {
         return _getManagedAssets(msg.sender);

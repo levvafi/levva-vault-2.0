@@ -338,7 +338,8 @@ contract LevvaPoolAdapterTest is Test {
 
         ILevvaPool.Position memory position = pool.positions(address(adapter));
         assertEq(uint8(ILevvaPool.PositionType.Lend), uint8(position._type));
-        uint256 actualQuoteCollateral = pool.quoteCollateralCoeff().inner.mulDiv(position.discountedQuoteAmount, X96_ONE);
+        uint256 actualQuoteCollateral =
+            pool.quoteCollateralCoeff().inner.mulDiv(position.discountedQuoteAmount, X96_ONE);
 
         assertEq(quoteCollateral, actualQuoteCollateral, "wrong base collateral before reinit");
 

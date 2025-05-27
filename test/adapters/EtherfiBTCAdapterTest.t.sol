@@ -70,7 +70,7 @@ contract EtherfiBTCAdapterTest is Test {
         adapter =
             new EtherfiBTCAdapter(address(levvaVault), address(WBTC), address(EBTC), LAYER_ZERO_TELLER, ATOMIC_QUEUE);
         levvaVault.addAdapter(address(adapter));
-        assertEq(levvaVault.externalPositionAdapterPosition(address(adapter)), 0);
+        assertNotEq(levvaVault.externalPositionAdapterPosition(address(adapter)), 0);
 
         deal(address(WBTC), address(levvaVault), 10 * 10 ** 8);
 
