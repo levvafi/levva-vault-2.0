@@ -1,0 +1,97 @@
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.28;
+
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
+
+import {IAdapterCallback} from "../../interfaces/IAdapterCallback.sol";
+import {IExternalPositionAdapter} from "../../interfaces/IExternalPositionAdapter.sol";
+import {Asserts} from "../../libraries/Asserts.sol";
+import {ERC4626AdapterBase} from "../ERC4626AdapterBase.sol";
+import {IStakedUSDe} from "./interfaces/IStakedUSDe.sol";
+
+contract EthenaAdapter is ERC4626AdapterBase, IExternalPositionAdapter {
+    using SafeERC20 for IStakedUSDe;
+    using Asserts for address;
+
+    bytes4 public constant getAdapterId = bytes4(keccak256("EthenaAdapter"));
+
+    event EthenaCooldown(uint256 shares, uint256 assets, uint256 timestamp);
+    event EthenaUnstake();
+
+    error NoAccess();
+
+    address public immutable levvaVault;
+
+    modifier onlyVault() {
+        if (msg.sender != levvaVault) revert NoAccess();
+        _;
+    }
+
+    constructor(address _levvaVault, address _sUSDe) ERC4626AdapterBase(_sUSDe) {
+        _levvaVault.assertNotZeroAddress();
+        levvaVault = _levvaVault;
+    }
+
+    function cooldownShares(uint256 shares) external onlyVault returns (uint256 assets) {
+        IStakedUSDe _stakedUSDe = stakedUSDe();
+
+        IAdapterCallback(msg.sender).adapterCallback(address(this), address(_stakedUSDe), shares);
+        assets = _stakedUSDe.cooldownShares(shares);
+        emit EthenaCooldown(shares, assets, block.timestamp);
+    }
+
+    function unstake() external onlyVault {
+        IStakedUSDe _stakedUSDe = stakedUSDe();
+        _ensureIsValidAsset(_stakedUSDe.asset());
+
+        _stakedUSDe.unstake(msg.sender);
+        emit EthenaUnstake();
+    }
+
+    function USDe() public view returns (address) {
+        return _asset;
+    }
+
+    function stakedUSDe() public view returns (IStakedUSDe) {
+        return IStakedUSDe(_vault);
+    }
+
+    function supportsInterface(bytes4 interfaceId) public pure override returns (bool) {
+        return interfaceId == type(IExternalPositionAdapter).interfaceId || super.supportsInterface(interfaceId);
+    }
+
+    /// @inheritdoc IExternalPositionAdapter
+    function getManagedAssets() external view returns (address[] memory assets, uint256[] memory amounts) {
+        return _getManagedAssets(msg.sender);
+    }
+
+    function getManagedAssets(address vault)
+        external
+        view
+        returns (address[] memory assets, uint256[] memory amounts)
+    {
+        return _getManagedAssets(vault);
+    }
+
+    /// @inheritdoc IExternalPositionAdapter
+    /// @dev there is no debt assets
+    function getDebtAssets() external view returns (address[] memory assets, uint256[] memory amounts) {}
+
+    function _getManagedAssets(address vault)
+        private
+        view
+        returns (address[] memory assets, uint256[] memory amounts)
+    {
+        if (vault != levvaVault) return (assets, amounts);
+
+        uint256 cooldownAmount = stakedUSDe().cooldowns(address(this)).underlyingAmount;
+        if (cooldownAmount != 0) {
+            assets = new address[](1);
+            assets[0] = USDe();
+
+            amounts = new uint256[](1);
+            amounts[0] = cooldownAmount;
+        }
+    }
+}
