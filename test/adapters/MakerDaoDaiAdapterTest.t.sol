@@ -56,12 +56,12 @@ contract MakerDaoDaiAdapterTest is Test {
     }
 
     function testDeposit() public {
-        uint256 usrBalanceBefore = DAI.balanceOf(address(levvaVault));
+        uint256 balanceBefore = DAI.balanceOf(address(levvaVault));
         uint256 depositAmount = 1000 * 10 ** 18;
         vm.prank(address(levvaVault));
         uint256 expectedLpTokens = adapter.deposit(depositAmount);
 
-        assertEq(usrBalanceBefore - DAI.balanceOf(address(levvaVault)), depositAmount);
+        assertEq(balanceBefore - DAI.balanceOf(address(levvaVault)), depositAmount);
         assertEq(S_DAI.balanceOf(address(levvaVault)), expectedLpTokens);
         assertEq(DAI.balanceOf(address(adapter)), 0);
         assertEq(S_DAI.balanceOf(address(adapter)), 0);
