@@ -6,7 +6,7 @@ import {Vm} from "lib/forge-std/src/Vm.sol";
 import {console} from "lib/forge-std/src/console.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {PendleAdapter} from "../../../../contracts/adapters/pendle/PendleAdapter.sol";
+import {PendleAdapter} from "../../../contracts/adapters/pendle/PendleAdapter.sol";
 import {
     TokenInput,
     ApproxParams,

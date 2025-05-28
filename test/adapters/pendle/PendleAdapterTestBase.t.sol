@@ -7,7 +7,7 @@ import {console} from "lib/forge-std/src/console.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {PendleAdapter} from "../../../../contracts/adapters/pendle/PendleAdapter.sol";
+import {PendleAdapter} from "../../../contracts/adapters/pendle/PendleAdapter.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {
     TokenInput,
@@ -20,8 +20,8 @@ import {
 import {IPSwapAggregator, SwapDataExtra} from "@pendle/core-v2/contracts/router/swap-aggregator/IPSwapAggregator.sol";
 import {IPMarket} from "@pendle/core-v2/contracts/interfaces/IPMarket.sol";
 import {IPPrincipalToken} from "@pendle/core-v2/contracts/interfaces/IPPrincipalToken.sol";
-import {EulerRouterMock} from "../../../mocks/EulerRouterMock.t.sol";
-import {LevvaVault} from "../../../../contracts/LevvaVault.sol";
+import {EulerRouterMock} from "../../mocks/EulerRouterMock.t.sol";
+import {LevvaVault} from "../../../contracts/LevvaVault.sol";
 
 abstract contract PendleAdapterTestBase is Test {
     address internal constant PENDLE_ROUTER = 0x888888888889758F76e7103c6CbF23ABbF58F946;

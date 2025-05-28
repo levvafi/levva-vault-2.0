@@ -8,16 +8,16 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {LevvaPoolAdapter} from "../../../../contracts/adapters/levvaPool/LevvaPoolAdapter.sol";
-import {AdapterBase} from "../../../../contracts/adapters/AdapterBase.sol";
-import {ILevvaPool} from "../../../../contracts/adapters/levvaPool/ILevvaPool.sol";
-import {FP96} from "../../../../contracts/adapters/levvaPool/FP96.sol";
-import {EulerRouterMock} from "../../../mocks/EulerRouterMock.t.sol";
-import {LevvaVault} from "../../../../contracts/LevvaVault.sol";
-import {IAdapter} from "../../../../contracts/interfaces/IAdapter.sol";
-import {IExternalPositionAdapter} from "../../../../contracts/interfaces/IExternalPositionAdapter.sol";
-import {Asserts} from "../../../../contracts/libraries/Asserts.sol";
-import {LevvaPoolMock} from "../../../mocks/LevvaPoolMock.t.sol";
+import {LevvaPoolAdapter} from "../../contracts/adapters/levvaPool/LevvaPoolAdapter.sol";
+import {AdapterBase} from "../../contracts/adapters/AdapterBase.sol";
+import {ILevvaPool} from "../../contracts/adapters/levvaPool/ILevvaPool.sol";
+import {FP96} from "../../contracts/adapters/levvaPool/FP96.sol";
+import {EulerRouterMock} from "../mocks/EulerRouterMock.t.sol";
+import {LevvaVault} from "../../contracts/LevvaVault.sol";
+import {IAdapter} from "../../contracts/interfaces/IAdapter.sol";
+import {IExternalPositionAdapter} from "../../contracts/interfaces/IExternalPositionAdapter.sol";
+import {Asserts} from "../../contracts/libraries/Asserts.sol";
+import {LevvaPoolMock} from "../mocks/LevvaPoolMock.t.sol";
 
 contract LevvaPoolAdapterTest is Test {
     using FP96 for ILevvaPool.FixedPoint;
