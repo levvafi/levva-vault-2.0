@@ -414,6 +414,23 @@ contract PendleAdapterTest is Test {
         pendleAdapter.swapTokenToToken(IPSwapAggregator(address(1)), swapDataExtra, amountIn);
     }
 
+    function testRedeemRewards() public {
+        hoax(address(vault));
+        PendleMarketMock(PT_MARKET_1).setRewardToken(address(USDT));
+        uint256 rewardAmount = 10 * 10 ** 6; // 10 USDT
+        deal(address(USDT), address(PT_MARKET_1), rewardAmount); // Give 10 USDT to the adapter
+        PendleMarketMock(PT_MARKET_1).setRewards(rewardAmount); // Set rewards to 10 USDT
+        uint256 balanceBefore = USDT.balanceOf(address(vault));
+
+        hoax(address(vault));
+        (address[] memory assets, uint256[] memory rewards) = pendleAdapter.redeemRewards(PT_MARKET_1);
+
+        assertEq(balanceBefore + rewards[0], USDT.balanceOf(address(vault)));
+        assertEq(USDT.balanceOf(address(pendleAdapter)), 0);
+    }
+
+    function testRedeemRewardsShouldFailWhenRewardsNotTracked() public {}
+
     function _createTokenInputSimple(address tokenIn, uint256 netTokenIn) private pure returns (TokenInput memory) {
         return TokenInput({
             tokenIn: tokenIn,
