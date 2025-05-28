@@ -17,7 +17,6 @@ abstract contract MorphoAdapterBase is AdapterBase {
 
     IMetaMorphoFactory internal immutable i_metaMorphoFactory;
 
-    error MorphoAdapterBase__NoAccess();
     error MorphoAdapterBase__InvalidMorphoVault();
 
     constructor(address metaMorphoFactory) AdapterBase() {
@@ -61,6 +60,10 @@ abstract contract MorphoAdapterBase is AdapterBase {
     {
         _ensureIsValidAsset(reward);
         IUniversalRewardsDistributorBase(rewardsDistributor).claim(msg.sender, reward, claimable, proof);
+    }
+
+    function getMetaMorphoFactory() external view returns (address) {
+        return address(i_metaMorphoFactory);
     }
 
     function _ensureIsValidMorphoVault(address morphoVault) internal view {

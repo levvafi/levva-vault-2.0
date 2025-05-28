@@ -80,6 +80,11 @@ contract MorphoAdapterTest is Test {
         new MorphoAdapter(address(0));
     }
 
+    function test_getMetaMorphoFactory() public {
+        assertEq(adapter.getMetaMorphoFactory(), MORPHO_FACTORY);
+        assertEq(adapterV1_1.getMetaMorphoFactory(), MORPHO_FACTORY_V1_1);
+    }
+
     function test_deposit() public {
         uint256 balanceBefore = USDC.balanceOf(address(levvaVault));
         uint256 depositAmount = 5000 * 10 ** 6;
