@@ -7,10 +7,10 @@ import {console} from "lib/forge-std/src/console.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {CurveRouterAdapter} from "../../../../contracts/adapters/curve/CurveRouterAdapter.sol";
-import {ICurveRouterNg} from "../../../../contracts/adapters/curve/ICurveRouterNg.sol";
-import {EulerRouterMock} from "../../../mocks/EulerRouterMock.t.sol";
-import {LevvaVault} from "../../../../contracts/LevvaVault.sol";
+import {CurveRouterAdapter} from "../../contracts/adapters/curve/CurveRouterAdapter.sol";
+import {ICurveRouterNg} from "../../contracts/adapters/curve/ICurveRouterNg.sol";
+import {EulerRouterMock} from "../mocks/EulerRouterMock.t.sol";
+import {LevvaVault} from "../../contracts/LevvaVault.sol";
 
 interface IWSTEHT {
     function unwrap(uint256 _wstETHAmount) external returns (uint256);
