@@ -282,7 +282,7 @@ contract PendleAdapter is AdapterBase {
         rewards = IPMarket(pendleMarket).redeemRewards(msg.sender);
 
         uint256 length = assets.length;
-        for (uint256 i = 0; i < length;) {
+        for (uint256 i; i < length;) {
             if (rewards[i] != 0) {
                 _ensureIsValidAsset(assets[i]);
             }
