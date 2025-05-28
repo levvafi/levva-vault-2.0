@@ -29,7 +29,7 @@ abstract contract MorphoAdapterBase is AdapterBase {
     /// @param assets The amount of assets to deposit
     function deposit(address morphoVault, uint256 assets) external returns (uint256 shares) {
         _ensureIsValidMorphoVault(morphoVault);
-        _ensureIsValidAsset(address(morphoVault));
+        _ensureIsValidAsset(morphoVault);
 
         address asset = IERC4626(morphoVault).asset();
         IAdapterCallback(msg.sender).adapterCallback(address(this), asset, assets);
