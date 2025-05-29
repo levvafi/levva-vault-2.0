@@ -8,19 +8,14 @@ abstract contract WithdrawalRequestQueue {
         0x4ff390a5d5a11ce79e4a39c0047f1e548cef89b95e951e10719d61464ab9a900;
 
     struct WithdrawalRequest {
-        /// @dev address of user
-        address receiver;
-        /// @dev lp amount to burn and exchange for underlying token
         uint256 shares;
+        uint256 assets;
     }
 
     struct WithdrawalQueueStorage {
-        /// @dev queue inner starting index. Increased after dequeue
-        uint128 start;
-        /// @dev queue inner ending index. Increased after enqueue
-        uint128 end;
-        /// @dev queue items
-        mapping(uint128 index => WithdrawalRequest item) items;
+        uint256 lastRequestId;
+        uint256 lastFinalizedRequestId;
+        mapping(uint256 requestId => WithdrawalRequest item) items;
     }
 
     function _getWithdrawalQueueStorageData() private pure returns (WithdrawalQueueStorage storage $) {
@@ -30,9 +25,9 @@ abstract contract WithdrawalRequestQueue {
     }
 
     event WithdrawalRequested(
-        uint128 indexed requestId, address indexed owner, address indexed receiver, uint256 shares
+        uint256 indexed requestId, address indexed owner, address indexed receiver, uint256 shares
     );
-    event WithdrawalFinalized(uint128 indexed requestId, address indexed receiver, uint256 shares, uint256 assets);
+    event WithdrawalFinalized(uint256 indexed requestId, address indexed receiver, uint256 shares, uint256 assets);
 
     error NoElementWithIndex(uint256 index);
 
@@ -40,27 +35,32 @@ abstract contract WithdrawalRequestQueue {
         return _getWithdrawalRequest(index);
     }
 
-    function _getWithdrawalRequest(uint128 index) internal view returns (WithdrawalRequest storage) {
+    function _getWithdrawalRequest(uint256 requestId) internal view returns (WithdrawalRequest storage) {
         WithdrawalQueueStorage storage queue = _getWithdrawalQueueStorageData();
-        uint128 memoryIndex = queue.start + index;
-        if (memoryIndex >= queue.end) revert NoElementWithIndex(index);
+        if (requestId > queue.lastRequestId) revert NoElementWithIndex(requestId);
 
-        return queue.items[memoryIndex];
+        return queue.items[requestId];
     }
 
-    function _enqueueWithdraw(address receiver, uint256 shares) internal returns (uint128 requestId) {
+    function _enqueueRequest(uint256 shares, uint256 assets) internal returns (uint256 requestId) {
         WithdrawalQueueStorage storage queue = _getWithdrawalQueueStorageData();
         unchecked {
-            requestId = queue.end++;
+            requestId = ++queue.lastRequestId;
         }
-        queue.items[requestId] = WithdrawalRequest({receiver: receiver, shares: shares});
+        queue.items[requestId] = WithdrawalRequest(shares, assets);
     }
 
-    function _dequeueWithdraw() internal returns (uint128 requestId) {
+    function _removeRequest(uint256 requestId) internal returns (WithdrawalRequest memory request) {
         WithdrawalQueueStorage storage queue = _getWithdrawalQueueStorageData();
-        unchecked {
-            requestId = queue.start++;
-        }
+        request = queue.items[requestId];
         delete queue.items[requestId];
+    }
+
+    function _finalizeRequests(uint256 newLastFinalizedRequestId) internal {
+        WithdrawalQueueStorage storage queue = _getWithdrawalQueueStorageData();
+        if (queue.lastFinalizedRequestId >= newLastFinalizedRequestId) revert();
+        if (queue.lastRequestId < newLastFinalizedRequestId) revert();
+
+        queue.lastFinalizedRequestId = newLastFinalizedRequestId;
     }
 }
