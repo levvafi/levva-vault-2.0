@@ -80,7 +80,7 @@ contract MorphoAdapterTest is Test {
         new MorphoAdapter(address(0));
     }
 
-    function test_getMetaMorphoFactory() public {
+    function test_getMetaMorphoFactory() public view {
         assertEq(adapter.getMetaMorphoFactory(), MORPHO_FACTORY);
         assertEq(adapterV1_1.getMetaMorphoFactory(), MORPHO_FACTORY_V1_1);
     }

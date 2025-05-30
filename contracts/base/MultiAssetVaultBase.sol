@@ -41,6 +41,7 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, FeeCollector, Adapt
     );
     event MinimalDepositSet(uint256 minDeposit);
 
+    error AlreadySet();
     error AlreadyTracked(uint256 index);
     error NotTrackedAsset();
     error NotZeroBalance(uint256 balance);
@@ -180,7 +181,7 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, FeeCollector, Adapt
 
     function setWithdrawalQueue(address queue) external onlyOwner {
         MultiAssetVaultBaseStorage storage $ = _getMultiAssetVaultBaseStorage();
-        if ($.withdrawalQueue != address(0)) revert();
+        if ($.withdrawalQueue != address(0)) revert AlreadySet();
         $.withdrawalQueue = queue;
     }
 
