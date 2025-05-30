@@ -58,6 +58,7 @@ contract TestSetUp is Test {
         assertEq(levvaVault.getFeeCollectorStorage().feeCollector, FEE_COLLECTOR);
         assertEq(levvaVault.getFeeCollectorStorage().highWaterMarkPerShare, 10 ** levvaVault.decimals());
         assertEq(address(levvaVault.oracle()), address(oracle));
+        assertEq(levvaVault.withdrawalQueue(), address(withdrawalQueue));
     }
 
     function _createLevvaVault() private {

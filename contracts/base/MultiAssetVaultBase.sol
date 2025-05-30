@@ -18,7 +18,6 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, FeeCollector, Adapt
 
     /// @custom:storage-location erc7201:levva.storage.MultiAssetVaultBase
     struct MultiAssetVaultBaseStorage {
-        address withdrawalQueue;
         uint256 minDeposit;
         IERC20[] trackedAssets;
         // if 0, then token is not tracked, otherwise 'trackedAssetsArrayIndex = trackedAssetPosition - 1'
@@ -41,7 +40,6 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, FeeCollector, Adapt
     );
     event MinimalDepositSet(uint256 minDeposit);
 
-    error AlreadySet();
     error AlreadyTracked(uint256 index);
     error NotTrackedAsset();
     error NotZeroBalance(uint256 balance);
@@ -77,9 +75,7 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, FeeCollector, Adapt
     }
 
     /// @inheritdoc ERC4626Upgradeable
-    function withdraw(uint256 assets, address receiver, address owner) public override returns (uint256) {
-        if (msg.sender != _getMultiAssetVaultBaseStorage().withdrawalQueue) revert NoAccess(msg.sender);
-
+    function withdraw(uint256 assets, address receiver, address owner) public override onlyQueue returns (uint256) {
         uint256 _totalAssets = _totalAssetsWithFeeCollection();
 
         uint256 shares = _convertToShares(assets, _totalAssets, totalSupply(), Math.Rounding.Ceil);
@@ -89,9 +85,7 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, FeeCollector, Adapt
     }
 
     /// @inheritdoc ERC4626Upgradeable
-    function redeem(uint256 shares, address receiver, address owner) public override returns (uint256) {
-        if (msg.sender != _getMultiAssetVaultBaseStorage().withdrawalQueue) revert NoAccess(msg.sender);
-
+    function redeem(uint256 shares, address receiver, address owner) public override onlyQueue returns (uint256) {
         uint256 _totalAssets = _totalAssetsWithFeeCollection();
         uint256 assets = _convertToAssets(shares, _totalAssets, totalSupply(), Math.Rounding.Floor);
         _withdraw(msg.sender, receiver, owner, assets, shares);
@@ -110,7 +104,7 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, FeeCollector, Adapt
 
         uint256 shares = _convertToShares(assets, _totalAssets, _totalSupply, Math.Rounding.Ceil);
 
-        address queue = _getMultiAssetVaultBaseStorage().withdrawalQueue;
+        address queue = _getWithdrawalQueue();
         _transfer(msg.sender, queue, shares);
         return WithdrawalQueue(queue).requestWithdrawal(assets, shares, msg.sender);
     }
@@ -124,7 +118,7 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, FeeCollector, Adapt
         uint256 _totalAssets = _totalAssetsWithFeeCollection();
         uint256 assets = _convertToAssets(shares, _totalAssets, totalSupply(), Math.Rounding.Ceil);
 
-        address queue = _getMultiAssetVaultBaseStorage().withdrawalQueue;
+        address queue = _getWithdrawalQueue();
         _transfer(msg.sender, queue, shares);
         return WithdrawalQueue(queue).requestWithdrawal(assets, shares, msg.sender);
     }
@@ -177,12 +171,6 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, FeeCollector, Adapt
 
         $.minDeposit = minDeposit;
         emit MinimalDepositSet(minDeposit);
-    }
-
-    function setWithdrawalQueue(address queue) external onlyOwner {
-        MultiAssetVaultBaseStorage storage $ = _getMultiAssetVaultBaseStorage();
-        if ($.withdrawalQueue != address(0)) revert AlreadySet();
-        $.withdrawalQueue = queue;
     }
 
     /// @inheritdoc ERC4626Upgradeable

@@ -7,6 +7,7 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 import {TestSetUp} from "./TestSetUp.t.sol";
 import {Asserts} from "../contracts/libraries/Asserts.sol";
 import {MultiAssetVaultBase} from "../contracts/base/MultiAssetVaultBase.sol";
+import {VaultAccessControl} from "../contracts/base/VaultAccessControl.sol";
 import {OraclePriceProvider} from "../contracts/base/OraclePriceProvider.sol";
 import {MintableERC20} from "./mocks/MintableERC20.t.sol";
 import {EulerRouterMock} from "./mocks/EulerRouterMock.t.sol";
@@ -162,7 +163,7 @@ contract LevvaVaultAdminActionsTest is TestSetUp {
     }
 
     function testSetWithdrawalQueueAlreadySet() public {
-        vm.expectRevert(abi.encodeWithSelector(MultiAssetVaultBase.AlreadySet.selector));
+        vm.expectRevert(abi.encodeWithSelector(VaultAccessControl.QueueAlreadySet.selector, address(withdrawalQueue)));
         levvaVault.setWithdrawalQueue(address(1));
     }
 
