@@ -34,7 +34,10 @@ contract FeeCollectorTest is TestSetUp {
 
         uint256 toRedeem = levvaVault.maxRedeem(USER);
         vm.prank(USER);
-        levvaVault.redeem(toRedeem, USER, USER);
+        levvaVault.transfer(address(withdrawalQueue), toRedeem);
+
+        vm.prank(address(withdrawalQueue));
+        levvaVault.redeem(toRedeem, address(withdrawalQueue), address(withdrawalQueue));
 
         uint256 feeCollectorAssets = totalAssetsBefore.mulDiv(FEE, ONE);
 
@@ -48,7 +51,10 @@ contract FeeCollectorTest is TestSetUp {
 
         toRedeem = levvaVault.maxRedeem(USER);
         vm.prank(USER);
-        levvaVault.redeem(toRedeem, USER, USER);
+        levvaVault.transfer(address(withdrawalQueue), toRedeem);
+
+        vm.prank(address(withdrawalQueue));
+        levvaVault.redeem(toRedeem, address(withdrawalQueue), address(withdrawalQueue));
 
         feeCollectorAssets += DEPOSIT_AMOUNT.mulDiv(FEE, ONE);
 
@@ -66,7 +72,10 @@ contract FeeCollectorTest is TestSetUp {
         uint256 toRedeem = levvaVault.maxRedeem(USER);
         uint256 expectedAssets = levvaVault.convertToAssets(toRedeem);
         vm.prank(USER);
-        uint256 assets = levvaVault.redeem(toRedeem, USER, USER);
+        levvaVault.transfer(address(withdrawalQueue), toRedeem);
+
+        vm.prank(address(withdrawalQueue));
+        uint256 assets = levvaVault.redeem(toRedeem, address(withdrawalQueue), address(withdrawalQueue));
 
         assertEq(expectedAssets, assets);
         assertEq(levvaVault.totalAssets(), totalAssetsBefore.mulDiv(FEE, ONE));
@@ -118,7 +127,10 @@ contract FeeCollectorTest is TestSetUp {
         assertApproxEqAbs(levvaVault.convertToAssets(toRedeem), expectedAssets, 1);
 
         vm.prank(USER);
-        uint256 assets = levvaVault.redeem(toRedeem, USER, USER);
+        levvaVault.transfer(address(withdrawalQueue), toRedeem);
+
+        vm.prank(address(withdrawalQueue));
+        uint256 assets = levvaVault.redeem(toRedeem, address(withdrawalQueue), address(withdrawalQueue));
 
         assertEq(expectedAssets, assets);
         assertEq(levvaVault.totalAssets(), totalAssetsBefore.mulDiv(FEE, ONE));
@@ -136,7 +148,10 @@ contract FeeCollectorTest is TestSetUp {
         assertApproxEqAbs(levvaVault.convertToShares(toWithdraw), expectedShares, 1);
 
         vm.prank(USER);
-        uint256 shares = levvaVault.withdraw(toWithdraw, USER, USER);
+        levvaVault.transfer(address(withdrawalQueue), expectedShares);
+
+        vm.prank(address(withdrawalQueue));
+        uint256 shares = levvaVault.withdraw(toWithdraw, address(withdrawalQueue), address(withdrawalQueue));
 
         assertEq(expectedShares, shares);
         assertEq(levvaVault.totalAssets(), totalAssetsBefore.mulDiv(FEE, ONE));
@@ -151,7 +166,10 @@ contract FeeCollectorTest is TestSetUp {
 
         uint256 toRedeem = levvaVault.maxRedeem(USER);
         vm.prank(USER);
-        levvaVault.redeem(toRedeem, USER, USER);
+        levvaVault.transfer(address(withdrawalQueue), toRedeem);
+
+        vm.prank(address(withdrawalQueue));
+        levvaVault.redeem(toRedeem, address(withdrawalQueue), address(withdrawalQueue));
 
         assertEq(levvaVault.totalAssets(), 0);
     }
