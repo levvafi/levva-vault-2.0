@@ -275,6 +275,24 @@ contract PendleAdapter is AdapterBase {
         return netOut[0];
     }
 
+    /// @notice Redeem rewards from a pendle market
+    /// @dev This function will ensure that the rewards are valid assets before redeeming them
+    function redeemRewards(address pendleMarket) external returns (address[] memory assets, uint256[] memory rewards) {
+        assets = IPMarket(pendleMarket).getRewardTokens();
+        rewards = IPMarket(pendleMarket).redeemRewards(msg.sender);
+
+        uint256 length = assets.length;
+        for (uint256 i; i < length;) {
+            if (rewards[i] != 0) {
+                _ensureIsValidAsset(assets[i]);
+            }
+
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
     /// @dev Creates default ApproxParams for on-chain approximation
     function _createDefaultApproxParams() private pure returns (ApproxParams memory) {
         return ApproxParams({guessMin: 0, guessMax: type(uint256).max, guessOffchain: 0, maxIteration: 256, eps: 1e14});

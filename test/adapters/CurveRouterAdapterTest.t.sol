@@ -1,21 +1,23 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.27;
+pragma solidity ^0.8.28;
 
-import {IERC165} from "@openzeppelin/contracts/interfaces/IERC165.sol";
-import {IAdapter} from "../../contracts/interfaces/IAdapter.sol";
-import {IExternalPositionAdapter} from "../../contracts/interfaces/IExternalPositionAdapter.sol";
-import {Vm} from "lib/forge-std/src/Vm.sol";
 import {Test} from "lib/forge-std/src/Test.sol";
-import {MintableERC20} from "../mocks/MintableERC20.t.sol";
+import {Vm} from "lib/forge-std/src/Vm.sol";
+import {console} from "lib/forge-std/src/console.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-import {AdapterBase} from "../../contracts/adapters/AdapterBase.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+
+import {LevvaVault} from "../../contracts/LevvaVault.sol";
 import {Asserts} from "../../contracts/libraries/Asserts.sol";
+import {AdapterBase} from "../../contracts/adapters/AdapterBase.sol";
 import {CurveRouterAdapter} from "../../contracts/adapters/curve/CurveRouterAdapter.sol";
+import {ICurveRouterNg} from "../../contracts/adapters/curve/ICurveRouterNg.sol";
+import {MintableERC20} from "../mocks/MintableERC20.t.sol";
 import {CurveRouterMock} from "../mocks/CurveRouterMock.t.sol";
 import {EulerRouterMock} from "../mocks/EulerRouterMock.t.sol";
-import {LevvaVault} from "../../contracts/LevvaVault.sol";
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract CurveRouterAdapterTest is Test {
     using Math for uint256;
