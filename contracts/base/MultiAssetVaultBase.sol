@@ -77,7 +77,7 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, FeeCollector, Adapt
 
     /// @inheritdoc ERC4626Upgradeable
     function withdraw(uint256 assets, address receiver, address owner) public override returns (uint256) {
-        if (msg.sender != _getMultiAssetVaultBaseStorage().withdrawalQueue) revert();
+        if (msg.sender != _getMultiAssetVaultBaseStorage().withdrawalQueue) revert NoAccess(msg.sender);
 
         uint256 _totalAssets = _totalAssetsWithFeeCollection();
 
@@ -89,7 +89,7 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, FeeCollector, Adapt
 
     /// @inheritdoc ERC4626Upgradeable
     function redeem(uint256 shares, address receiver, address owner) public override returns (uint256) {
-        if (msg.sender != _getMultiAssetVaultBaseStorage().withdrawalQueue) revert();
+        if (msg.sender != _getMultiAssetVaultBaseStorage().withdrawalQueue) revert NoAccess(msg.sender);
 
         uint256 _totalAssets = _totalAssetsWithFeeCollection();
         uint256 assets = _convertToAssets(shares, _totalAssets, totalSupply(), Math.Rounding.Floor);
@@ -99,21 +99,33 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, FeeCollector, Adapt
     }
 
     function requestWithdrawal(uint256 assets) public returns (uint256 requestId) {
-        WithdrawalQueue queue = WithdrawalQueue(_getMultiAssetVaultBaseStorage().withdrawalQueue);
         uint256 _totalAssets = _totalAssetsWithFeeCollection();
-        uint256 shares = _convertToShares(assets, _totalAssets, totalSupply(), Math.Rounding.Ceil);
+        uint256 _totalSupply = totalSupply();
 
-        _transfer(msg.sender, address(queue), shares);
-        return queue.requestWithdrawal(assets, shares, msg.sender);
+        uint256 maxAssets = _convertToAssets(balanceOf(msg.sender), _totalAssets, _totalSupply, Math.Rounding.Floor);
+        if (assets > maxAssets) {
+            revert ERC4626ExceededMaxWithdraw(msg.sender, assets, maxAssets);
+        }
+
+        uint256 shares = _convertToShares(assets, _totalAssets, _totalSupply, Math.Rounding.Ceil);
+
+        address queue = _getMultiAssetVaultBaseStorage().withdrawalQueue;
+        _transfer(msg.sender, queue, shares);
+        return WithdrawalQueue(queue).requestWithdrawal(assets, shares, msg.sender);
     }
 
     function requestRedeem(uint256 shares) public returns (uint256 requestId) {
-        WithdrawalQueue queue = WithdrawalQueue(_getMultiAssetVaultBaseStorage().withdrawalQueue);
+        uint256 maxShares = maxRedeem(msg.sender);
+        if (shares > maxShares) {
+            revert ERC4626ExceededMaxRedeem(msg.sender, shares, maxShares);
+        }
+
         uint256 _totalAssets = _totalAssetsWithFeeCollection();
         uint256 assets = _convertToAssets(shares, _totalAssets, totalSupply(), Math.Rounding.Ceil);
 
-        _transfer(msg.sender, address(queue), shares);
-        return queue.requestWithdrawal(assets, shares, msg.sender);
+        address queue = _getMultiAssetVaultBaseStorage().withdrawalQueue;
+        _transfer(msg.sender, queue, shares);
+        return WithdrawalQueue(queue).requestWithdrawal(assets, shares, msg.sender);
     }
 
     function addTrackedAsset(address newTrackedAsset) external onlyOwner {

@@ -7,11 +7,14 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {ERC721Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 
-import {WithdrawalRequestQueue} from "./base/WithdrawalRequestQueue.sol";
+import {WithdrawalQueueBase} from "./base/WithdrawalQueueBase.sol";
 
 /// @custom:oz-upgrades-unsafe-allow constructor
-contract WithdrawalQueue is UUPSUpgradeable, ERC721Upgradeable, Ownable2StepUpgradeable, WithdrawalRequestQueue {
+contract WithdrawalQueue is UUPSUpgradeable, ERC721Upgradeable, Ownable2StepUpgradeable, WithdrawalQueueBase {
     using SafeERC20 for IERC4626;
+
+    error NoAccess();
+    error NotRequestOwner();
 
     IERC4626 public levvaVault;
 
@@ -26,7 +29,7 @@ contract WithdrawalQueue is UUPSUpgradeable, ERC721Upgradeable, Ownable2StepUpgr
     }
 
     function requestWithdrawal(uint256 assets, uint256 shares, address receiver) external returns (uint256) {
-        if (msg.sender != address(levvaVault)) revert();
+        if (msg.sender != address(levvaVault)) revert NoAccess();
 
         uint256 requestId = _enqueueRequest(shares, assets);
         _safeMint(receiver, requestId);
@@ -34,7 +37,7 @@ contract WithdrawalQueue is UUPSUpgradeable, ERC721Upgradeable, Ownable2StepUpgr
     }
 
     function claimWithdrawal(uint256 requestId) external returns (uint256 claimedAssets) {
-        require(msg.sender == ownerOf(requestId));
+        if (msg.sender != ownerOf(requestId)) revert NotRequestOwner();
         WithdrawalRequest memory request = _removeRequest(requestId);
 
         uint256 previewedAmount = levvaVault.convertToAssets(request.shares);
@@ -46,10 +49,6 @@ contract WithdrawalQueue is UUPSUpgradeable, ERC721Upgradeable, Ownable2StepUpgr
 
     function finalizeRequests(uint256 requestId) external onlyOwner {
         _finalizeRequests(requestId);
-    }
-
-    function getWithdrawalRequest(uint256 requestId) external view returns (WithdrawalRequest memory) {
-        return _getWithdrawalRequest(requestId);
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}

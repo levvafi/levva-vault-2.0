@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.28;
 
-abstract contract WithdrawalRequestQueue {
+abstract contract WithdrawalQueueBase {
     /// @dev 'WithdrawalQueueStorageData' storage slot address
     /// @dev keccak256(abi.encode(uint256(keccak256("levva-vault.WithdrawalQueueStorage")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant WithdrawalQueueStorageLocation =
@@ -29,16 +29,15 @@ abstract contract WithdrawalRequestQueue {
     );
     event WithdrawalFinalized(uint256 indexed requestId, address indexed receiver, uint256 shares, uint256 assets);
 
-    error NoElementWithIndex(uint256 index);
+    error FutureFinalization();
+    error AlreadyFinalized();
 
-    function withdrawalRequest(uint128 index) external view returns (WithdrawalRequest memory) {
-        return _getWithdrawalRequest(index);
+    function getWithdrawalRequest(uint256 requestId) external view returns (WithdrawalRequest memory) {
+        return _getWithdrawalRequest(requestId);
     }
 
     function _getWithdrawalRequest(uint256 requestId) internal view returns (WithdrawalRequest storage) {
         WithdrawalQueueStorage storage queue = _getWithdrawalQueueStorageData();
-        if (requestId > queue.lastRequestId) revert NoElementWithIndex(requestId);
-
         return queue.items[requestId];
     }
 
@@ -58,8 +57,8 @@ abstract contract WithdrawalRequestQueue {
 
     function _finalizeRequests(uint256 newLastFinalizedRequestId) internal {
         WithdrawalQueueStorage storage queue = _getWithdrawalQueueStorageData();
-        if (queue.lastFinalizedRequestId >= newLastFinalizedRequestId) revert();
-        if (queue.lastRequestId < newLastFinalizedRequestId) revert();
+        if (queue.lastFinalizedRequestId >= newLastFinalizedRequestId) revert AlreadyFinalized();
+        if (queue.lastRequestId < newLastFinalizedRequestId) revert FutureFinalization();
 
         queue.lastFinalizedRequestId = newLastFinalizedRequestId;
     }
