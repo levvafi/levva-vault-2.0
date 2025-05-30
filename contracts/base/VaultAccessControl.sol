@@ -28,6 +28,7 @@ abstract contract VaultAccessControl is Initializable, Ownable2StepUpgradeable {
         }
     }
 
+    event VaultManagerSet(address indexed manager, bool added);
     event QueueSet(address indexed queue);
 
     error NoAccess(address sender);
@@ -47,8 +48,9 @@ abstract contract VaultAccessControl is Initializable, Ownable2StepUpgradeable {
         __Ownable_init(owner);
     }
 
-    function addVaultManager(address user, bool add) external onlyOwner {
-        _getVaultAccessControlStorage()._vaultManagers[user] = add;
+    function addVaultManager(address manager, bool add) external onlyOwner {
+        _getVaultAccessControlStorage()._vaultManagers[manager] = add;
+        emit VaultManagerSet(manager, add);
     }
 
     function setWithdrawalQueue(address queue) external onlyOwner {
@@ -63,6 +65,10 @@ abstract contract VaultAccessControl is Initializable, Ownable2StepUpgradeable {
 
     function withdrawalQueue() external view returns (address) {
         return _getWithdrawalQueue();
+    }
+
+    function isVaultManager(address manager) external view returns (bool) {
+        return _getVaultAccessControlStorage()._vaultManagers[manager];
     }
 
     function _getWithdrawalQueue() internal view returns (address) {

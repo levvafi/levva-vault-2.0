@@ -21,6 +21,7 @@ contract TestSetUp is Test {
 
     address internal constant NO_ACCESS = address(0xDEAD);
     address internal constant VAULT_MANAGER = address(0x123456789);
+    address internal constant FINALIZER = address(0x1234567890);
     address internal constant FEE_COLLECTOR = address(0xFEE);
     address internal constant USER = address(0x987654321);
 
@@ -59,7 +60,10 @@ contract TestSetUp is Test {
         assertEq(levvaVault.getFeeCollectorStorage().highWaterMarkPerShare, 10 ** levvaVault.decimals());
         assertEq(address(levvaVault.oracle()), address(oracle));
         assertEq(levvaVault.withdrawalQueue(), address(withdrawalQueue));
+        assert(levvaVault.isVaultManager(VAULT_MANAGER));
+
         assertEq(address(withdrawalQueue.levvaVault()), address(levvaVault));
+        assert(withdrawalQueue.isFinalizer(FINALIZER));
     }
 
     function _createLevvaVault() private {
@@ -78,6 +82,8 @@ contract TestSetUp is Test {
         bytes memory data = abi.encodeWithSelector(WithdrawalQueue.initialize.selector, levvaVault);
         withdrawalQueueProxy = new ERC1967Proxy(address(withdrawalQueueImplementation), data);
         withdrawalQueue = WithdrawalQueue(address(withdrawalQueueProxy));
+
+        withdrawalQueue.addFinalizer(FINALIZER, true);
     }
 
     function _setWithdrawalQueue() private {

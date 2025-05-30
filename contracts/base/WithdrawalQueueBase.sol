@@ -3,10 +3,11 @@ pragma solidity 0.8.28;
 
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 
 import {Asserts} from "../libraries/Asserts.sol";
 
-abstract contract WithdrawalQueueBase is Initializable {
+abstract contract WithdrawalQueueBase is Initializable, Ownable2StepUpgradeable {
     using Asserts for address;
 
     /// @custom:storage-location erc7201:levva.storage.WithdrawalQueueBaseStorage
@@ -14,6 +15,7 @@ abstract contract WithdrawalQueueBase is Initializable {
         uint256 lastRequestId;
         uint256 lastFinalizedRequestId;
         IERC4626 levvaVault;
+        mapping(address => bool) finalizers;
         mapping(uint256 requestId => WithdrawalRequest item) items;
     }
 
@@ -33,6 +35,8 @@ abstract contract WithdrawalQueueBase is Initializable {
         uint256 assets;
     }
 
+    event FinalizerSet(address indexed finalizer, bool added);
+
     error NoAccess(address sender);
     error FutureFinalization();
     error AlreadyFinalized();
@@ -42,9 +46,21 @@ abstract contract WithdrawalQueueBase is Initializable {
         _;
     }
 
-    function __WithdrawalQueueBase_init(address _levvaVault) internal onlyInitializing {
+    modifier onlyFinalizer() {
+        _onlyFinalizer();
+        _;
+    }
+
+    function __WithdrawalQueueBase_init(address owner, address _levvaVault) internal onlyInitializing {
+        __Ownable_init(owner);
+
         _levvaVault.assertNotZeroAddress();
         _getWithdrawalQueueBaseStorage().levvaVault = IERC4626(_levvaVault);
+    }
+
+    function addFinalizer(address finalizer, bool add) external onlyOwner {
+        _getWithdrawalQueueBaseStorage().finalizers[finalizer] = add;
+        emit FinalizerSet(finalizer, add);
     }
 
     function getWithdrawalRequest(uint256 requestId) external view returns (WithdrawalRequest memory) {
@@ -53,6 +69,10 @@ abstract contract WithdrawalQueueBase is Initializable {
 
     function levvaVault() external view returns (IERC4626) {
         return _getLevvaVault();
+    }
+
+    function isFinalizer(address finalizer) external view returns (bool) {
+        return _getWithdrawalQueueBaseStorage().finalizers[finalizer];
     }
 
     function _enqueueRequest(uint256 shares, uint256 assets) internal returns (uint256 requestId) {
@@ -88,5 +108,9 @@ abstract contract WithdrawalQueueBase is Initializable {
 
     function _onlyLevvaVault() private view {
         if (msg.sender != address(_getLevvaVault())) revert NoAccess(msg.sender);
+    }
+
+    function _onlyFinalizer() private view {
+        if (!_getWithdrawalQueueBaseStorage().finalizers[msg.sender]) revert NoAccess(msg.sender);
     }
 }

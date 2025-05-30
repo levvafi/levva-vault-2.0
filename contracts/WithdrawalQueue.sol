@@ -5,12 +5,11 @@ import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {ERC721Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
-import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 
 import {WithdrawalQueueBase} from "./base/WithdrawalQueueBase.sol";
 
 /// @custom:oz-upgrades-unsafe-allow constructor
-contract WithdrawalQueue is UUPSUpgradeable, ERC721Upgradeable, Ownable2StepUpgradeable, WithdrawalQueueBase {
+contract WithdrawalQueue is UUPSUpgradeable, ERC721Upgradeable, WithdrawalQueueBase {
     using SafeERC20 for IERC4626;
 
     event WithdrawalRequested(uint256 indexed requestId, address indexed receiver, uint256 assets, uint256 shares);
@@ -25,8 +24,7 @@ contract WithdrawalQueue is UUPSUpgradeable, ERC721Upgradeable, Ownable2StepUpgr
 
     function initialize(address levvaVault) external initializer {
         __UUPSUpgradeable_init();
-        __Ownable_init(msg.sender);
-        __WithdrawalQueueBase_init(levvaVault);
+        __WithdrawalQueueBase_init(msg.sender, levvaVault);
     }
 
     function requestWithdrawal(uint256 assets, uint256 shares, address receiver)
@@ -54,7 +52,7 @@ contract WithdrawalQueue is UUPSUpgradeable, ERC721Upgradeable, Ownable2StepUpgr
         emit WithdrawalClaimed(requestId, msg.sender, claimedAssets);
     }
 
-    function finalizeRequests(uint256 requestId) external onlyOwner {
+    function finalizeRequests(uint256 requestId) external onlyFinalizer {
         _finalizeRequests(requestId);
         emit RequestsFinalized(requestId);
     }

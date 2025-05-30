@@ -119,6 +119,7 @@ contract LevvaWithdrawalQueueTest is TestSetUp {
         vm.prank(USER);
         uint256 requestId = levvaVault.requestWithdrawal(DEPOSIT);
 
+        vm.prank(FINALIZER);
         withdrawalQueue.finalizeRequests(requestId);
         uint256 userBalanceBefore = asset.balanceOf(USER);
 
@@ -140,6 +141,7 @@ contract LevvaWithdrawalQueueTest is TestSetUp {
         vm.prank(USER);
         uint256 requestId = levvaVault.requestWithdrawal(DEPOSIT);
 
+        vm.prank(FINALIZER);
         withdrawalQueue.finalizeRequests(requestId);
 
         vm.expectRevert(abi.encodeWithSelector(WithdrawalQueue.NotRequestOwner.selector));
@@ -147,11 +149,11 @@ contract LevvaWithdrawalQueueTest is TestSetUp {
         withdrawalQueue.claimWithdrawal(requestId);
     }
 
-    function testFinalizeOnlyRole() public {
+    function testFinalizeOnlyFinalizer() public {
         vm.prank(USER);
         uint256 requestId = levvaVault.requestWithdrawal(DEPOSIT);
 
-        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, NO_ACCESS));
+        vm.expectRevert(abi.encodeWithSelector(WithdrawalQueueBase.NoAccess.selector, NO_ACCESS));
         vm.prank(NO_ACCESS);
         withdrawalQueue.finalizeRequests(requestId);
     }
@@ -160,8 +162,10 @@ contract LevvaWithdrawalQueueTest is TestSetUp {
         vm.prank(USER);
         uint256 requestId = levvaVault.requestWithdrawal(DEPOSIT);
 
+        vm.prank(FINALIZER);
         withdrawalQueue.finalizeRequests(requestId);
 
+        vm.prank(FINALIZER);
         vm.expectRevert(abi.encodeWithSelector(WithdrawalQueueBase.AlreadyFinalized.selector));
         withdrawalQueue.finalizeRequests(requestId);
     }
@@ -170,7 +174,14 @@ contract LevvaWithdrawalQueueTest is TestSetUp {
         vm.prank(USER);
         uint256 requestId = levvaVault.requestWithdrawal(DEPOSIT);
 
+        vm.prank(FINALIZER);
         vm.expectRevert(abi.encodeWithSelector(WithdrawalQueueBase.FutureFinalization.selector));
         withdrawalQueue.finalizeRequests(requestId + 1);
+    }
+
+    function testAddFinalizerNoAccess() public {
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, NO_ACCESS));
+        vm.prank(NO_ACCESS);
+        withdrawalQueue.addFinalizer(NO_ACCESS, true);
     }
 }
