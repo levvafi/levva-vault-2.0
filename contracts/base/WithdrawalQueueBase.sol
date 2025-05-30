@@ -1,48 +1,62 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.28;
 
-abstract contract WithdrawalQueueBase {
+import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
+import {Asserts} from "../libraries/Asserts.sol";
+
+abstract contract WithdrawalQueueBase is Initializable {
+    using Asserts for address;
+
+    /// @custom:storage-location erc7201:levva.storage.WithdrawalQueueBaseStorage
+    struct WithdrawalQueueBaseStorage {
+        uint256 lastRequestId;
+        uint256 lastFinalizedRequestId;
+        IERC4626 levvaVault;
+        mapping(uint256 requestId => WithdrawalRequest item) items;
+    }
+
     /// @dev 'WithdrawalQueueStorageData' storage slot address
-    /// @dev keccak256(abi.encode(uint256(keccak256("levva-vault.WithdrawalQueueStorage")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant WithdrawalQueueStorageLocation =
-        0x4ff390a5d5a11ce79e4a39c0047f1e548cef89b95e951e10719d61464ab9a900;
+    /// @dev keccak256(abi.encode(uint256(keccak256("levva-vault.WithdrawalQueueBaseStorage")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant WithdrawalQueueBaseStorageLocation =
+        0x78f0351b059b6aed2e654ce4a38d42d975f3dcea3167a2d4518f5ef39639c600;
+
+    function _getWithdrawalQueueBaseStorage() private pure returns (WithdrawalQueueBaseStorage storage $) {
+        assembly {
+            $.slot := WithdrawalQueueBaseStorageLocation
+        }
+    }
 
     struct WithdrawalRequest {
         uint256 shares;
         uint256 assets;
     }
 
-    struct WithdrawalQueueStorage {
-        uint256 lastRequestId;
-        uint256 lastFinalizedRequestId;
-        mapping(uint256 requestId => WithdrawalRequest item) items;
-    }
-
-    function _getWithdrawalQueueStorageData() private pure returns (WithdrawalQueueStorage storage $) {
-        assembly {
-            $.slot := WithdrawalQueueStorageLocation
-        }
-    }
-
-    event WithdrawalRequested(
-        uint256 indexed requestId, address indexed owner, address indexed receiver, uint256 shares
-    );
-    event WithdrawalFinalized(uint256 indexed requestId, address indexed receiver, uint256 shares, uint256 assets);
-
+    error NoAccess(address sender);
     error FutureFinalization();
     error AlreadyFinalized();
+
+    modifier onlyLevvaVault() {
+        _onlyLevvaVault();
+        _;
+    }
+
+    function __WithdrawalQueueBase_init(address _levvaVault) internal onlyInitializing {
+        _levvaVault.assertNotZeroAddress();
+        _getWithdrawalQueueBaseStorage().levvaVault = IERC4626(_levvaVault);
+    }
 
     function getWithdrawalRequest(uint256 requestId) external view returns (WithdrawalRequest memory) {
         return _getWithdrawalRequest(requestId);
     }
 
-    function _getWithdrawalRequest(uint256 requestId) internal view returns (WithdrawalRequest storage) {
-        WithdrawalQueueStorage storage queue = _getWithdrawalQueueStorageData();
-        return queue.items[requestId];
+    function levvaVault() external view returns (IERC4626) {
+        return _getLevvaVault();
     }
 
     function _enqueueRequest(uint256 shares, uint256 assets) internal returns (uint256 requestId) {
-        WithdrawalQueueStorage storage queue = _getWithdrawalQueueStorageData();
+        WithdrawalQueueBaseStorage storage queue = _getWithdrawalQueueBaseStorage();
         unchecked {
             requestId = ++queue.lastRequestId;
         }
@@ -50,16 +64,29 @@ abstract contract WithdrawalQueueBase {
     }
 
     function _removeRequest(uint256 requestId) internal returns (WithdrawalRequest memory request) {
-        WithdrawalQueueStorage storage queue = _getWithdrawalQueueStorageData();
+        WithdrawalQueueBaseStorage storage queue = _getWithdrawalQueueBaseStorage();
         request = queue.items[requestId];
         delete queue.items[requestId];
     }
 
     function _finalizeRequests(uint256 newLastFinalizedRequestId) internal {
-        WithdrawalQueueStorage storage queue = _getWithdrawalQueueStorageData();
+        WithdrawalQueueBaseStorage storage queue = _getWithdrawalQueueBaseStorage();
         if (queue.lastFinalizedRequestId >= newLastFinalizedRequestId) revert AlreadyFinalized();
         if (queue.lastRequestId < newLastFinalizedRequestId) revert FutureFinalization();
 
         queue.lastFinalizedRequestId = newLastFinalizedRequestId;
+    }
+
+    function _getWithdrawalRequest(uint256 requestId) internal view returns (WithdrawalRequest storage) {
+        WithdrawalQueueBaseStorage storage queue = _getWithdrawalQueueBaseStorage();
+        return queue.items[requestId];
+    }
+
+    function _getLevvaVault() internal view returns (IERC4626) {
+        return _getWithdrawalQueueBaseStorage().levvaVault;
+    }
+
+    function _onlyLevvaVault() private view {
+        if (msg.sender != address(_getLevvaVault())) revert NoAccess(msg.sender);
     }
 }

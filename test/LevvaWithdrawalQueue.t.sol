@@ -110,7 +110,7 @@ contract LevvaWithdrawalQueueTest is TestSetUp {
     }
 
     function testRequestOnlyVault() public {
-        vm.expectRevert(abi.encodeWithSelector(WithdrawalQueue.NoAccess.selector));
+        vm.expectRevert(abi.encodeWithSelector(WithdrawalQueueBase.NoAccess.selector, USER));
         vm.prank(USER);
         withdrawalQueue.requestWithdrawal(DEPOSIT, DEPOSIT, USER);
     }

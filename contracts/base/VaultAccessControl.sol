@@ -9,16 +9,17 @@ import {Asserts} from "../libraries/Asserts.sol";
 abstract contract VaultAccessControl is Initializable, Ownable2StepUpgradeable {
     using Asserts for address;
 
-    /// @dev 'VaultAccessControlStorage' storage slot address
-    /// @dev keccak256(abi.encode(uint256(keccak256("levva-vault.VaultAccessControlStorage")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant VaultAccessControlStorageLocation =
-        0x02eb9da8ea38b41b4650ef2b85e08be861a787c9657df49bae75bf68e905cf00;
-
+    /// @custom:storage-location erc7201:levva.storage.VaultAccessControlStorage
     struct VaultAccessControlStorage {
         address withdrawalQueue;
         /// @dev vault managers
         mapping(address => bool) _vaultManagers;
     }
+
+    /// @dev 'VaultAccessControlStorage' storage slot address
+    /// @dev keccak256(abi.encode(uint256(keccak256("levva-vault.VaultAccessControlStorage")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant VaultAccessControlStorageLocation =
+        0x02eb9da8ea38b41b4650ef2b85e08be861a787c9657df49bae75bf68e905cf00;
 
     /// @dev returns storage slot of 'VaultAccessControlStorage' struct
     function _getVaultAccessControlStorage() private pure returns (VaultAccessControlStorage storage $) {
@@ -26,6 +27,8 @@ abstract contract VaultAccessControl is Initializable, Ownable2StepUpgradeable {
             $.slot := VaultAccessControlStorageLocation
         }
     }
+
+    event QueueSet(address indexed queue);
 
     error NoAccess(address sender);
     error QueueAlreadySet(address queue);
@@ -54,6 +57,8 @@ abstract contract VaultAccessControl is Initializable, Ownable2StepUpgradeable {
         VaultAccessControlStorage storage $ = _getVaultAccessControlStorage();
         if ($.withdrawalQueue != address(0)) revert QueueAlreadySet($.withdrawalQueue);
         $.withdrawalQueue = queue;
+
+        emit QueueSet(queue);
     }
 
     function withdrawalQueue() external view returns (address) {
