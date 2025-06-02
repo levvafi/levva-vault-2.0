@@ -5,6 +5,7 @@ import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {IERC165} from "@openzeppelin/contracts/interfaces/IERC165.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {IAdapter} from "../interfaces/IAdapter.sol";
 import {IExternalPositionAdapter} from "../interfaces/IExternalPositionAdapter.sol";
@@ -14,9 +15,13 @@ import {OraclePriceProvider} from "./OraclePriceProvider.sol";
 
 abstract contract AdapterActionExecutor is IAdapterCallback, OraclePriceProvider {
     using SafeERC20 for IERC20;
+    using Math for uint256;
+
+    uint24 private constant SLIPPAGE_ONE = 1_000_000;
 
     /// @custom:storage-location erc7201:levva.storage.AdapterActionExecutor
     struct AdapterActionExecutorStorage {
+        uint24 slippage;
         mapping(bytes4 adapterId => IAdapter) adapters;
         IExternalPositionAdapter[] externalPositionAdapters;
         mapping(address adapter => uint256) externalPositionAdapterPosition;
@@ -44,12 +49,14 @@ abstract contract AdapterActionExecutor is IAdapterCallback, OraclePriceProvider
     event ExternalPositionAdapterRemoved(
         address indexed adapter, uint256 indexed position, address indexed replacement
     );
+    event SlippageSet(uint24 slippage);
 
     error UnknownAdapter(bytes4 adapterId);
     error WrongAddress();
     error UnknownExternalPositionAdapter();
     error AdapterAlreadyExists(address adapter);
     error Forbidden();
+    error TooMuchSlippage(uint256 totalAssetsBefore, uint256 totalAssetsAfter);
 
     function adapterCallback(address receiver, address token, uint256 amount) external {
         if (msg.sender != _getAdapterSafe(IAdapter(msg.sender).getAdapterId())) revert Forbidden();
@@ -57,6 +64,7 @@ abstract contract AdapterActionExecutor is IAdapterCallback, OraclePriceProvider
     }
 
     function executeAdapterAction(AdapterActionArg[] calldata actionArgs) external onlyVaultManager {
+        uint256 totalAssetsBefore = totalAssets();
         uint256 length = actionArgs.length;
         uint256 i;
         for (; i < length;) {
@@ -70,6 +78,12 @@ abstract contract AdapterActionExecutor is IAdapterCallback, OraclePriceProvider
             unchecked {
                 ++i;
             }
+        }
+
+        uint24 _slippage = _getAdapterActionExecutorStorage().slippage;
+        uint256 totalAssetsAfter = totalAssets();
+        if (totalAssetsAfter < totalAssetsBefore.mulDiv(SLIPPAGE_ONE - length * _slippage, SLIPPAGE_ONE)) {
+            revert TooMuchSlippage(totalAssetsBefore, totalAssetsAfter);
         }
     }
 
@@ -90,12 +104,21 @@ abstract contract AdapterActionExecutor is IAdapterCallback, OraclePriceProvider
         }
     }
 
+    function setSlippage(uint24 _slippage) external onlyOwner {
+        _getAdapterActionExecutorStorage().slippage = _slippage;
+        emit SlippageSet(_slippage);
+    }
+
     function getAdapter(bytes4 adapterId) external view returns (IAdapter) {
         return _getAdapterActionExecutorStorage().adapters[adapterId];
     }
 
     function externalPositionAdapterPosition(address adapter) external view returns (uint256) {
         return _getAdapterActionExecutorStorage().externalPositionAdapterPosition[adapter];
+    }
+
+    function slippage() external view returns (uint24) {
+        return _getAdapterActionExecutorStorage().slippage;
     }
 
     function _addAdapter(IAdapter adapter) private {
@@ -161,7 +184,7 @@ abstract contract AdapterActionExecutor is IAdapterCallback, OraclePriceProvider
     function _getExternalPositionAdaptersTotalAssets(IEulerPriceOracle eulerOracle, address asset)
         internal
         view
-        returns (uint256 totalAssets)
+        returns (uint256 assets)
     {
         unchecked {
             AdapterActionExecutorStorage storage $ = _getAdapterActionExecutorStorage();
@@ -172,15 +195,17 @@ abstract contract AdapterActionExecutor is IAdapterCallback, OraclePriceProvider
                 (address[] memory managedAssets, uint256[] memory managedAmounts) = adapter.getManagedAssets();
                 uint256 assetsLength = managedAssets.length;
                 for (uint256 j; j < assetsLength; ++j) {
-                    totalAssets += _callOracle(eulerOracle, managedAmounts[i], managedAssets[i], asset);
+                    assets += _callOracle(eulerOracle, managedAmounts[i], managedAssets[i], asset);
                 }
 
                 (address[] memory debtAssets, uint256[] memory debtAmounts) = adapter.getDebtAssets();
                 assetsLength = debtAssets.length;
                 for (uint256 j; j < assetsLength; ++j) {
-                    totalAssets -= _callOracle(eulerOracle, debtAmounts[i], debtAssets[i], asset);
+                    assets -= _callOracle(eulerOracle, debtAmounts[i], debtAssets[i], asset);
                 }
             }
         }
     }
+
+    function totalAssets() public view virtual returns (uint256);
 }
