@@ -82,7 +82,15 @@ abstract contract AdapterActionExecutor is IAdapterCallback, OraclePriceProvider
 
         uint24 _slippage = _getAdapterActionExecutorStorage().slippage;
         uint256 totalAssetsAfter = totalAssets();
-        if (totalAssetsAfter < totalAssetsBefore.mulDiv(SLIPPAGE_ONE - length * _slippage, SLIPPAGE_ONE)) {
+
+        // revert must occur if the next condition is true:
+        // delta = totalAssetsBefore - totalAssetsAfter > totalAssetsBefore * length * slippage
+        // totalAssetsAfter < totalAssetsBefore * (1 - length * slippage)
+        //
+        // the 'length * slippage' comes from the Taylor series:
+        // 1 - maxTotalSlippage = (1 - slippagePerAction) ^ actionCount ~
+        // ~ 1 - actionCount * slippagePerAction + o(slippagePerAction ^ 2)
+        if (totalAssetsAfter * SLIPPAGE_ONE < totalAssetsBefore * (SLIPPAGE_ONE - length * _slippage)) {
             revert TooMuchSlippage(totalAssetsBefore, totalAssetsAfter);
         }
     }

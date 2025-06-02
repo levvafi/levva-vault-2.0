@@ -2,6 +2,7 @@
 pragma solidity ^0.8.27;
 
 import {Vm} from "lib/forge-std/src/Vm.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import {TestSetUp} from "./TestSetUp.t.sol";
@@ -11,6 +12,11 @@ import {AdapterMock} from "./mocks/AdapterMock.t.sol";
 import {ExternalPositionAdapterMock} from "./mocks/ExternalPositionAdapterMock.t.sol";
 
 contract AdapterActionExecutorTest is TestSetUp {
+    using Math for uint256;
+
+    uint24 private constant ONE_PERCENT_SLIPPAGE = 10_000;
+    uint24 private constant ONE_SLIPPAGE = 1_000_000;
+
     function testAddAdapter() public {
         vm.expectEmit(address(levvaVault));
         emit AdapterActionExecutor.NewAdapterAdded(adapter.getAdapterId(), address(adapter));
@@ -255,5 +261,48 @@ contract AdapterActionExecutorTest is TestSetUp {
         expectedTotalAssets -=
             oracle.getQuote(externalPositionDebtAssetAmount, address(externalPositionDebtAsset), address(asset));
         assertEq(levvaVault.totalAssets(), expectedTotalAssets);
+    }
+
+    function testExecuteAdapterLowSlippage() public {
+        asset.mint(address(levvaVault), ONE_SLIPPAGE);
+
+        levvaVault.setSlippage(ONE_PERCENT_SLIPPAGE);
+        levvaVault.addAdapter(address(adapter));
+
+        AdapterActionExecutor.AdapterActionArg[] memory args = new AdapterActionExecutor.AdapterActionArg[](1);
+
+        uint256 totalAssets = levvaVault.totalAssets();
+        uint256 slipped = totalAssets.mulDiv(ONE_PERCENT_SLIPPAGE, ONE_SLIPPAGE);
+        bytes memory adapterCalldataWithSelector = abi.encodeWithSelector(adapter.slippage.selector, asset, slipped);
+        args[0] = AdapterActionExecutor.AdapterActionArg({
+            adapterId: adapter.getAdapterId(),
+            data: adapterCalldataWithSelector
+        });
+
+        vm.prank(VAULT_MANAGER);
+        levvaVault.executeAdapterAction(args);
+    }
+
+    function testExecuteAdapterTooMuchSlippage() public {
+        asset.mint(address(levvaVault), ONE_SLIPPAGE);
+
+        levvaVault.setSlippage(ONE_PERCENT_SLIPPAGE);
+        levvaVault.addAdapter(address(adapter));
+
+        AdapterActionExecutor.AdapterActionArg[] memory args = new AdapterActionExecutor.AdapterActionArg[](1);
+
+        uint256 totalAssets = levvaVault.totalAssets();
+        uint256 slipped = totalAssets.mulDiv(ONE_PERCENT_SLIPPAGE, ONE_SLIPPAGE) + 1;
+        bytes memory adapterCalldataWithSelector = abi.encodeWithSelector(adapter.slippage.selector, asset, slipped);
+        args[0] = AdapterActionExecutor.AdapterActionArg({
+            adapterId: adapter.getAdapterId(),
+            data: adapterCalldataWithSelector
+        });
+
+        vm.prank(VAULT_MANAGER);
+        vm.expectRevert(
+            abi.encodeWithSelector(AdapterActionExecutor.TooMuchSlippage.selector, totalAssets, totalAssets - slipped)
+        );
+        levvaVault.executeAdapterAction(args);
     }
 }
