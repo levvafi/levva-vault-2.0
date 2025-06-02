@@ -263,6 +263,19 @@ contract AdapterActionExecutorTest is TestSetUp {
         assertEq(levvaVault.totalAssets(), expectedTotalAssets);
     }
 
+    function testSetSlippage() public {
+        uint24 slippage = ONE_SLIPPAGE / 3;
+        levvaVault.setSlippage(slippage);
+
+        assertEq(levvaVault.slippage(), slippage);
+    }
+
+    function testSetSlippageOnlyOwner() public {
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, NO_ACCESS));
+        vm.prank(NO_ACCESS);
+        levvaVault.setSlippage(ONE_SLIPPAGE);
+    }
+
     function testExecuteAdapterLowSlippage() public {
         asset.mint(address(levvaVault), ONE_SLIPPAGE);
 
