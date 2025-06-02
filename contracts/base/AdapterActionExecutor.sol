@@ -21,7 +21,7 @@ abstract contract AdapterActionExecutor is IAdapterCallback, OraclePriceProvider
 
     /// @custom:storage-location erc7201:levva.storage.AdapterActionExecutor
     struct AdapterActionExecutorStorage {
-        uint24 slippage;
+        uint24 maxSlippage;
         mapping(bytes4 adapterId => IAdapter) adapters;
         IExternalPositionAdapter[] externalPositionAdapters;
         mapping(address adapter => uint256) externalPositionAdapterPosition;
@@ -39,6 +39,7 @@ abstract contract AdapterActionExecutor is IAdapterCallback, OraclePriceProvider
 
     struct AdapterActionArg {
         bytes4 adapterId;
+        uint24 actionSlippage;
         bytes data;
     }
 
@@ -49,7 +50,7 @@ abstract contract AdapterActionExecutor is IAdapterCallback, OraclePriceProvider
     event ExternalPositionAdapterRemoved(
         address indexed adapter, uint256 indexed position, address indexed replacement
     );
-    event SlippageSet(uint24 slippage);
+    event MaxSlippageSet(uint24 maxSlippage);
 
     error UnknownAdapter(bytes4 adapterId);
     error WrongAddress();
@@ -57,6 +58,8 @@ abstract contract AdapterActionExecutor is IAdapterCallback, OraclePriceProvider
     error AdapterAlreadyExists(address adapter);
     error Forbidden();
     error TooMuchSlippage(uint256 totalAssetsBefore, uint256 totalAssetsAfter);
+    error WrongSlippageValue(uint256 actionIndex);
+    error WrongValue();
 
     function adapterCallback(address receiver, address token, uint256 amount) external {
         if (msg.sender != _getAdapterSafe(IAdapter(msg.sender).getAdapterId())) revert Forbidden();
@@ -65,10 +68,16 @@ abstract contract AdapterActionExecutor is IAdapterCallback, OraclePriceProvider
 
     function executeAdapterAction(AdapterActionArg[] calldata actionArgs) external onlyVaultManager {
         uint256 totalAssetsBefore = totalAssets();
+        uint24 _maxSlippage = _getAdapterActionExecutorStorage().maxSlippage;
         uint256 length = actionArgs.length;
         uint256 i;
+
+        // product of `1 - actionArgs[i].actionSlippage`
+        uint256 minBalanceRatio = SLIPPAGE_ONE;
         for (; i < length;) {
             AdapterActionArg memory actionArg = actionArgs[i];
+
+            if (actionArg.actionSlippage > _maxSlippage) revert WrongSlippageValue(i);
 
             address adapter = _getAdapterSafe(actionArg.adapterId);
             bytes memory result = Address.functionCall(adapter, actionArg.data);
@@ -77,20 +86,13 @@ abstract contract AdapterActionExecutor is IAdapterCallback, OraclePriceProvider
 
             unchecked {
                 ++i;
+                minBalanceRatio = minBalanceRatio * (SLIPPAGE_ONE - actionArg.actionSlippage) / SLIPPAGE_ONE;
             }
         }
 
-        uint24 _slippage = _getAdapterActionExecutorStorage().slippage;
         uint256 totalAssetsAfter = totalAssets();
 
-        // revert must occur if the next condition is true:
-        // delta = totalAssetsBefore - totalAssetsAfter > totalAssetsBefore * length * slippage
-        // totalAssetsAfter < totalAssetsBefore * (1 - length * slippage)
-        //
-        // the 'length * slippage' comes from the Taylor series:
-        // 1 - maxTotalSlippage = (1 - slippagePerAction) ^ actionCount ~
-        // ~ 1 - actionCount * slippagePerAction + o(slippagePerAction ^ 2)
-        if (totalAssetsAfter * SLIPPAGE_ONE < totalAssetsBefore * (SLIPPAGE_ONE - length * _slippage)) {
+        if (totalAssetsAfter * SLIPPAGE_ONE < totalAssetsBefore * minBalanceRatio) {
             revert TooMuchSlippage(totalAssetsBefore, totalAssetsAfter);
         }
     }
@@ -112,9 +114,10 @@ abstract contract AdapterActionExecutor is IAdapterCallback, OraclePriceProvider
         }
     }
 
-    function setSlippage(uint24 _slippage) external onlyOwner {
-        _getAdapterActionExecutorStorage().slippage = _slippage;
-        emit SlippageSet(_slippage);
+    function setMaxSlippage(uint24 _maxSlippage) external onlyOwner {
+        if (_maxSlippage >= SLIPPAGE_ONE) revert WrongValue();
+        _getAdapterActionExecutorStorage().maxSlippage = _maxSlippage;
+        emit MaxSlippageSet(_maxSlippage);
     }
 
     function getAdapter(bytes4 adapterId) external view returns (IAdapter) {
@@ -125,8 +128,8 @@ abstract contract AdapterActionExecutor is IAdapterCallback, OraclePriceProvider
         return _getAdapterActionExecutorStorage().externalPositionAdapterPosition[adapter];
     }
 
-    function slippage() external view returns (uint24) {
-        return _getAdapterActionExecutorStorage().slippage;
+    function maxSlippage() external view returns (uint24) {
+        return _getAdapterActionExecutorStorage().maxSlippage;
     }
 
     function _addAdapter(IAdapter adapter) private {
