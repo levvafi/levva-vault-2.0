@@ -7,16 +7,11 @@ import {ERC4626Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC2
 
 import {Asserts} from "../libraries/Asserts.sol";
 import {FeeCollector} from "./FeeCollector.sol";
-import {WithdrawalRequestQueue} from "./WithdrawalRequestQueue.sol";
+import {WithdrawalQueue} from "../WithdrawalQueue.sol";
 import {AdapterActionExecutor} from "./AdapterActionExecutor.sol";
 import {IEulerPriceOracle} from "../interfaces/IEulerPriceOracle.sol";
 
-abstract contract MultiAssetVaultBase is
-    ERC4626Upgradeable,
-    FeeCollector,
-    WithdrawalRequestQueue,
-    AdapterActionExecutor
-{
+abstract contract MultiAssetVaultBase is ERC4626Upgradeable, FeeCollector, AdapterActionExecutor {
     using Asserts for address;
     using Asserts for uint256;
     using Math for uint256;
@@ -80,13 +75,8 @@ abstract contract MultiAssetVaultBase is
     }
 
     /// @inheritdoc ERC4626Upgradeable
-    function withdraw(uint256 assets, address receiver, address owner) public override returns (uint256) {
+    function withdraw(uint256 assets, address receiver, address owner) public override onlyQueue returns (uint256) {
         uint256 _totalAssets = _totalAssetsWithFeeCollection();
-
-        uint256 maxAssets = _convertToAssets(balanceOf(owner), _totalAssets, totalSupply(), Math.Rounding.Floor);
-        if (assets > maxAssets) {
-            revert ERC4626ExceededMaxWithdraw(owner, assets, maxAssets);
-        }
 
         uint256 shares = _convertToShares(assets, _totalAssets, totalSupply(), Math.Rounding.Ceil);
         _withdraw(msg.sender, receiver, owner, assets, shares);
@@ -95,12 +85,7 @@ abstract contract MultiAssetVaultBase is
     }
 
     /// @inheritdoc ERC4626Upgradeable
-    function redeem(uint256 shares, address receiver, address owner) public override returns (uint256) {
-        uint256 maxShares = maxRedeem(owner);
-        if (shares > maxShares) {
-            revert ERC4626ExceededMaxRedeem(owner, shares, maxShares);
-        }
-
+    function redeem(uint256 shares, address receiver, address owner) public override onlyQueue returns (uint256) {
         uint256 _totalAssets = _totalAssetsWithFeeCollection();
         uint256 assets = _convertToAssets(shares, _totalAssets, totalSupply(), Math.Rounding.Floor);
         _withdraw(msg.sender, receiver, owner, assets, shares);
@@ -108,41 +93,33 @@ abstract contract MultiAssetVaultBase is
         return assets;
     }
 
-    function requestWithdrawal(uint256 assets, address receiver, address owner) external returns (uint256 shares) {
+    function requestWithdrawal(uint256 assets) public returns (uint256 requestId) {
         uint256 _totalAssets = _totalAssetsWithFeeCollection();
         uint256 _totalSupply = totalSupply();
-        uint256 maxAssets = _convertToAssets(balanceOf(owner), _totalAssets, _totalSupply, Math.Rounding.Floor);
+
+        uint256 maxAssets = _convertToAssets(balanceOf(msg.sender), _totalAssets, _totalSupply, Math.Rounding.Floor);
         if (assets > maxAssets) {
-            revert ERC4626ExceededMaxWithdraw(owner, assets, maxAssets);
+            revert ERC4626ExceededMaxWithdraw(msg.sender, assets, maxAssets);
         }
 
-        shares = _convertToShares(assets, _totalAssets, _totalSupply, Math.Rounding.Ceil);
+        uint256 shares = _convertToShares(assets, _totalAssets, _totalSupply, Math.Rounding.Ceil);
 
-        if (IERC20(asset()).balanceOf(address(this)) < assets) {
-            if (msg.sender != owner) {
-                _spendAllowance(owner, msg.sender, shares);
-            }
-
-            _transfer(owner, address(this), shares);
-            uint128 requestId = _enqueueWithdraw(receiver, shares);
-            emit WithdrawalRequested(requestId, owner, receiver, shares);
-            return shares;
-        }
-
-        _withdraw(msg.sender, receiver, owner, assets, shares);
+        address queue = _getWithdrawalQueue();
+        _transfer(msg.sender, queue, shares);
+        return WithdrawalQueue(queue).requestWithdrawal(shares, msg.sender);
     }
 
-    function finalizeWithdrawalRequest() external onlyVaultManager returns (uint256 assets) {
-        WithdrawalRequest memory request = _getWithdrawalRequest(0);
+    function requestRedeem(uint256 shares) public returns (uint256 requestId) {
+        uint256 maxShares = maxRedeem(msg.sender);
+        if (shares > maxShares) {
+            revert ERC4626ExceededMaxRedeem(msg.sender, shares, maxShares);
+        }
 
-        uint256 _totalAssets = _totalAssetsWithFeeCollection();
-        assets = _convertToAssets(request.shares, _totalAssets, totalSupply(), Math.Rounding.Floor);
-        _withdraw(address(this), request.receiver, address(this), assets, request.shares);
+        _totalAssetsWithFeeCollection();
 
-        uint128 requestId = _dequeueWithdraw();
-
-        emit WithdrawalFinalized(requestId, request.receiver, request.shares, assets);
-        return assets;
+        address queue = _getWithdrawalQueue();
+        _transfer(msg.sender, queue, shares);
+        return WithdrawalQueue(queue).requestWithdrawal(shares, msg.sender);
     }
 
     function addTrackedAsset(address newTrackedAsset) external onlyOwner {
@@ -207,7 +184,10 @@ abstract contract MultiAssetVaultBase is
 
             for (uint256 i; i < length; ++i) {
                 IERC20 trackedAsset = trackedAssets[i];
-                balance += _callOracle(eulerOracle, _tokenBalance(trackedAsset), address(trackedAsset), asset);
+                uint256 trackedAssetBalance = _tokenBalance(trackedAsset);
+                if (balance != 0) {
+                    balance += _callOracle(eulerOracle, trackedAssetBalance, address(trackedAsset), asset);
+                }
             }
 
             balance += _getExternalPositionAdaptersTotalAssets(eulerOracle, asset);

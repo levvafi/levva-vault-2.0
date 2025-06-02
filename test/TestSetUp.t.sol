@@ -6,6 +6,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
+import {WithdrawalQueue} from "../contracts/WithdrawalQueue.sol";
 import {LevvaVault} from "../contracts/LevvaVault.sol";
 import {MintableERC20} from "./mocks/MintableERC20.t.sol";
 import {AdapterMock} from "./mocks/AdapterMock.t.sol";
@@ -20,12 +21,17 @@ contract TestSetUp is Test {
 
     address internal constant NO_ACCESS = address(0xDEAD);
     address internal constant VAULT_MANAGER = address(0x123456789);
+    address internal constant FINALIZER = address(0x1234567890);
     address internal constant FEE_COLLECTOR = address(0xFEE);
     address internal constant USER = address(0x987654321);
 
     LevvaVault internal levvaVaultImplementation;
     ERC1967Proxy internal levvaVaultProxy;
     LevvaVault internal levvaVault;
+
+    WithdrawalQueue internal withdrawalQueueImplementation;
+    ERC1967Proxy internal withdrawalQueueProxy;
+    WithdrawalQueue internal withdrawalQueue;
 
     MintableERC20 internal asset;
     MintableERC20 internal trackedAsset;
@@ -41,6 +47,8 @@ contract TestSetUp is Test {
         _createAssets();
         _createAdapterMocks();
         _createLevvaVault();
+        _createWithdrawalQueue();
+        _setWithdrawalQueue();
     }
 
     function testInitialize() public view {
@@ -51,6 +59,11 @@ contract TestSetUp is Test {
         assertEq(levvaVault.getFeeCollectorStorage().feeCollector, FEE_COLLECTOR);
         assertEq(levvaVault.getFeeCollectorStorage().highWaterMarkPerShare, 10 ** levvaVault.decimals());
         assertEq(address(levvaVault.oracle()), address(oracle));
+        assertEq(levvaVault.withdrawalQueue(), address(withdrawalQueue));
+        assert(levvaVault.isVaultManager(VAULT_MANAGER));
+
+        assertEq(address(withdrawalQueue.levvaVault()), address(levvaVault));
+        assert(withdrawalQueue.isFinalizer(FINALIZER));
     }
 
     function _createLevvaVault() private {
@@ -62,6 +75,19 @@ contract TestSetUp is Test {
         levvaVault = LevvaVault(address(levvaVaultProxy));
 
         levvaVault.addVaultManager(VAULT_MANAGER, true);
+    }
+
+    function _createWithdrawalQueue() private {
+        withdrawalQueueImplementation = new WithdrawalQueue();
+        bytes memory data = abi.encodeWithSelector(WithdrawalQueue.initialize.selector, levvaVault);
+        withdrawalQueueProxy = new ERC1967Proxy(address(withdrawalQueueImplementation), data);
+        withdrawalQueue = WithdrawalQueue(address(withdrawalQueueProxy));
+
+        withdrawalQueue.addFinalizer(FINALIZER, true);
+    }
+
+    function _setWithdrawalQueue() private {
+        levvaVault.setWithdrawalQueue(address(withdrawalQueue));
     }
 
     function _createOracleMock() private {

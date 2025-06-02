@@ -423,7 +423,7 @@ contract PendleAdapterTest is Test {
         uint256 balanceBefore = USDT.balanceOf(address(vault));
 
         hoax(address(vault));
-        (address[] memory assets, uint256[] memory rewards) = pendleAdapter.redeemRewards(PT_MARKET_1);
+        (, uint256[] memory rewards) = pendleAdapter.redeemRewards(PT_MARKET_1);
 
         assertEq(balanceBefore + rewards[0], USDT.balanceOf(address(vault)));
         assertEq(USDT.balanceOf(address(pendleAdapter)), 0);
