@@ -173,7 +173,7 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, FeeCollector, Adapt
     }
 
     /// @inheritdoc ERC4626Upgradeable
-    function totalAssets() public view override returns (uint256) {
+    function totalAssets() public view override(AdapterActionExecutor, ERC4626Upgradeable) returns (uint256) {
         unchecked {
             address asset = asset();
             IEulerPriceOracle eulerOracle = oracle();
