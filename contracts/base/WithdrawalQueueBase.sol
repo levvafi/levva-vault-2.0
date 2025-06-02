@@ -16,7 +16,7 @@ abstract contract WithdrawalQueueBase is Initializable, Ownable2StepUpgradeable 
         uint256 lastFinalizedRequestId;
         IERC4626 levvaVault;
         mapping(address => bool) finalizers;
-        mapping(uint256 requestId => WithdrawalRequest item) items;
+        mapping(uint256 requestId => uint256) requestedShares;
     }
 
     /// @dev 'WithdrawalQueueStorageData' storage slot address
@@ -28,11 +28,6 @@ abstract contract WithdrawalQueueBase is Initializable, Ownable2StepUpgradeable 
         assembly {
             $.slot := WithdrawalQueueBaseStorageLocation
         }
-    }
-
-    struct WithdrawalRequest {
-        uint256 shares;
-        uint256 assets;
     }
 
     event FinalizerSet(address indexed finalizer, bool added);
@@ -63,30 +58,38 @@ abstract contract WithdrawalQueueBase is Initializable, Ownable2StepUpgradeable 
         emit FinalizerSet(finalizer, add);
     }
 
-    function getWithdrawalRequest(uint256 requestId) external view returns (WithdrawalRequest memory) {
-        return _getWithdrawalRequest(requestId);
+    function getRequestedShares(uint256 requestId) external view returns (uint256) {
+        return _getRequestedShares(requestId);
     }
 
     function levvaVault() external view returns (IERC4626) {
         return _getLevvaVault();
     }
 
+    function lastRequestId() external view returns (uint256) {
+        return _getWithdrawalQueueBaseStorage().lastRequestId;
+    }
+
+    function lastFinalizedRequestId() external view returns (uint256) {
+        return _getWithdrawalQueueBaseStorage().lastFinalizedRequestId;
+    }
+
     function isFinalizer(address finalizer) external view returns (bool) {
         return _getWithdrawalQueueBaseStorage().finalizers[finalizer];
     }
 
-    function _enqueueRequest(uint256 shares, uint256 assets) internal returns (uint256 requestId) {
+    function _enqueueRequest(uint256 shares) internal returns (uint256 requestId) {
         WithdrawalQueueBaseStorage storage queue = _getWithdrawalQueueBaseStorage();
         unchecked {
             requestId = ++queue.lastRequestId;
         }
-        queue.items[requestId] = WithdrawalRequest(shares, assets);
+        queue.requestedShares[requestId] = shares;
     }
 
-    function _removeRequest(uint256 requestId) internal returns (WithdrawalRequest memory request) {
+    function _removeRequest(uint256 requestId) internal returns (uint256 requestedShares) {
         WithdrawalQueueBaseStorage storage queue = _getWithdrawalQueueBaseStorage();
-        request = queue.items[requestId];
-        delete queue.items[requestId];
+        requestedShares = queue.requestedShares[requestId];
+        delete queue.requestedShares[requestId];
     }
 
     function _finalizeRequests(uint256 newLastFinalizedRequestId) internal {
@@ -97,13 +100,17 @@ abstract contract WithdrawalQueueBase is Initializable, Ownable2StepUpgradeable 
         queue.lastFinalizedRequestId = newLastFinalizedRequestId;
     }
 
-    function _getWithdrawalRequest(uint256 requestId) internal view returns (WithdrawalRequest storage) {
+    function _getRequestedShares(uint256 requestId) internal view returns (uint256) {
         WithdrawalQueueBaseStorage storage queue = _getWithdrawalQueueBaseStorage();
-        return queue.items[requestId];
+        return queue.requestedShares[requestId];
     }
 
     function _getLevvaVault() internal view returns (IERC4626) {
         return _getWithdrawalQueueBaseStorage().levvaVault;
+    }
+
+    function _isFinalized(uint256 requestId) internal view returns (bool) {
+        return requestId <= _getWithdrawalQueueBaseStorage().lastFinalizedRequestId;
     }
 
     function _onlyLevvaVault() private view {

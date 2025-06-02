@@ -38,15 +38,15 @@ contract LevvaWithdrawalQueueTest is TestSetUp {
         vm.prank(USER);
         uint256 requestId = levvaVault.requestWithdrawal(withdrawalAmount);
         assertEq(requestId, 1);
+        assertEq(withdrawalQueue.lastRequestId(), 1);
 
         assertEq(asset.balanceOf(USER), assetBalanceBefore);
         assertEq(lpBalanceBefore - levvaVault.balanceOf(USER), lpBalanceDelta);
         assertEq(levvaVault.balanceOf(address(withdrawalQueue)), lpBalanceDelta);
         assertEq(withdrawalQueue.ownerOf(requestId), USER);
 
-        WithdrawalQueue.WithdrawalRequest memory request = withdrawalQueue.getWithdrawalRequest(requestId);
-        assertEq(request.shares, lpBalanceDelta);
-        assertEq(request.assets, withdrawalAmount);
+        uint256 requestedShares = withdrawalQueue.getRequestedShares(requestId);
+        assertEq(requestedShares, lpBalanceDelta);
     }
 
     function testRequestWithdrawalExceedsMax() public {
@@ -74,7 +74,6 @@ contract LevvaWithdrawalQueueTest is TestSetUp {
         uint256 lpBalanceBefore = levvaVault.balanceOf(USER);
 
         uint256 lpBalanceDelta = lpBalanceBefore / 2;
-        uint256 redeemAssetsAmount = levvaVault.previewRedeem(lpBalanceDelta);
 
         vm.prank(USER);
         uint256 requestId = levvaVault.requestRedeem(lpBalanceDelta);
@@ -85,9 +84,8 @@ contract LevvaWithdrawalQueueTest is TestSetUp {
         assertEq(levvaVault.balanceOf(address(withdrawalQueue)), lpBalanceDelta);
         assertEq(withdrawalQueue.ownerOf(requestId), USER);
 
-        WithdrawalQueue.WithdrawalRequest memory request = withdrawalQueue.getWithdrawalRequest(requestId);
-        assertEq(request.shares, lpBalanceDelta);
-        assertEq(request.assets, redeemAssetsAmount);
+        uint256 requestedShares = withdrawalQueue.getRequestedShares(requestId);
+        assertEq(requestedShares, lpBalanceDelta);
     }
 
     function testRequestRedeemExceedsMax() public {
@@ -112,7 +110,7 @@ contract LevvaWithdrawalQueueTest is TestSetUp {
     function testRequestOnlyVault() public {
         vm.expectRevert(abi.encodeWithSelector(WithdrawalQueueBase.NoAccess.selector, USER));
         vm.prank(USER);
-        withdrawalQueue.requestWithdrawal(DEPOSIT, DEPOSIT, USER);
+        withdrawalQueue.requestWithdrawal(DEPOSIT, USER);
     }
 
     function testClaimWithdrawal() public {
@@ -121,8 +119,9 @@ contract LevvaWithdrawalQueueTest is TestSetUp {
 
         vm.prank(FINALIZER);
         withdrawalQueue.finalizeRequests(requestId);
-        uint256 userBalanceBefore = asset.balanceOf(USER);
+        assertEq(withdrawalQueue.lastFinalizedRequestId(), 1);
 
+        uint256 userBalanceBefore = asset.balanceOf(USER);
         vm.prank(USER);
         withdrawalQueue.claimWithdrawal(requestId);
 
@@ -132,9 +131,17 @@ contract LevvaWithdrawalQueueTest is TestSetUp {
         vm.expectRevert(abi.encodeWithSelector(IERC721Errors.ERC721NonexistentToken.selector, requestId));
         withdrawalQueue.ownerOf(requestId);
 
-        WithdrawalQueue.WithdrawalRequest memory request = withdrawalQueue.getWithdrawalRequest(requestId);
-        assertEq(request.shares, 0);
-        assertEq(request.assets, 0);
+        uint256 requestedShares = withdrawalQueue.getRequestedShares(requestId);
+        assertEq(requestedShares, 0);
+    }
+
+    function testClaimWithdrawalNotFinalized() public {
+        vm.prank(USER);
+        uint256 requestId = levvaVault.requestWithdrawal(DEPOSIT);
+
+        vm.expectRevert(abi.encodeWithSelector(WithdrawalQueue.NotFinalized.selector));
+        vm.prank(USER);
+        withdrawalQueue.claimWithdrawal(requestId);
     }
 
     function testClaimWithdrawalNotRequestOwner() public {

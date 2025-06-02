@@ -12,11 +12,12 @@ import {WithdrawalQueueBase} from "./base/WithdrawalQueueBase.sol";
 contract WithdrawalQueue is UUPSUpgradeable, ERC721Upgradeable, WithdrawalQueueBase {
     using SafeERC20 for IERC4626;
 
-    event WithdrawalRequested(uint256 indexed requestId, address indexed receiver, uint256 assets, uint256 shares);
+    event WithdrawalRequested(uint256 indexed requestId, address indexed receiver, uint256 shares);
     event WithdrawalClaimed(uint256 indexed requestId, address indexed receiver, uint256 claimedAssets);
     event RequestsFinalized(uint256 lastFinalizedRequest);
 
     error NotRequestOwner();
+    error NotFinalized();
 
     constructor() {
         _disableInitializers();
@@ -27,25 +28,19 @@ contract WithdrawalQueue is UUPSUpgradeable, ERC721Upgradeable, WithdrawalQueueB
         __WithdrawalQueueBase_init(msg.sender, levvaVault);
     }
 
-    function requestWithdrawal(uint256 assets, uint256 shares, address receiver)
-        external
-        onlyLevvaVault
-        returns (uint256 requestId)
-    {
-        requestId = _enqueueRequest(shares, assets);
+    function requestWithdrawal(uint256 shares, address receiver) external onlyLevvaVault returns (uint256 requestId) {
+        requestId = _enqueueRequest(shares);
         _safeMint(receiver, requestId);
 
-        emit WithdrawalRequested(requestId, receiver, assets, shares);
+        emit WithdrawalRequested(requestId, receiver, shares);
     }
 
     function claimWithdrawal(uint256 requestId) external returns (uint256 claimedAssets) {
         if (msg.sender != ownerOf(requestId)) revert NotRequestOwner();
-        WithdrawalRequest memory request = _removeRequest(requestId);
+        if (!_isFinalized(requestId)) revert NotFinalized();
 
-        IERC4626 levvaVault = _getLevvaVault();
-        uint256 previewedAmount = levvaVault.convertToAssets(request.shares);
-        claimedAssets = request.assets < previewedAmount ? request.assets : previewedAmount;
-        levvaVault.withdraw(claimedAssets, msg.sender, address(this));
+        uint256 requestedShares = _removeRequest(requestId);
+        claimedAssets = _getLevvaVault().redeem(requestedShares, msg.sender, address(this));
 
         _burn(requestId);
 

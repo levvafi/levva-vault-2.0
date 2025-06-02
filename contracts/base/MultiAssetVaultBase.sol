@@ -106,7 +106,7 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, FeeCollector, Adapt
 
         address queue = _getWithdrawalQueue();
         _transfer(msg.sender, queue, shares);
-        return WithdrawalQueue(queue).requestWithdrawal(assets, shares, msg.sender);
+        return WithdrawalQueue(queue).requestWithdrawal(shares, msg.sender);
     }
 
     function requestRedeem(uint256 shares) public returns (uint256 requestId) {
@@ -115,12 +115,11 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, FeeCollector, Adapt
             revert ERC4626ExceededMaxRedeem(msg.sender, shares, maxShares);
         }
 
-        uint256 _totalAssets = _totalAssetsWithFeeCollection();
-        uint256 assets = _convertToAssets(shares, _totalAssets, totalSupply(), Math.Rounding.Ceil);
+        _totalAssetsWithFeeCollection();
 
         address queue = _getWithdrawalQueue();
         _transfer(msg.sender, queue, shares);
-        return WithdrawalQueue(queue).requestWithdrawal(assets, shares, msg.sender);
+        return WithdrawalQueue(queue).requestWithdrawal(shares, msg.sender);
     }
 
     function addTrackedAsset(address newTrackedAsset) external onlyOwner {
