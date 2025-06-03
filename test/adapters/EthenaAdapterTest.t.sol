@@ -7,7 +7,9 @@ import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
+import {LevvaVaultFactory} from "../../contracts/LevvaVaultFactory.sol";
 import {LevvaVault} from "../../contracts/LevvaVault.sol";
+import {WithdrawalQueue} from "../../contracts/WithdrawalQueue.sol";
 import {IStakedUSDe} from "../../contracts/adapters/ethena/interfaces/IStakedUSDe.sol";
 import {EthenaAdapter} from "../../contracts/adapters/ethena/EthenaAdapter.sol";
 import {AdapterBase} from "../../contracts/adapters/AdapterBase.sol";
@@ -41,11 +43,20 @@ contract EthenaAdapterTest is Test {
         oracle.setPrice(oracle.ONE(), address(USDE), address(USDC));
         oracle.setPrice(oracle.ONE().mulDiv(117, 100), address(S_USDE), address(USDC));
 
-        LevvaVault levvaVaultImplementation = new LevvaVault();
+        address levvaVaultImplementation = address(new LevvaVault());
+        address withdrawalQueueImplementation = address(new WithdrawalQueue());
+        address levvaVaultFactoryImplementation = address(new LevvaVaultFactory());
+
         bytes memory data = abi.encodeWithSelector(
-            LevvaVault.initialize.selector, USDC, "lpName", "lpSymbol", address(0xFEE), address(oracle)
+            LevvaVaultFactory.initialize.selector, levvaVaultImplementation, withdrawalQueueImplementation
         );
-        levvaVault = LevvaVault(address(new ERC1967Proxy(address(levvaVaultImplementation), data)));
+        ERC1967Proxy levvaVaultFactoryProxy = new ERC1967Proxy(levvaVaultFactoryImplementation, data);
+        LevvaVaultFactory levvaVaultFactory = LevvaVaultFactory(address(levvaVaultFactoryProxy));
+
+        (address deployedVault,) =
+            levvaVaultFactory.deployVault(address(USDC), "lpName", "lpSymbol", address(0xFEE), address(oracle));
+
+        levvaVault = LevvaVault(deployedVault);
 
         adapter = new EthenaAdapter(address(levvaVault), address(S_USDE));
         levvaVault.addAdapter(address(adapter));

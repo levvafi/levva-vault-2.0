@@ -10,7 +10,9 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
+import {LevvaVaultFactory} from "../../contracts/LevvaVaultFactory.sol";
 import {LevvaVault} from "../../contracts/LevvaVault.sol";
+import {WithdrawalQueue} from "../../contracts/WithdrawalQueue.sol";
 import {Asserts} from "../../contracts/libraries/Asserts.sol";
 import {AdapterBase} from "../../contracts/adapters/AdapterBase.sol";
 import {CurveRouterAdapter} from "../../contracts/adapters/curve/CurveRouterAdapter.sol";
@@ -77,12 +79,20 @@ contract CurveRouterAdapterTest is Test {
 
         curveRouterAdapter = new CurveRouterAdapter(address(curveRouter));
 
-        LevvaVault levvaVaultImplementation = new LevvaVault();
-        bytes memory data = abi.encodeWithSelector(
-            LevvaVault.initialize.selector, USDC, "lpName", "lpSymbol", address(0xFEE), address(oracle)
-        );
+        address levvaVaultImplementation = address(new LevvaVault());
+        address withdrawalQueueImplementation = address(new WithdrawalQueue());
+        address levvaVaultFactoryImplementation = address(new LevvaVaultFactory());
 
-        vault = LevvaVault(address(new ERC1967Proxy(address(levvaVaultImplementation), data)));
+        bytes memory data = abi.encodeWithSelector(
+            LevvaVaultFactory.initialize.selector, levvaVaultImplementation, withdrawalQueueImplementation
+        );
+        ERC1967Proxy levvaVaultFactoryProxy = new ERC1967Proxy(levvaVaultFactoryImplementation, data);
+        LevvaVaultFactory levvaVaultFactory = LevvaVaultFactory(address(levvaVaultFactoryProxy));
+
+        (address deployedVault,) =
+            levvaVaultFactory.deployVault(address(USDC), "lpName", "lpSymbol", address(0xFEE), address(oracle));
+
+        vault = LevvaVault(deployedVault);
         vault.addTrackedAsset(address(USDT));
         vault.addTrackedAsset(address(DAI));
         vault.addTrackedAsset(address(USDE));

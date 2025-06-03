@@ -7,7 +7,9 @@ import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
+import {LevvaVaultFactory} from "../../contracts/LevvaVaultFactory.sol";
 import {LevvaVault} from "../../contracts/LevvaVault.sol";
+import {WithdrawalQueue} from "../../contracts/WithdrawalQueue.sol";
 import {EtherfiETHAdapter} from "../../contracts/adapters/etherfi/EtherfiETHAdapter.sol";
 import {AdapterBase} from "../../contracts/adapters/AdapterBase.sol";
 import {IAtomicQueue} from "../../contracts/adapters/etherfi/interfaces/IAtomicQueue.sol";
@@ -61,11 +63,20 @@ contract EtherfiETHAdapterTest is Test {
         oracle.setPrice(oracle.ONE().mulDiv(2000, 10 ** 12), address(WETH), address(USDC));
         oracle.setPrice(oracle.ONE().mulDiv(2500, 10 ** 12), address(WEETH), address(USDC));
 
-        LevvaVault levvaVaultImplementation = new LevvaVault();
+        address levvaVaultImplementation = address(new LevvaVault());
+        address withdrawalQueueImplementation = address(new WithdrawalQueue());
+        address levvaVaultFactoryImplementation = address(new LevvaVaultFactory());
+
         bytes memory data = abi.encodeWithSelector(
-            LevvaVault.initialize.selector, USDC, "lpName", "lpSymbol", address(0xFEE), address(oracle)
+            LevvaVaultFactory.initialize.selector, levvaVaultImplementation, withdrawalQueueImplementation
         );
-        levvaVault = LevvaVault(address(new ERC1967Proxy(address(levvaVaultImplementation), data)));
+        ERC1967Proxy levvaVaultFactoryProxy = new ERC1967Proxy(levvaVaultFactoryImplementation, data);
+        LevvaVaultFactory levvaVaultFactory = LevvaVaultFactory(address(levvaVaultFactoryProxy));
+
+        (address deployedVault,) =
+            levvaVaultFactory.deployVault(address(USDC), "lpName", "lpSymbol", address(0xFEE), address(oracle));
+
+        levvaVault = LevvaVault(deployedVault);
 
         adapter = new EtherfiETHAdapter(address(WETH), address(WEETH), address(ETHERFI_LIQUIDITY_POOL));
         levvaVault.addAdapter(address(adapter));

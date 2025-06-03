@@ -12,7 +12,9 @@ import {PathKey} from "@uniswap/v4-periphery/src/libraries/PathKey.sol";
 import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
 import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
 
+import {LevvaVaultFactory} from "../../contracts/LevvaVaultFactory.sol";
 import {LevvaVault} from "../../contracts/LevvaVault.sol";
+import {WithdrawalQueue} from "../../contracts/WithdrawalQueue.sol";
 import {UniswapAdapter} from "../../contracts/adapters/uniswap/UniswapAdapter.sol";
 import {AbstractUniswapV3Adapter} from "../../contracts/adapters/uniswap/AbstractUniswapV3Adapter.sol";
 import {AdapterBase} from "../../contracts/adapters/AdapterBase.sol";
@@ -41,11 +43,20 @@ contract UniswapAdapterTest is Test {
         EulerRouterMock oracle = new EulerRouterMock();
         oracle.setPrice(oracle.ONE().mulDiv(100_000, 10 ** 2), address(WBTC), address(USDC));
 
-        LevvaVault levvaVaultImplementation = new LevvaVault();
+        address levvaVaultImplementation = address(new LevvaVault());
+        address withdrawalQueueImplementation = address(new WithdrawalQueue());
+        address levvaVaultFactoryImplementation = address(new LevvaVaultFactory());
+
         bytes memory data = abi.encodeWithSelector(
-            LevvaVault.initialize.selector, USDC, "lpName", "lpSymbol", address(0xFEE), address(oracle)
+            LevvaVaultFactory.initialize.selector, levvaVaultImplementation, withdrawalQueueImplementation
         );
-        levvaVault = LevvaVault(address(new ERC1967Proxy(address(levvaVaultImplementation), data)));
+        ERC1967Proxy levvaVaultFactoryProxy = new ERC1967Proxy(levvaVaultFactoryImplementation, data);
+        LevvaVaultFactory levvaVaultFactory = LevvaVaultFactory(address(levvaVaultFactoryProxy));
+
+        (address deployedVault,) =
+            levvaVaultFactory.deployVault(address(USDC), "lpName", "lpSymbol", address(0xFEE), address(oracle));
+
+        levvaVault = LevvaVault(deployedVault);
 
         adapter = new UniswapAdapter(UNISWAP_V3_ROUTER, UNISWAP_UNIVERSAL_ROUTER, PERMIT2);
         levvaVault.addAdapter(address(adapter));

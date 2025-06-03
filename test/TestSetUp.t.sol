@@ -6,8 +6,9 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
-import {WithdrawalQueue} from "../contracts/WithdrawalQueue.sol";
+import {LevvaVaultFactory} from "../contracts/LevvaVaultFactory.sol";
 import {LevvaVault} from "../contracts/LevvaVault.sol";
+import {WithdrawalQueue} from "../contracts/WithdrawalQueue.sol";
 import {MintableERC20} from "./mocks/MintableERC20.t.sol";
 import {AdapterMock} from "./mocks/AdapterMock.t.sol";
 import {EulerRouterMock} from "./mocks/EulerRouterMock.t.sol";
@@ -25,12 +26,14 @@ contract TestSetUp is Test {
     address internal constant FEE_COLLECTOR = address(0xFEE);
     address internal constant USER = address(0x987654321);
 
+    LevvaVaultFactory internal levvaVaultFactoryImplementation;
+    ERC1967Proxy internal levvaVaultFactoryProxy;
+    LevvaVaultFactory internal levvaVaultFactory;
+
     LevvaVault internal levvaVaultImplementation;
-    ERC1967Proxy internal levvaVaultProxy;
     LevvaVault internal levvaVault;
 
     WithdrawalQueue internal withdrawalQueueImplementation;
-    ERC1967Proxy internal withdrawalQueueProxy;
     WithdrawalQueue internal withdrawalQueue;
 
     MintableERC20 internal asset;
@@ -46,9 +49,8 @@ contract TestSetUp is Test {
         _createOracleMock();
         _createAssets();
         _createAdapterMocks();
-        _createLevvaVault();
-        _createWithdrawalQueue();
-        _setWithdrawalQueue();
+        _createLevvaVaultFactory();
+        _deployLevvaVault();
     }
 
     function testInitialize() public view {
@@ -66,28 +68,29 @@ contract TestSetUp is Test {
         assert(withdrawalQueue.isFinalizer(FINALIZER));
     }
 
-    function _createLevvaVault() private {
+    function _createLevvaVaultFactory() private {
         levvaVaultImplementation = new LevvaVault();
+        withdrawalQueueImplementation = new WithdrawalQueue();
+
+        levvaVaultFactoryImplementation = new LevvaVaultFactory();
         bytes memory data = abi.encodeWithSelector(
-            LevvaVault.initialize.selector, IERC20(asset), LP_NAME, LP_SYMBOL, FEE_COLLECTOR, address(oracle)
+            LevvaVaultFactory.initialize.selector,
+            address(levvaVaultImplementation),
+            address(withdrawalQueueImplementation)
         );
-        levvaVaultProxy = new ERC1967Proxy(address(levvaVaultImplementation), data);
-        levvaVault = LevvaVault(address(levvaVaultProxy));
+        levvaVaultFactoryProxy = new ERC1967Proxy(address(levvaVaultFactoryImplementation), data);
+        levvaVaultFactory = LevvaVaultFactory(address(levvaVaultFactoryProxy));
+    }
+
+    function _deployLevvaVault() private {
+        (address vault, address queue) =
+            levvaVaultFactory.deployVault(address(asset), LP_NAME, LP_SYMBOL, FEE_COLLECTOR, address(oracle));
+
+        levvaVault = LevvaVault(vault);
+        withdrawalQueue = WithdrawalQueue(queue);
 
         levvaVault.addVaultManager(VAULT_MANAGER, true);
-    }
-
-    function _createWithdrawalQueue() private {
-        withdrawalQueueImplementation = new WithdrawalQueue();
-        bytes memory data = abi.encodeWithSelector(WithdrawalQueue.initialize.selector, levvaVault);
-        withdrawalQueueProxy = new ERC1967Proxy(address(withdrawalQueueImplementation), data);
-        withdrawalQueue = WithdrawalQueue(address(withdrawalQueueProxy));
-
         withdrawalQueue.addFinalizer(FINALIZER, true);
-    }
-
-    function _setWithdrawalQueue() private {
-        levvaVault.setWithdrawalQueue(address(withdrawalQueue));
     }
 
     function _createOracleMock() private {
