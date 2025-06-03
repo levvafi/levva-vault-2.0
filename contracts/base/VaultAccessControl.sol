@@ -53,7 +53,7 @@ abstract contract VaultAccessControl is Initializable, Ownable2StepUpgradeable {
         emit VaultManagerSet(manager, add);
     }
 
-    function setWithdrawalQueue(address queue) external onlyOwner {
+    function setWithdrawalQueue(address queue) external {
         queue.assertNotZeroAddress();
 
         VaultAccessControlStorage storage $ = _getVaultAccessControlStorage();

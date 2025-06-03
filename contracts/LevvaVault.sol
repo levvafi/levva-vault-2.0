@@ -7,24 +7,22 @@ import {MultiAssetVaultBase} from "./base/MultiAssetVaultBase.sol";
 import {IEulerPriceOracle} from "./interfaces/IEulerPriceOracle.sol";
 
 /// @custom:oz-upgrades-unsafe-allow constructor
-contract LevvaVault is UUPSUpgradeable, MultiAssetVaultBase {
+contract LevvaVault is MultiAssetVaultBase {
     /// @dev Disabling initializers for implementation contract
     constructor() {
         _disableInitializers();
     }
 
     function initialize(
-        IERC20 asset,
+        address owner,
+        address asset,
         string calldata lpName,
         string calldata lpSymbol,
         address feeCollector,
         address eulerOracle
     ) external initializer {
-        __UUPSUpgradeable_init();
-        __VaultAccessControl_init(msg.sender);
-        __MultiAssetVaultBase_init(asset, lpName, lpSymbol, feeCollector);
+        __VaultAccessControl_init(owner);
+        __MultiAssetVaultBase_init(IERC20(asset), lpName, lpSymbol, feeCollector);
         __OraclePriceProvider_init(eulerOracle);
     }
-
-    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 }

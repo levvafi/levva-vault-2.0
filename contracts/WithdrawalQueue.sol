@@ -9,7 +9,7 @@ import {ERC721Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC72
 import {WithdrawalQueueBase} from "./base/WithdrawalQueueBase.sol";
 
 /// @custom:oz-upgrades-unsafe-allow constructor
-contract WithdrawalQueue is UUPSUpgradeable, ERC721Upgradeable, WithdrawalQueueBase {
+contract WithdrawalQueue is ERC721Upgradeable, WithdrawalQueueBase {
     using SafeERC20 for IERC4626;
 
     event WithdrawalRequested(uint256 indexed requestId, address indexed receiver, uint256 shares);
@@ -23,9 +23,8 @@ contract WithdrawalQueue is UUPSUpgradeable, ERC721Upgradeable, WithdrawalQueueB
         _disableInitializers();
     }
 
-    function initialize(address levvaVault) external initializer {
-        __UUPSUpgradeable_init();
-        __WithdrawalQueueBase_init(msg.sender, levvaVault);
+    function initialize(address owner, address levvaVault) external initializer {
+        __WithdrawalQueueBase_init(owner, levvaVault);
     }
 
     function requestWithdrawal(uint256 shares, address receiver) external onlyLevvaVault returns (uint256 requestId) {
@@ -51,6 +50,4 @@ contract WithdrawalQueue is UUPSUpgradeable, ERC721Upgradeable, WithdrawalQueueB
         _finalizeRequests(requestId);
         emit RequestsFinalized(requestId);
     }
-
-    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 }
