@@ -19,9 +19,10 @@ contract LevvaVault is MultiAssetVaultBase {
         string calldata lpName,
         string calldata lpSymbol,
         address feeCollector,
-        address eulerOracle
+        address eulerOracle,
+        address withdrawalQueue
     ) external initializer {
-        __VaultAccessControl_init(owner);
+        __VaultAccessControl_init(owner, withdrawalQueue);
         __MultiAssetVaultBase_init(IERC20(asset), lpName, lpSymbol, feeCollector);
         __OraclePriceProvider_init(eulerOracle);
     }

@@ -54,6 +54,8 @@ contract TestSetUp is Test {
     }
 
     function testInitialize() public view {
+        assert(levvaVaultFactory.isLevvaVault(address(levvaVault)));
+
         assertEq(address(levvaVault.asset()), address(asset));
         assertEq(levvaVault.owner(), address(this));
         assertEq(levvaVault.name(), LP_NAME);

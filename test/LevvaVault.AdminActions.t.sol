@@ -161,9 +161,4 @@ contract LevvaVaultAdminActionsTest is TestSetUp {
         vm.expectRevert(abi.encodeWithSelector(Asserts.ZeroAddress.selector));
         levvaVault.setOracle(address(0));
     }
-
-    function testSetWithdrawalQueueAlreadySet() public {
-        vm.expectRevert(abi.encodeWithSelector(VaultAccessControl.QueueAlreadySet.selector, address(withdrawalQueue)));
-        levvaVault.setWithdrawalQueue(address(1));
-    }
 }

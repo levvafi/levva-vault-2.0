@@ -46,6 +46,10 @@ abstract contract FactoryBase is Initializable, Ownable2StepUpgradeable {
         return address(_getFactoryBaseStorage().withdrawalQueueBeacon);
     }
 
+    function isLevvaVault(address levvaVault) external view returns (bool) {
+        return _getFactoryBaseStorage().isLevvaVault[levvaVault];
+    }
+
     function _deployVault(
         address asset,
         string calldata lpName,
@@ -53,15 +57,14 @@ abstract contract FactoryBase is Initializable, Ownable2StepUpgradeable {
         address feeCollector,
         address eulerOracle
     ) internal returns (address vault, address queue) {
-        bytes memory vaultInitializeCalldata = abi.encodeWithSelector(
-            LevvaVault.initialize.selector, msg.sender, asset, lpName, lpSymbol, feeCollector, eulerOracle
-        );
-        vault = address(new BeaconProxy(vaultBeacon(), vaultInitializeCalldata));
+        vault = address(new BeaconProxy(vaultBeacon(), ""));
 
         bytes memory queueInitializeCalldata =
             abi.encodeWithSelector(WithdrawalQueue.initialize.selector, msg.sender, vault);
         queue = address(new BeaconProxy(withdrawalQueueBeacon(), queueInitializeCalldata));
 
-        LevvaVault(vault).setWithdrawalQueue(queue);
+        LevvaVault(vault).initialize(msg.sender, asset, lpName, lpSymbol, feeCollector, eulerOracle, queue);
+
+        _getFactoryBaseStorage().isLevvaVault[vault] = true;
     }
 }
