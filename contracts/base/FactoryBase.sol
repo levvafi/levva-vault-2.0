@@ -27,7 +27,9 @@ abstract contract FactoryBase is Initializable, Ownable2StepUpgradeable {
         }
     }
 
-    event NewVaultDeployed(address indexed vault, address indexed withdrawalQueue, string indexed lpName, address asset);
+    event NewVaultDeployed(
+        address indexed vault, address indexed withdrawalQueue, string indexed lpName, address asset
+    );
 
     function __FactoryBase_init(address owner, address vaultImplementation, address withdrawalQueueImplementation)
         internal

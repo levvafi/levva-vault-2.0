@@ -5,6 +5,7 @@ import {Test} from "lib/forge-std/src/Test.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 
 import {LevvaVaultFactory} from "../contracts/LevvaVaultFactory.sol";
 import {LevvaVault} from "../contracts/LevvaVault.sol";
@@ -56,6 +57,14 @@ contract TestSetUp is Test {
     function testInitialize() public view {
         assert(levvaVaultFactory.isLevvaVault(address(levvaVault)));
 
+        UpgradeableBeacon vaultBeacon = UpgradeableBeacon(levvaVaultFactory.vaultBeacon());
+        assertEq(vaultBeacon.implementation(), address(levvaVaultImplementation));
+        assertEq(vaultBeacon.owner(), address(this));
+
+        UpgradeableBeacon withdrawalQueueBeacon = UpgradeableBeacon(levvaVaultFactory.withdrawalQueueBeacon());
+        assertEq(withdrawalQueueBeacon.implementation(), address(withdrawalQueueImplementation));
+        assertEq(withdrawalQueueBeacon.owner(), address(this));
+
         assertEq(address(levvaVault.asset()), address(asset));
         assertEq(levvaVault.owner(), address(this));
         assertEq(levvaVault.name(), LP_NAME);
@@ -64,9 +73,11 @@ contract TestSetUp is Test {
         assertEq(levvaVault.getFeeCollectorStorage().highWaterMarkPerShare, 10 ** levvaVault.decimals());
         assertEq(address(levvaVault.oracle()), address(oracle));
         assertEq(levvaVault.withdrawalQueue(), address(withdrawalQueue));
+        assertEq(levvaVault.owner(), address(this));
         assert(levvaVault.isVaultManager(VAULT_MANAGER));
 
         assertEq(address(withdrawalQueue.levvaVault()), address(levvaVault));
+        assertEq(withdrawalQueue.owner(), address(this));
         assert(withdrawalQueue.isFinalizer(FINALIZER));
     }
 
