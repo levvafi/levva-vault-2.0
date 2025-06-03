@@ -196,6 +196,36 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, FeeCollector, Adapt
         }
     }
 
+    /// @inheritdoc ERC4626Upgradeable
+    function maxWithdraw(address owner) public view override returns (uint256) {
+        (uint256 _totalAssets, uint256 _totalSupply) = _estimateTotalAssetsAndSupply();
+        return _convertToAssets(balanceOf(owner), _totalAssets, _totalSupply, Math.Rounding.Floor);
+    }
+
+    /// @inheritdoc ERC4626Upgradeable
+    function previewDeposit(uint256 assets) public view override returns (uint256) {
+        (uint256 _totalAssets, uint256 _totalSupply) = _estimateTotalAssetsAndSupply();
+        return _convertToShares(assets, _totalAssets, _totalSupply, Math.Rounding.Floor);
+    }
+
+    /// @inheritdoc ERC4626Upgradeable
+    function previewMint(uint256 shares) public view override returns (uint256) {
+        (uint256 _totalAssets, uint256 _totalSupply) = _estimateTotalAssetsAndSupply();
+        return _convertToAssets(shares, _totalAssets, _totalSupply, Math.Rounding.Ceil);
+    }
+
+    /// @inheritdoc ERC4626Upgradeable
+    function previewWithdraw(uint256 assets) public view override returns (uint256) {
+        (uint256 _totalAssets, uint256 _totalSupply) = _estimateTotalAssetsAndSupply();
+        return _convertToShares(assets, _totalAssets, _totalSupply, Math.Rounding.Ceil);
+    }
+
+    /// @inheritdoc ERC4626Upgradeable
+    function previewRedeem(uint256 shares) public view override returns (uint256) {
+        (uint256 _totalAssets, uint256 _totalSupply) = _estimateTotalAssetsAndSupply();
+        return _convertToAssets(shares, _totalAssets, _totalSupply, Math.Rounding.Floor);
+    }
+
     function trackedAssetPosition(address trackedAsset) external view returns (uint256) {
         return _getMultiAssetVaultBaseStorage().trackedAssetPosition[trackedAsset];
     }
@@ -232,8 +262,7 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, FeeCollector, Adapt
      *      and are definitely calculated somewhere else.
      */
     function _convertToShares(uint256 assets, Math.Rounding rounding) internal view override returns (uint256) {
-        (uint256 _totalAssets, uint256 _totalSupply) = _estimateTotalAssetsAndSupply();
-        return _convertToShares(assets, _totalAssets, _totalSupply, rounding);
+        return _convertToShares(assets, totalAssets(), totalSupply(), rounding);
     }
 
     /**
@@ -243,8 +272,7 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, FeeCollector, Adapt
      *      and are definitely calculated somewhere else.
      */
     function _convertToAssets(uint256 shares, Math.Rounding rounding) internal view override returns (uint256) {
-        (uint256 _totalAssets, uint256 _totalSupply) = _estimateTotalAssetsAndSupply();
-        return _convertToAssets(shares, _totalAssets, _totalSupply, rounding);
+        return _convertToAssets(shares, totalAssets(), totalSupply(), rounding);
     }
 
     function _convertToShares(uint256 assets, uint256 _totalAssets, uint256 _totalSupply, Math.Rounding rounding)

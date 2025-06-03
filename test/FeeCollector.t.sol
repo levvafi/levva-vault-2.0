@@ -70,7 +70,7 @@ contract FeeCollectorTest is TestSetUp {
         asset.mint(address(levvaVault), totalAssetsBefore);
 
         uint256 toRedeem = levvaVault.maxRedeem(USER);
-        uint256 expectedAssets = levvaVault.convertToAssets(toRedeem);
+        uint256 expectedAssets = levvaVault.previewRedeem(toRedeem);
         vm.prank(USER);
         levvaVault.transfer(address(withdrawalQueue), toRedeem);
 
@@ -90,7 +90,6 @@ contract FeeCollectorTest is TestSetUp {
 
         uint256 toMint = 10 ** levvaVault.decimals();
         uint256 expectedAssets = levvaVault.previewMint(toMint);
-        assertApproxEqAbs(levvaVault.convertToAssets(toMint), expectedAssets, 1);
 
         vm.prank(USER);
         uint256 assets = levvaVault.mint(toMint, USER);
@@ -107,7 +106,6 @@ contract FeeCollectorTest is TestSetUp {
 
         uint256 toDeposit = 10 ** asset.decimals();
         uint256 expectedShares = levvaVault.previewDeposit(toDeposit);
-        assertApproxEqAbs(levvaVault.convertToShares(toDeposit), expectedShares, 1);
 
         vm.prank(USER);
         uint256 shares = levvaVault.deposit(toDeposit, USER);
@@ -124,7 +122,6 @@ contract FeeCollectorTest is TestSetUp {
 
         uint256 toRedeem = levvaVault.maxRedeem(USER);
         uint256 expectedAssets = levvaVault.previewRedeem(toRedeem);
-        assertApproxEqAbs(levvaVault.convertToAssets(toRedeem), expectedAssets, 1);
 
         vm.prank(USER);
         levvaVault.transfer(address(withdrawalQueue), toRedeem);
@@ -145,7 +142,6 @@ contract FeeCollectorTest is TestSetUp {
 
         uint256 toWithdraw = levvaVault.maxWithdraw(USER);
         uint256 expectedShares = levvaVault.previewWithdraw(toWithdraw);
-        assertApproxEqAbs(levvaVault.convertToShares(toWithdraw), expectedShares, 1);
 
         vm.prank(USER);
         levvaVault.transfer(address(withdrawalQueue), expectedShares);
@@ -237,5 +233,20 @@ contract FeeCollectorTest is TestSetUp {
         levvaVault.setPerformanceFeeRatio(FEE);
         vm.expectRevert(abi.encodeWithSelector(Asserts.SameValue.selector));
         levvaVault.setPerformanceFeeRatio(FEE);
+    }
+
+    function testConvertMethodsWithoutFees() public {
+        asset.mint(address(levvaVault), DEPOSIT_AMOUNT);
+        uint256 totalAssets = levvaVault.totalAssets();
+        uint256 totalSupply = levvaVault.totalSupply();
+        assertNotEq(totalAssets, totalSupply);
+
+        uint256 assetsToConvert = DEPOSIT_AMOUNT;
+        uint256 expectedShares = assetsToConvert.mulDiv(totalSupply + 1, totalAssets + 1, Math.Rounding.Floor);
+        assertEq(levvaVault.convertToShares(assetsToConvert), expectedShares);
+
+        uint256 sharesToConvert = DEPOSIT_AMOUNT;
+        uint256 expectedAssets = sharesToConvert.mulDiv(totalAssets + 1, totalSupply + 1, Math.Rounding.Floor);
+        assertEq(levvaVault.convertToAssets(sharesToConvert), expectedAssets);
     }
 }
