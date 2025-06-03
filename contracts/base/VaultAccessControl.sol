@@ -44,23 +44,17 @@ abstract contract VaultAccessControl is Initializable, Ownable2StepUpgradeable {
         _;
     }
 
-    function __VaultAccessControl_init(address owner) internal onlyInitializing {
+    function __VaultAccessControl_init(address owner, address _withdrawalQueue) internal onlyInitializing {
+        _withdrawalQueue.assertNotZeroAddress();
+        owner.assertNotZeroAddress();
+
         __Ownable_init(owner);
+        _getVaultAccessControlStorage().withdrawalQueue = _withdrawalQueue;
     }
 
     function addVaultManager(address manager, bool add) external onlyOwner {
         _getVaultAccessControlStorage()._vaultManagers[manager] = add;
         emit VaultManagerSet(manager, add);
-    }
-
-    function setWithdrawalQueue(address queue) external onlyOwner {
-        queue.assertNotZeroAddress();
-
-        VaultAccessControlStorage storage $ = _getVaultAccessControlStorage();
-        if ($.withdrawalQueue != address(0)) revert QueueAlreadySet($.withdrawalQueue);
-        $.withdrawalQueue = queue;
-
-        emit QueueSet(queue);
     }
 
     function withdrawalQueue() external view returns (address) {

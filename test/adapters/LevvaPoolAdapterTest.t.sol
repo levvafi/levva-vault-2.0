@@ -13,7 +13,9 @@ import {AdapterBase} from "../../contracts/adapters/AdapterBase.sol";
 import {ILevvaPool} from "../../contracts/adapters/levvaPool/ILevvaPool.sol";
 import {FP96} from "../../contracts/adapters/levvaPool/FP96.sol";
 import {EulerRouterMock} from "../mocks/EulerRouterMock.t.sol";
+import {LevvaVaultFactory} from "../../contracts/LevvaVaultFactory.sol";
 import {LevvaVault} from "../../contracts/LevvaVault.sol";
+import {WithdrawalQueue} from "../../contracts/WithdrawalQueue.sol";
 import {IAdapter} from "../../contracts/interfaces/IAdapter.sol";
 import {IExternalPositionAdapter} from "../../contracts/interfaces/IExternalPositionAdapter.sol";
 import {Asserts} from "../../contracts/libraries/Asserts.sol";
@@ -49,12 +51,21 @@ contract LevvaPoolAdapterTest is Test {
         oracle.setPrice(oracle.ONE(), address(PT_weETH), address(WETH));
         oracle.setPrice(oracle.ONE(), address(weETH), address(WETH));
 
-        LevvaVault levvaVaultImplementation = new LevvaVault();
-        bytes memory data = abi.encodeWithSelector(
-            LevvaVault.initialize.selector, WETH, "lpName", "lpSymbol", address(0xFEE), address(oracle)
-        );
+        address levvaVaultImplementation = address(new LevvaVault());
+        address withdrawalQueueImplementation = address(new WithdrawalQueue());
+        address levvaVaultFactoryImplementation = address(new LevvaVaultFactory());
 
-        vault = LevvaVault(address(new ERC1967Proxy(address(levvaVaultImplementation), data)));
+        bytes memory data = abi.encodeWithSelector(
+            LevvaVaultFactory.initialize.selector, levvaVaultImplementation, withdrawalQueueImplementation
+        );
+        ERC1967Proxy levvaVaultFactoryProxy = new ERC1967Proxy(levvaVaultFactoryImplementation, data);
+        LevvaVaultFactory levvaVaultFactory = LevvaVaultFactory(address(levvaVaultFactoryProxy));
+
+        (address deployedVault,) =
+            levvaVaultFactory.deployVault(address(WETH), "lpName", "lpSymbol", address(0xFEE), address(oracle));
+
+        vault = LevvaVault(deployedVault);
+
         vault.addTrackedAsset(address(weETH));
         vault.addTrackedAsset(address(PT_weETH));
 

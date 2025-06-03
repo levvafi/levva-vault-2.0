@@ -8,7 +8,9 @@ import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
+import {LevvaVaultFactory} from "../../contracts/LevvaVaultFactory.sol";
 import {LevvaVault} from "../../contracts/LevvaVault.sol";
+import {WithdrawalQueue} from "../../contracts/WithdrawalQueue.sol";
 import {IUniversalRewardsDistributorBase} from "../../contracts/adapters/morpho/IUniversalRewardsDistributorBase.sol";
 import {MorphoAdapter} from "../../contracts/adapters/morpho/MorphoAdapter.sol";
 import {MorphoAdapterV1_1} from "../../contracts/adapters/morpho/MorphoAdapterV1_1.sol";
@@ -51,11 +53,20 @@ contract MorphoAdapterTest is Test {
         oracle.setPrice(oracle.ONE(), address(SteakhouseUSDC), address(USDC));
         oracle.setPrice(oracle.ONE(), address(cbBTCVault), address(USDC));
 
-        LevvaVault levvaVaultImplementation = new LevvaVault();
+        address levvaVaultImplementation = address(new LevvaVault());
+        address withdrawalQueueImplementation = address(new WithdrawalQueue());
+        address levvaVaultFactoryImplementation = address(new LevvaVaultFactory());
+
         bytes memory data = abi.encodeWithSelector(
-            LevvaVault.initialize.selector, USDC, "lpName", "lpSymbol", address(0xFEE), address(oracle)
+            LevvaVaultFactory.initialize.selector, levvaVaultImplementation, withdrawalQueueImplementation
         );
-        levvaVault = LevvaVault(address(new ERC1967Proxy(address(levvaVaultImplementation), data)));
+        ERC1967Proxy levvaVaultFactoryProxy = new ERC1967Proxy(levvaVaultFactoryImplementation, data);
+        LevvaVaultFactory levvaVaultFactory = LevvaVaultFactory(address(levvaVaultFactoryProxy));
+
+        (address deployedVault,) =
+            levvaVaultFactory.deployVault(address(USDC), "lpName", "lpSymbol", address(0xFEE), address(oracle));
+
+        levvaVault = LevvaVault(deployedVault);
 
         adapter = new MorphoAdapter(MORPHO_FACTORY);
         adapterV1_1 = new MorphoAdapterV1_1(MORPHO_FACTORY_V1_1);
