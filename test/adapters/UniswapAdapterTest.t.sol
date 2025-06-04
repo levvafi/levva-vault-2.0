@@ -2,6 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {Test} from "lib/forge-std/src/Test.sol";
+import {console} from "lib/forge-std/src/console.sol";
 import {Vm} from "lib/forge-std/src/Vm.sol";
 import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
@@ -91,6 +92,7 @@ contract UniswapAdapterTest is Test {
     }
 
     function testSwapExactInputV3AllExcept() public {
+        deal(address(USDC), address(levvaVault), 105_000 * 10 ** 6);
         uint256 except = 100_000 * 10 ** 6;
 
         bytes memory path = abi.encodePacked(USDC, uint24(3_000), WBTC);
@@ -244,6 +246,7 @@ contract UniswapAdapterTest is Test {
     }
 
     function testSwapExactInputV4AllExcept() public {
+        deal(address(USDC), address(levvaVault), 105_000 * 10 ** 6);
         uint128 except = 100_000 * 10 ** 6;
 
         PathKey[] memory path = new PathKey[](1);
