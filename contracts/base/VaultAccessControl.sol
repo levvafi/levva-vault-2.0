@@ -32,7 +32,6 @@ abstract contract VaultAccessControl is Initializable, Ownable2StepUpgradeable {
     event QueueSet(address indexed queue);
 
     error NoAccess(address sender);
-    error QueueAlreadySet(address queue);
 
     modifier onlyVaultManager() {
         _onlyVaultManager();

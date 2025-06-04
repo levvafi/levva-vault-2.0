@@ -13,15 +13,4 @@ abstract contract AdapterBase is IERC165, IAdapter {
     function supportsInterface(bytes4 interfaceId) public pure virtual returns (bool) {
         return interfaceId == type(IAdapter).interfaceId || interfaceId == type(IERC165).interfaceId;
     }
-
-    /// @notice Ensure the asset is vault asset or tracked asset
-    /// @param asset asset address
-    function _ensureIsValidAsset(address asset) internal view {
-        if (
-            IMultiAssetVault(msg.sender).trackedAssetPosition(asset) == 0
-                && IMultiAssetVault(msg.sender).asset() != asset
-        ) {
-            revert AdapterBase__InvalidToken(asset);
-        }
-    }
 }

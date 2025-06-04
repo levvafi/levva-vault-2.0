@@ -72,8 +72,6 @@ contract EtherfiBTCAdapter is AdapterBase, IExternalPositionAdapter {
 
     function claimWithdraw() external onlyVault returns (uint256 wbtcClaimed) {
         IERC20 _wBTC = wBTC;
-        _ensureIsValidAsset(address(_wBTC));
-
         wbtcClaimed = _wBTC.balanceOf(address(this));
         _wBTC.safeTransfer(msg.sender, wbtcClaimed);
 
@@ -82,8 +80,6 @@ contract EtherfiBTCAdapter is AdapterBase, IExternalPositionAdapter {
 
     function cancelWithdrawRequest() external onlyVault returns (uint256 ebtcReturned) {
         IERC20 _eBTC = eBTC;
-        _ensureIsValidAsset(address(_eBTC));
-
         IAtomicQueue _atomicQueue = atomicQueue;
 
         IAtomicQueue.AtomicRequest memory defaultRequest;
@@ -139,8 +135,6 @@ contract EtherfiBTCAdapter is AdapterBase, IExternalPositionAdapter {
 
     function _deposit(IERC20 _wBTC, uint256 amount, uint256 minShare) private returns (uint256 shares) {
         IERC20 _eBTC = eBTC;
-
-        _ensureIsValidAsset(address(_eBTC));
 
         IAdapterCallback(msg.sender).adapterCallback(address(this), address(_wBTC), amount);
         _wBTC.forceApprove(address(_eBTC), amount);

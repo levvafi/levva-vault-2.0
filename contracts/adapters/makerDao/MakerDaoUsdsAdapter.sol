@@ -8,11 +8,11 @@ contract MakerDaoUsdsAdapter is ERC4626AdapterBase {
 
     constructor(address _sUSDS) ERC4626AdapterBase(_sUSDS) {}
 
-    function USDS() public view returns (address) {
+    function USDS() external view returns (address) {
         return _asset;
     }
 
-    function sUSDS() public view returns (address) {
+    function sUSDS() external view returns (address) {
         return _vault;
     }
 }
