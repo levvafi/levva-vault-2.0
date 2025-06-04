@@ -13,13 +13,13 @@ import {LevvaVaultFactory} from "../../contracts/LevvaVaultFactory.sol";
 import {LevvaVault} from "../../contracts/LevvaVault.sol";
 import {WithdrawalQueue} from "../../contracts/WithdrawalQueue.sol";
 import {LidoAdapter} from "../../contracts/adapters/lido/LidoAdapter.sol";
-import {ILidoWithdrawalQueue} from "../../contracts/adapters/lido/ILidoWithdrawalQueue.sol";
+import {ILidoWithdrawalQueue} from "../../contracts/adapters/lido/interfaces/ILidoWithdrawalQueue.sol";
 import {AdapterBase} from "../../contracts/adapters/AdapterBase.sol";
 import {EulerRouterMock} from "../mocks/EulerRouterMock.t.sol";
 import {Asserts} from "../../contracts/libraries/Asserts.sol";
 import {IExternalPositionAdapter} from "../../contracts/interfaces/IExternalPositionAdapter.sol";
 import {IAdapter} from "../../contracts/interfaces/IAdapter.sol";
-import {IWstETH} from "../../contracts/adapters/lido/IWstETH.sol";
+import {IWstETH} from "../../contracts/adapters/lido/interfaces/IWstETH.sol";
 
 contract LidoAdapterTest is Test {
     uint256 public constant FORK_BLOCK = 22567800;
@@ -105,6 +105,27 @@ contract LidoAdapterTest is Test {
         assertEq(amounts.length, 0);
     }
 
+    function test_stakeAllExcept() public {
+        uint256 except = 5 ether;
+        uint256 initialAmount = 7 ether;
+        uint256 amount = initialAmount - except;
+
+        deal(address(WETH), address(levvaVault), initialAmount);
+        vm.prank(address(levvaVault));
+        adapter.stakeAllExcept(except);
+
+        uint256 wstETHBalance = WSTETH.balanceOf(address(levvaVault));
+        assertApproxEqAbs(IWstETH(address(WSTETH)).getStETHByWstETH(wstETHBalance), amount, 2);
+        assertEq(WETH.balanceOf(address(levvaVault)), except);
+        assertEq(WSTETH.balanceOf(address(adapter)), 0);
+        assertEq(WETH.balanceOf(address(adapter)), 0);
+        assertEq(address(adapter).balance, 0);
+
+        (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets();
+        assertEq(assets.length, 0);
+        assertEq(amounts.length, 0);
+    }
+
     function test_stakeShouldFailWhenAssetIsNotValid() public {
         levvaVault.removeTrackedAsset(address(WSTETH));
 
@@ -136,6 +157,38 @@ contract LidoAdapterTest is Test {
         vm.expectEmit(true, true, false, false);
         emit LidoAdapter.WithdrawalRequested(expectedRequestId, withdrawalAmount);
         adapter.requestWithdrawal(withdrawalAmount);
+
+        (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets();
+        assertEq(assets.length, 1);
+        assertEq(assets[0], address(WETH));
+        assertEq(amounts.length, 1);
+        assertApproxEqAbs(amounts[0], withdrawalStEthAmount, 1);
+
+        (address[] memory debtAssets, uint256[] memory debtAmounts) = adapter.getDebtAssets();
+        assertEq(debtAssets.length, 0);
+        assertEq(debtAmounts.length, 0);
+
+        assertEq(adapter.getWithdrawalQueueStart(address(levvaVault)), 0);
+        assertEq(adapter.getWithdrawalQueueEnd(address(levvaVault)), 1);
+        assertEq(adapter.getWithdrawalQueueRequest(address(levvaVault), 0), LidoWithdrawalQueue.getLastRequestId());
+    }
+
+    function test_requestWithdrawalAllExcept() public {
+        uint256 amount = 5 ether;
+        deal(address(WETH), address(levvaVault), amount);
+        vm.startPrank(address(levvaVault));
+        adapter.stake(amount);
+
+        uint256 wstETHBalance = WSTETH.balanceOf(address(levvaVault));
+
+        uint256 expectedRequestId = LidoWithdrawalQueue.getLastRequestId() + 1;
+        uint256 exceptAmount = 3 ether;
+        uint256 withdrawalAmount = wstETHBalance - exceptAmount;
+
+        uint256 withdrawalStEthAmount = IWstETH(address(WSTETH)).getStETHByWstETH(withdrawalAmount);
+        vm.expectEmit(true, true, false, false);
+        emit LidoAdapter.WithdrawalRequested(expectedRequestId, withdrawalAmount);
+        adapter.requestWithdrawalAllExcept(exceptAmount);
 
         (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets();
         assertEq(assets.length, 1);

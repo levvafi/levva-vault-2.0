@@ -26,7 +26,7 @@ contract AaveAdapter is AdapterBase {
         aavePoolAddressProvider = IPoolAddressesProvider(_aavePoolAddressProvider);
     }
 
-    function supply(address asset, uint256 amount) external {
+    function supply(address asset, uint256 amount) public {
         IPool aavePool = IPool(aavePoolAddressProvider.getPool());
 
         address aToken = _getAToken(aavePool, asset);
@@ -37,20 +37,37 @@ contract AaveAdapter is AdapterBase {
         aavePool.supply(asset, amount, msg.sender, 0);
     }
 
-    function withdraw(address asset, uint256 amount) external {
-        _ensureIsValidAsset(asset);
+    ///@dev Use call supplyAllExcept(asset, 0) to supply all balance,
+    ///      or supplyAllExcept(asset, IERC20(asset).balanceOf(msg.sender)) - to supply prev action result
+    function supplyAllExcept(address asset, uint256 except) external {
+        uint256 supplyAmount = IERC20(asset).balanceOf(msg.sender) - except;
+        supply(asset, supplyAmount);
+    }
 
+    function withdraw(address asset, uint256 amount) public {
         IPool aavePool = IPool(aavePoolAddressProvider.getPool());
         address aToken = _getAToken(aavePool, asset);
+        _withdraw(asset, aavePool, aToken, amount);
+    }
+
+    function withdrawAllExcept(address asset, uint256 except) external {
+        IPool aavePool = IPool(aavePoolAddressProvider.getPool());
+        address aToken = _getAToken(aavePool, asset);
+        uint256 amount = IERC20(aToken).balanceOf(msg.sender) - except;
+        _withdraw(asset, aavePool, aToken, amount);
+    }
+
+    function _getAToken(IPool pool, address asset) private view returns (address) {
+        return pool.getReserveData(asset).aTokenAddress;
+    }
+
+    function _withdraw(address asset, IPool aavePool, address aToken, uint256 amount) private {
+        _ensureIsValidAsset(asset);
 
         uint256 toTransfer = amount == type(uint256).max ? IERC20(aToken).balanceOf(msg.sender) : amount;
         IAdapterCallback(msg.sender).adapterCallback(address(this), aToken, toTransfer);
         IERC20(asset).forceApprove(aToken, toTransfer);
 
         aavePool.withdraw(asset, amount, msg.sender);
-    }
-
-    function _getAToken(IPool pool, address asset) private view returns (address) {
-        return pool.getReserveData(asset).aTokenAddress;
     }
 }

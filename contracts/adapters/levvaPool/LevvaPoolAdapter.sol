@@ -12,7 +12,7 @@ import {IAdapterCallback} from "../../interfaces/IAdapterCallback.sol";
 import {IExternalPositionAdapter} from "../../interfaces/IExternalPositionAdapter.sol";
 import {IMultiAssetVault} from "../../interfaces/IMultiAssetVault.sol";
 import {IEulerPriceOracle} from "../../interfaces/IEulerPriceOracle.sol";
-import {ILevvaPool} from "./ILevvaPool.sol";
+import {ILevvaPool} from "./interfaces/ILevvaPool.sol";
 import {Asserts} from "../../libraries/Asserts.sol";
 import {FP96} from "./FP96.sol";
 
@@ -38,6 +38,9 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
     error LevvaPoolAdapter__OracleNotExists(address base, address quote);
     error LevvaPoolAdapter__WrongLevvaPoolMode();
     error LevvaPoolAdapter__NotSupported();
+
+    event PoolAdded(address indexed pool);
+    event PoolRemoved(address indexed pool);
 
     constructor(address vault) {
         vault.assertNotZeroAddress();
@@ -68,34 +71,20 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
         uint256 limitPriceX96,
         uint256 swapCallData
     ) external onlyVault {
-        address quoteToken = ILevvaPool(pool).quoteToken();
-        ILevvaPool.CallType callType =
-            asset == quoteToken ? ILevvaPool.CallType.DepositQuote : ILevvaPool.CallType.DepositBase;
+        _deposit(asset, amount, positionAmount, pool, limitPriceX96, swapCallData);
+    }
 
-        //Both token deposits not supported
-        ILevvaPool.Position memory position = ILevvaPool(pool).positions(address(this));
-        if (position._type == ILevvaPool.PositionType.Lend) {
-            if (position.discountedBaseAmount != 0) {
-                if (callType == ILevvaPool.CallType.DepositQuote) revert LevvaPoolAdapter__NotSupported();
-            } else {
-                if (callType == ILevvaPool.CallType.DepositBase) revert LevvaPoolAdapter__NotSupported();
-            }
-        }
-
-        if (callType == ILevvaPool.CallType.DepositQuote && positionAmount < 0) {
-            // depositQuote and long
-            _assertOracleExists(quoteToken, IMultiAssetVault(msg.sender).asset());
-        } else if (callType == ILevvaPool.CallType.DepositBase && positionAmount < 0) {
-            // depositBase and short
-            _assertOracleExists(ILevvaPool(pool).baseToken(), IMultiAssetVault(msg.sender).asset());
-        }
-
-        IAdapterCallback(msg.sender).adapterCallback(address(this), asset, amount);
-
-        IERC20(asset).forceApprove(address(pool), amount);
-        ILevvaPool(pool).execute(callType, amount, positionAmount, limitPriceX96, false, address(0), swapCallData);
-
-        _addPool(pool);
+    /// @notice Deposits all amount except given amount into a Marginly pool
+    function depositAllExcept(
+        address asset,
+        uint256 except,
+        int256 positionAmount,
+        address pool,
+        uint256 limitPriceX96,
+        uint256 swapCallData
+    ) external onlyVault {
+        uint256 amount = IERC20(asset).balanceOf(msg.sender) - except;
+        _deposit(asset, amount, positionAmount, pool, limitPriceX96, swapCallData);
     }
 
     ///@notice Opens a long position
@@ -267,6 +256,8 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
 
         s_pools.push(pool);
         s_poolPosition[pool] = s_pools.length;
+
+        emit PoolAdded(pool);
     }
 
     function _removePool(address pool) private {
@@ -284,6 +275,8 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
 
         s_pools.pop();
         delete s_poolPosition[pool];
+
+        emit PoolRemoved(pool);
     }
 
     /// @dev A little modified MarginlyPool.accruedInterest() function
@@ -405,5 +398,43 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
         FP96.FixedPoint memory feeDt = FP96.powTaylor(onePlusFee, secondsPassed);
 
         return accruedRateDt.mul(feeDt);
+    }
+
+    function _deposit(
+        address asset,
+        uint256 amount,
+        int256 positionAmount,
+        address pool,
+        uint256 limitPriceX96,
+        uint256 swapCallData
+    ) private {
+        address quoteToken = ILevvaPool(pool).quoteToken();
+        ILevvaPool.CallType callType =
+            asset == quoteToken ? ILevvaPool.CallType.DepositQuote : ILevvaPool.CallType.DepositBase;
+
+        //Both token deposits not supported
+        ILevvaPool.Position memory position = ILevvaPool(pool).positions(address(this));
+        if (position._type == ILevvaPool.PositionType.Lend) {
+            if (position.discountedBaseAmount != 0) {
+                if (callType == ILevvaPool.CallType.DepositQuote) revert LevvaPoolAdapter__NotSupported();
+            } else {
+                if (callType == ILevvaPool.CallType.DepositBase) revert LevvaPoolAdapter__NotSupported();
+            }
+        }
+
+        if (callType == ILevvaPool.CallType.DepositQuote && positionAmount < 0) {
+            // depositQuote and long
+            _assertOracleExists(quoteToken, IMultiAssetVault(msg.sender).asset());
+        } else if (callType == ILevvaPool.CallType.DepositBase && positionAmount < 0) {
+            // depositBase and short
+            _assertOracleExists(ILevvaPool(pool).baseToken(), IMultiAssetVault(msg.sender).asset());
+        }
+
+        IAdapterCallback(msg.sender).adapterCallback(address(this), asset, amount);
+
+        IERC20(asset).forceApprove(address(pool), amount);
+        ILevvaPool(pool).execute(callType, amount, positionAmount, limitPriceX96, false, address(0), swapCallData);
+
+        _addPool(pool);
     }
 }

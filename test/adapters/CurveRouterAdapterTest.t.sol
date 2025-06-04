@@ -15,8 +15,8 @@ import {LevvaVault} from "../../contracts/LevvaVault.sol";
 import {WithdrawalQueue} from "../../contracts/WithdrawalQueue.sol";
 import {Asserts} from "../../contracts/libraries/Asserts.sol";
 import {AdapterBase} from "../../contracts/adapters/AdapterBase.sol";
-import {CurveRouterAdapter} from "../../contracts/adapters/curve/CurveRouterAdapter.sol";
-import {ICurveRouterNg} from "../../contracts/adapters/curve/ICurveRouterNg.sol";
+import {CurveRouterAdapter} from "contracts/adapters/curve/CurveRouterAdapter.sol";
+import {ICurveRouterNg} from "../../contracts/adapters/curve/interfaces/ICurveRouterNg.sol";
 import {MintableERC20} from "../mocks/MintableERC20.t.sol";
 import {CurveRouterMock} from "../mocks/CurveRouterMock.t.sol";
 import {EulerRouterMock} from "../mocks/EulerRouterMock.t.sol";
@@ -240,5 +240,29 @@ contract CurveRouterAdapterTest is Test {
         vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, address(0)));
         hoax(address(vault));
         curveRouterAdapter.exchange(route, swapParams, amount, minDy, pools);
+    }
+
+    function testExchangeAllExcept() public {
+        IERC20 tokenIn = USDC;
+        IERC20 tokenOut = DAI;
+
+        address[11] memory route;
+        route[0] = address(USDC);
+        route[1] = address(POOL_1);
+        route[2] = address(DAI);
+
+        uint256[5][5] memory swapParams;
+        uint256 except = 100e6;
+        uint256 minDy = 99e6;
+        address[5] memory pools;
+
+        hoax(address(vault));
+        curveRouterAdapter.exchangeAllExcept(route, swapParams, except, minDy, pools);
+
+        assertGe(tokenOut.balanceOf(address(vault)), minDy);
+        assertEq(tokenIn.balanceOf(address(vault)), except);
+
+        assertEq(tokenIn.balanceOf(address(curveRouterAdapter)), 0);
+        assertEq(tokenOut.balanceOf(address(curveRouterAdapter)), 0);
     }
 }

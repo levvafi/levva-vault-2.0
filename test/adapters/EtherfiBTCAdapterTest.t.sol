@@ -103,6 +103,21 @@ contract EtherfiBTCAdapterTest is Test {
         _assertAdapterAssets(0, 0);
     }
 
+    function testDepositBtcAllExcept() public {
+        uint256 wbtcBalanceBefore = WBTC.balanceOf(address(levvaVault));
+        uint256 exceptAmount = 9 * 10 ** 8;
+        uint256 depositAmount = wbtcBalanceBefore - exceptAmount;
+        vm.prank(address(levvaVault));
+        adapter.depositAllExcept(exceptAmount, 0);
+
+        assertEq(WBTC.balanceOf(address(levvaVault)), exceptAmount);
+        assertApproxEqAbs(EBTC.balanceOf(address(levvaVault)), depositAmount, 1);
+        assertEq(WBTC.balanceOf(address(adapter)), 0);
+        assertEq(EBTC.balanceOf(address(adapter)), 0);
+
+        _assertAdapterAssets(0, 0);
+    }
+
     function testDepositBtcNoAccess() public {
         uint256 depositAmount = 10 ** 8;
         vm.prank(NO_ACCESS);
@@ -143,6 +158,33 @@ contract EtherfiBTCAdapterTest is Test {
         assertEq(EBTC.balanceOf(address(adapter)), depositAmount);
 
         _assertAdapterAssets(0, depositAmount);
+    }
+
+    function testRequestWithdrawBtcAllExcept() public {
+        uint256 depositAmount = 2 * 10 ** 8;
+        vm.prank(address(levvaVault));
+        adapter.deposit(depositAmount, 0);
+
+        uint88 price = 10 ** 8;
+        uint64 deadline = type(uint64).max;
+
+        vm.prank(address(levvaVault));
+        uint96 except = uint96(1 * 10 ** 8);
+        uint256 withdrawAmount = depositAmount - except;
+        adapter.requestWithdrawAllExcept(except, price, deadline);
+
+        IAtomicQueue.AtomicRequest memory request =
+            IAtomicQueue(ATOMIC_QUEUE).getUserAtomicRequest(address(adapter), EBTC, WBTC);
+
+        assertEq(request.deadline, deadline);
+        assertEq(request.atomicPrice, price);
+        assertEq(request.offerAmount, withdrawAmount);
+        assert(!request.inSolve);
+
+        assertEq(WBTC.balanceOf(address(adapter)), 0);
+        assertEq(EBTC.balanceOf(address(adapter)), withdrawAmount);
+
+        _assertAdapterAssets(0, except);
     }
 
     function testRequestWithdrawBtcNoAccess() public {

@@ -90,6 +90,30 @@ contract UniswapAdapterTest is Test {
         assertEq(USDC.balanceOf(address(adapter)), 0);
     }
 
+    function testSwapExactInputV3AllExcept() public {
+        deal(address(USDC), address(levvaVault), 105_000 * 10 ** 6);
+        uint256 except = 100_000 * 10 ** 6;
+
+        bytes memory path = abi.encodePacked(USDC, uint24(3_000), WBTC);
+
+        ISwapRouter.ExactInputParams memory params = ISwapRouter.ExactInputParams({
+            path: path,
+            recipient: address(levvaVault),
+            deadline: block.timestamp,
+            amountIn: except,
+            amountOutMinimum: 0
+        });
+
+        vm.prank(address(levvaVault));
+        adapter.swapExactInputV3AllExcept(params);
+
+        assertEq(USDC.balanceOf(address(levvaVault)), except);
+        assertGt(WBTC.balanceOf(address(levvaVault)), 0);
+
+        assertEq(WBTC.balanceOf(address(adapter)), 0);
+        assertEq(USDC.balanceOf(address(adapter)), 0);
+    }
+
     function testSwapExactInputV3NotTrackedAsset() public {
         uint128 amountIn = 100_000 * 10 ** 6;
         bytes memory path = abi.encodePacked(USDC, uint24(3_000), USDT);
@@ -214,6 +238,37 @@ contract UniswapAdapterTest is Test {
 
         uint256 usdcBalanceAfter = USDC.balanceOf(address(levvaVault));
         assertEq(usdcBalanceBefore - usdcBalanceAfter, amountIn);
+        assertGt(WBTC.balanceOf(address(levvaVault)), 0);
+
+        assertEq(WBTC.balanceOf(address(adapter)), 0);
+        assertEq(USDC.balanceOf(address(adapter)), 0);
+    }
+
+    function testSwapExactInputV4AllExcept() public {
+        deal(address(USDC), address(levvaVault), 105_000 * 10 ** 6);
+        uint128 except = 100_000 * 10 ** 6;
+
+        PathKey[] memory path = new PathKey[](1);
+        path[0] = PathKey({
+            intermediateCurrency: Currency.wrap(address(WBTC)),
+            fee: 3000,
+            tickSpacing: 60,
+            hooks: IHooks(address(0)),
+            hookData: ""
+        });
+
+        IV4Router.ExactInputParams memory params = IV4Router.ExactInputParams({
+            path: path,
+            currencyIn: Currency.wrap(address(USDC)),
+            amountIn: except,
+            amountOutMinimum: 0
+        });
+
+        vm.prank(address(levvaVault));
+        adapter.swapExactInputV4AllExcept(params);
+
+        uint256 usdcBalanceAfter = USDC.balanceOf(address(levvaVault));
+        assertEq(usdcBalanceAfter, except);
         assertGt(WBTC.balanceOf(address(levvaVault)), 0);
 
         assertEq(WBTC.balanceOf(address(adapter)), 0);

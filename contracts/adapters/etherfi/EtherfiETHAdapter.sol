@@ -56,35 +56,23 @@ contract EtherfiETHAdapter is AdapterBase, ERC721Holder, IExternalPositionAdapte
     receive() external payable {}
 
     function deposit(uint256 wethAmount) external returns (uint256 weETHAmount) {
-        IweETH _weETH = weETH;
-        _ensureIsValidAsset(address(_weETH));
+        weETHAmount = _deposit(weth, wethAmount);
+    }
 
-        ILiquidityPool _liquidityPool = liquidityPool;
+    function depositAllExcept(uint256 except) external returns (uint256 weETHAmount) {
         IWETH9 _weth = weth;
-
-        IAdapterCallback(msg.sender).adapterCallback(address(this), address(_weth), wethAmount);
-        _weth.withdraw(wethAmount);
-
-        _liquidityPool.deposit{value: wethAmount}();
-        eETH.forceApprove(address(_weETH), wethAmount);
-        weETHAmount = _weETH.wrap(wethAmount);
-        _weETH.safeTransfer(msg.sender, weETHAmount);
+        uint256 depositAmount = _weth.balanceOf(msg.sender) - except;
+        weETHAmount = _deposit(_weth, depositAmount);
     }
 
     function requestWithdraw(uint256 weethAmount) external returns (uint256 requestId) {
-        ILiquidityPool _liquidityPool = liquidityPool;
-        IeETH _eETH = eETH;
+        requestId = _requestWithdraw(weETH, weethAmount);
+    }
+
+    function requestWithdrawAllExcept(uint256 except) external returns (uint256 requestId) {
         IweETH _weETH = weETH;
-
-        IAdapterCallback(msg.sender).adapterCallback(address(this), address(_weETH), weethAmount);
-
-        uint256 eethAmount = _weETH.unwrap(weethAmount);
-        _eETH.forceApprove(address(_liquidityPool), eethAmount);
-
-        requestId = _liquidityPool.requestWithdraw(address(this), eethAmount);
-        _enqueueWithdrawalRequest(requestId);
-
-        emit EtherfiETHRequestWithdraw(requestId, weethAmount);
+        uint256 withdrawAmount = _weETH.balanceOf(msg.sender) - except;
+        requestId = _requestWithdraw(_weETH, withdrawAmount);
     }
 
     function claimWithdraw() external returns (uint256 withdrawn) {
@@ -176,5 +164,35 @@ contract EtherfiETHAdapter is AdapterBase, ERC721Holder, IExternalPositionAdapte
 
         amounts = new uint256[](1);
         amounts[0] = _getPendingEthAmount(vault);
+    }
+
+    function _deposit(IWETH9 _weth, uint256 wethAmount) private returns (uint256 weETHAmount) {
+        IweETH _weETH = weETH;
+        _ensureIsValidAsset(address(_weETH));
+
+        ILiquidityPool _liquidityPool = liquidityPool;
+
+        IAdapterCallback(msg.sender).adapterCallback(address(this), address(_weth), wethAmount);
+        _weth.withdraw(wethAmount);
+
+        _liquidityPool.deposit{value: wethAmount}();
+        eETH.forceApprove(address(_weETH), wethAmount);
+        weETHAmount = _weETH.wrap(wethAmount);
+        _weETH.safeTransfer(msg.sender, weETHAmount);
+    }
+
+    function _requestWithdraw(IweETH _weETH, uint256 weethAmount) private returns (uint256 requestId) {
+        ILiquidityPool _liquidityPool = liquidityPool;
+        IeETH _eETH = eETH;
+
+        IAdapterCallback(msg.sender).adapterCallback(address(this), address(_weETH), weethAmount);
+
+        uint256 eethAmount = _weETH.unwrap(weethAmount);
+        _eETH.forceApprove(address(_liquidityPool), eethAmount);
+
+        requestId = _liquidityPool.requestWithdraw(address(this), eethAmount);
+        _enqueueWithdrawalRequest(requestId);
+
+        emit EtherfiETHRequestWithdraw(requestId, weethAmount);
     }
 }

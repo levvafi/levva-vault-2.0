@@ -29,7 +29,7 @@ abstract contract AbstractUniswapV4Adapter is AdapterBase {
         permit2 = IAllowanceTransfer(_permit2);
     }
 
-    function swapExactInputV4(IV4Router.ExactInputParams calldata params) external returns (uint256 amountOut) {
+    function swapExactInputV4(IV4Router.ExactInputParams memory params) public returns (uint256 amountOut) {
         address outputToken = Currency.unwrap(params.path[params.path.length - 1].intermediateCurrency);
         _ensureIsValidAsset(outputToken);
 
@@ -41,6 +41,13 @@ abstract contract AbstractUniswapV4Adapter is AdapterBase {
 
         _universalRouter.execute(_getSwapCommandByteArray(), _getExecuteInputs(params), block.timestamp);
         return _sendTokenToVault(outputToken);
+    }
+
+    ///@dev Swap all tokenIn except params.amountIn
+    function swapExactInputV4AllExcept(IV4Router.ExactInputParams memory params) external returns (uint256 amountOut) {
+        address inputToken = Currency.unwrap(params.currencyIn);
+        params.amountIn = uint128(IERC20(inputToken).balanceOf(msg.sender) - params.amountIn);
+        return swapExactInputV4(params);
     }
 
     function swapExactOutputV4(IV4Router.ExactOutputParams calldata params) external returns (uint256 amountIn) {
@@ -75,11 +82,7 @@ abstract contract AbstractUniswapV4Adapter is AdapterBase {
         return abi.encodePacked(uint8(Commands.V4_SWAP));
     }
 
-    function _getExecuteInputs(IV4Router.ExactInputParams calldata params)
-        private
-        pure
-        returns (bytes[] memory inputs)
-    {
+    function _getExecuteInputs(IV4Router.ExactInputParams memory params) private pure returns (bytes[] memory inputs) {
         bytes memory actions =
             abi.encodePacked(uint8(Actions.SWAP_EXACT_IN), uint8(Actions.SETTLE_ALL), uint8(Actions.TAKE_ALL));
 

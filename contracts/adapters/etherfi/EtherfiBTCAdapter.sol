@@ -51,35 +51,23 @@ contract EtherfiBTCAdapter is AdapterBase, IExternalPositionAdapter {
     }
 
     function deposit(uint256 amount, uint256 minShare) external onlyVault returns (uint256 shares) {
+        shares = _deposit(wBTC, amount, minShare);
+    }
+
+    function depositAllExcept(uint256 except, uint256 minShare) external onlyVault returns (uint256 shares) {
         IERC20 _wBTC = wBTC;
-        IERC20 _eBTC = eBTC;
-
-        _ensureIsValidAsset(address(_eBTC));
-
-        IAdapterCallback(msg.sender).adapterCallback(address(this), address(_wBTC), amount);
-        _wBTC.forceApprove(address(_eBTC), amount);
-
-        shares = teller.deposit(_wBTC, amount, minShare);
-        _eBTC.safeTransfer(msg.sender, amount);
+        uint256 amount = _wBTC.balanceOf(msg.sender) - except;
+        return _deposit(_wBTC, amount, minShare);
     }
 
     function requestWithdraw(uint96 amount, uint88 atomicPrice, uint64 deadline) external onlyVault {
-        IERC20 _wBTC = wBTC;
+        _requestWithdraw(eBTC, amount, atomicPrice, deadline);
+    }
+
+    function requestWithdrawAllExcept(uint96 except, uint88 atomicPrice, uint64 deadline) external onlyVault {
         IERC20 _eBTC = eBTC;
-        IAtomicQueue _atomicQueue = atomicQueue;
-
-        IAtomicQueue.AtomicRequest memory currentRequest =
-            _atomicQueue.getUserAtomicRequest(address(this), _eBTC, _wBTC);
-        currentRequest.offerAmount = amount;
-        currentRequest.deadline = deadline;
-        currentRequest.atomicPrice = atomicPrice;
-
-        _atomicQueue.updateAtomicRequest(_eBTC, _wBTC, currentRequest);
-
-        IAdapterCallback(msg.sender).adapterCallback(address(this), address(_eBTC), amount);
-        _eBTC.forceApprove(address(_atomicQueue), amount);
-
-        emit EtherfiBTCRequestWithdraw(address(_eBTC), address(_wBTC), amount, atomicPrice, deadline);
+        uint96 amount = uint96(_eBTC.balanceOf(msg.sender) - except);
+        return _requestWithdraw(_eBTC, amount, atomicPrice, deadline);
     }
 
     function claimWithdraw() external onlyVault returns (uint256 wbtcClaimed) {
@@ -147,5 +135,35 @@ contract EtherfiBTCAdapter is AdapterBase, IExternalPositionAdapter {
             amounts[0] = _wBTC.balanceOf(address(this));
             amounts[1] = _eBTC.balanceOf(address(this));
         }
+    }
+
+    function _deposit(IERC20 _wBTC, uint256 amount, uint256 minShare) private returns (uint256 shares) {
+        IERC20 _eBTC = eBTC;
+
+        _ensureIsValidAsset(address(_eBTC));
+
+        IAdapterCallback(msg.sender).adapterCallback(address(this), address(_wBTC), amount);
+        _wBTC.forceApprove(address(_eBTC), amount);
+
+        shares = teller.deposit(_wBTC, amount, minShare);
+        _eBTC.safeTransfer(msg.sender, amount);
+    }
+
+    function _requestWithdraw(IERC20 _eBTC, uint96 amount, uint88 atomicPrice, uint64 deadline) private onlyVault {
+        IERC20 _wBTC = wBTC;
+        IAtomicQueue _atomicQueue = atomicQueue;
+
+        IAtomicQueue.AtomicRequest memory currentRequest =
+            _atomicQueue.getUserAtomicRequest(address(this), _eBTC, _wBTC);
+        currentRequest.offerAmount = amount;
+        currentRequest.deadline = deadline;
+        currentRequest.atomicPrice = atomicPrice;
+
+        _atomicQueue.updateAtomicRequest(_eBTC, _wBTC, currentRequest);
+
+        IAdapterCallback(msg.sender).adapterCallback(address(this), address(_eBTC), amount);
+        _eBTC.forceApprove(address(_atomicQueue), amount);
+
+        emit EtherfiBTCRequestWithdraw(address(_eBTC), address(_wBTC), amount, atomicPrice, deadline);
     }
 }

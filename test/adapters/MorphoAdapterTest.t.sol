@@ -11,7 +11,8 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {LevvaVaultFactory} from "../../contracts/LevvaVaultFactory.sol";
 import {LevvaVault} from "../../contracts/LevvaVault.sol";
 import {WithdrawalQueue} from "../../contracts/WithdrawalQueue.sol";
-import {IUniversalRewardsDistributorBase} from "../../contracts/adapters/morpho/IUniversalRewardsDistributorBase.sol";
+import {IUniversalRewardsDistributorBase} from
+    "../../contracts/adapters/morpho/interfaces/IUniversalRewardsDistributorBase.sol";
 import {MorphoAdapter} from "../../contracts/adapters/morpho/MorphoAdapter.sol";
 import {MorphoAdapterV1_1} from "../../contracts/adapters/morpho/MorphoAdapterV1_1.sol";
 import {MorphoAdapterBase} from "../../contracts/adapters/morpho/MorphoAdapterBase.sol";
@@ -109,6 +110,18 @@ contract MorphoAdapterTest is Test {
         assertEq(SteakhouseUSDC.balanceOf(address(adapter)), 0);
     }
 
+    function test_depositAllExcept() public {
+        uint256 except = 995_000 * 10 ** 6;
+
+        vm.prank(address(levvaVault));
+        uint256 expectedLpTokens = adapter.depositAllExcept(address(SteakhouseUSDC), except);
+
+        assertEq(USDC.balanceOf(address(levvaVault)), except);
+        assertEq(SteakhouseUSDC.balanceOf(address(levvaVault)), expectedLpTokens);
+        assertEq(USDC.balanceOf(address(adapter)), 0);
+        assertEq(SteakhouseUSDC.balanceOf(address(adapter)), 0);
+    }
+
     function test_depositV1_1() public {
         uint256 balanceBefore = cbBTC.balanceOf(address(levvaVault));
         uint256 depositAmount = 1 * 10 ** 8;
@@ -133,7 +146,7 @@ contract MorphoAdapterTest is Test {
     function test_depositShouldFailWhenInvalidMorphoVault() public {
         vm.prank(address(levvaVault));
         vm.expectRevert(MorphoAdapterBase.MorphoAdapterBase__InvalidMorphoVault.selector);
-        adapter.deposit(address(0), 1000 * 10 ** 18);
+        adapter.deposit(address(levvaVault), 1000 * 10 ** 18);
     }
 
     function test_redeem() public {
@@ -147,6 +160,22 @@ contract MorphoAdapterTest is Test {
         assertTrue(assets > 0);
         assertEq(USDC.balanceOf(address(levvaVault)), balanceBefore + assets);
         assertEq(SteakhouseUSDC.balanceOf(address(levvaVault)), 0);
+        assertEq(USDC.balanceOf(address(adapter)), 0);
+        assertEq(SteakhouseUSDC.balanceOf(address(adapter)), 0);
+    }
+
+    function test_redeemAllExcept() public {
+        deal(address(SteakhouseUSDC), address(levvaVault), 1000 * 10 ** 18);
+        uint256 balanceBefore = USDC.balanceOf(address(levvaVault));
+        uint256 except = 500 * 10 ** 18;
+        //uint256 expectedToRedeem = SteakhouseUSDC.balanceOf(address(levvaVault)) - except;
+
+        vm.prank(address(levvaVault));
+        uint256 assets = adapter.redeemAllExcept(address(SteakhouseUSDC), except);
+
+        assertTrue(assets > 0);
+        assertEq(USDC.balanceOf(address(levvaVault)), balanceBefore + assets);
+        assertEq(SteakhouseUSDC.balanceOf(address(levvaVault)), except);
         assertEq(USDC.balanceOf(address(adapter)), 0);
         assertEq(SteakhouseUSDC.balanceOf(address(adapter)), 0);
     }

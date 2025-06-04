@@ -7,10 +7,10 @@ import {IExternalPositionAdapter} from "../../interfaces/IExternalPositionAdapte
 import {AdapterBase} from "../AdapterBase.sol";
 import {IAdapterCallback} from "../../interfaces/IAdapterCallback.sol";
 import {Asserts} from "../../libraries/Asserts.sol";
-import {IWETH9} from "./IWETH9.sol";
-import {IStETH} from "./IStETH.sol";
-import {IWstETH} from "./IWstETH.sol";
-import {ILidoWithdrawalQueue} from "./ILidoWithdrawalQueue.sol";
+import {IWETH9} from "./interfaces/IWETH9.sol";
+import {IStETH} from "./interfaces/IStETH.sol";
+import {IWstETH} from "./interfaces/IWstETH.sol";
+import {ILidoWithdrawalQueue} from "./interfaces/ILidoWithdrawalQueue.sol";
 
 contract LidoAdapter is AdapterBase, IExternalPositionAdapter {
     using SafeERC20 for IERC20;
@@ -55,19 +55,16 @@ contract LidoAdapter is AdapterBase, IExternalPositionAdapter {
     /// @param amount Amount of WETH to stake
     /// @return wstETHAmount Amount of wstETH received after staking
     function stake(uint256 amount) external returns (uint256 wstETHAmount) {
-        IWstETH wstETH = i_wstETH;
-        _ensureIsValidAsset(address(wstETH));
+        wstETHAmount = _stake(i_WETH, amount);
+    }
 
+    /// @notice Stake all WETH except the given amount to receive wstETH
+    /// @param except Amount to be left
+    /// @return wstETHAmount Amount of wstETH received after staking
+    function stakeAllExcept(uint256 except) external returns (uint256 wstETHAmount) {
         IWETH9 weth = i_WETH;
-        IAdapterCallback(msg.sender).adapterCallback(address(this), address(weth), amount);
-        weth.withdraw(amount);
-        // stake ETH and wrap it into wstETH
-        (bool success,) = address(wstETH).call{value: amount}("");
-        if (!success) {
-            revert LidoAdapter__StakeFailed();
-        }
-        wstETHAmount = IERC20(wstETH).balanceOf(address(this));
-        IERC20(wstETH).safeTransfer(msg.sender, wstETHAmount);
+        uint256 amount = weth.balanceOf(msg.sender) - except;
+        wstETHAmount = _stake(weth, amount);
     }
 
     /// @notice Request withdrawal of ETH from Lido
@@ -75,30 +72,15 @@ contract LidoAdapter is AdapterBase, IExternalPositionAdapter {
     /// @dev The amount must be greater than or equal to the minimum withdrawal amount defined by Lido 100 Wei
     /// @dev The amount must be less than or equal to the maximum withdrawal amount defined by Lido 1000 ether
     function requestWithdrawal(uint256 wstETHAmount) external {
+        _requestWithdrawal(i_wstETH, wstETHAmount);
+    }
+
+    /// @notice Request withdrawal all wstETH except given amount
+    /// @param except Amount of wstETH to be left
+    function requestWithdrawalAllExcept(uint256 except) external {
         IWstETH wstETH = i_wstETH;
-        IAdapterCallback(msg.sender).adapterCallback(address(this), address(wstETH), wstETHAmount);
-
-        ILidoWithdrawalQueue withdrawalQueue = i_lidoWithdrawalQueue;
-        IERC20(wstETH).forceApprove(address(withdrawalQueue), wstETHAmount);
-
-        uint256 maxLidoWithdrawal = wstETH.getWstETHByStETH(withdrawalQueue.MAX_STETH_WITHDRAWAL_AMOUNT());
-        uint256 additionalWithdrawalsNumber = wstETHAmount / maxLidoWithdrawal;
-        uint256 length = additionalWithdrawalsNumber + 1;
-        uint256[] memory amounts = new uint256[](additionalWithdrawalsNumber + 1);
-        unchecked {
-            for (uint256 i; i < additionalWithdrawalsNumber; ++i) {
-                amounts[i] = maxLidoWithdrawal;
-            }
-        }
-        amounts[additionalWithdrawalsNumber] = wstETHAmount % maxLidoWithdrawal;
-
-        uint256[] memory requestIds = withdrawalQueue.requestWithdrawalsWstETH(amounts, address(0));
-        unchecked {
-            for (uint256 i = 0; i < length; ++i) {
-                emit WithdrawalRequested(requestIds[i], amounts[i]);
-                _enqueueWithdrawalRequest(requestIds[i]);
-            }
-        }
+        uint256 amount = wstETH.balanceOf(msg.sender) - except;
+        _requestWithdrawal(wstETH, amount);
     }
 
     /// @notice Claim withdrawal
@@ -218,5 +200,46 @@ contract LidoAdapter is AdapterBase, IExternalPositionAdapter {
 
         requestId = queue.requests[queueStart];
         delete queue.requests[queueStart];
+    }
+
+    function _stake(IWETH9 weth, uint256 amount) private returns (uint256 wstETHAmount) {
+        IWstETH wstETH = i_wstETH;
+        _ensureIsValidAsset(address(wstETH));
+
+        IAdapterCallback(msg.sender).adapterCallback(address(this), address(weth), amount);
+        weth.withdraw(amount);
+        // stake ETH and wrap it into wstETH
+        (bool success,) = address(wstETH).call{value: amount}("");
+        if (!success) {
+            revert LidoAdapter__StakeFailed();
+        }
+        wstETHAmount = IERC20(wstETH).balanceOf(address(this));
+        IERC20(wstETH).safeTransfer(msg.sender, wstETHAmount);
+    }
+
+    function _requestWithdrawal(IWstETH wstETH, uint256 wstETHAmount) private {
+        IAdapterCallback(msg.sender).adapterCallback(address(this), address(wstETH), wstETHAmount);
+
+        ILidoWithdrawalQueue withdrawalQueue = i_lidoWithdrawalQueue;
+        IERC20(wstETH).forceApprove(address(withdrawalQueue), wstETHAmount);
+
+        uint256 maxLidoWithdrawal = wstETH.getWstETHByStETH(withdrawalQueue.MAX_STETH_WITHDRAWAL_AMOUNT());
+        uint256 additionalWithdrawalsNumber = wstETHAmount / maxLidoWithdrawal;
+        uint256 length = additionalWithdrawalsNumber + 1;
+        uint256[] memory amounts = new uint256[](additionalWithdrawalsNumber + 1);
+        unchecked {
+            for (uint256 i; i < additionalWithdrawalsNumber; ++i) {
+                amounts[i] = maxLidoWithdrawal;
+            }
+        }
+        amounts[additionalWithdrawalsNumber] = wstETHAmount % maxLidoWithdrawal;
+
+        uint256[] memory requestIds = withdrawalQueue.requestWithdrawalsWstETH(amounts, address(0));
+        unchecked {
+            for (uint256 i = 0; i < length; ++i) {
+                emit WithdrawalRequested(requestIds[i], amounts[i]);
+                _enqueueWithdrawalRequest(requestIds[i]);
+            }
+        }
     }
 }

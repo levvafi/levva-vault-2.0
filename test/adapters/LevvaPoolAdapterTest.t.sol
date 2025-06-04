@@ -10,7 +10,7 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {LevvaPoolAdapter} from "../../contracts/adapters/levvaPool/LevvaPoolAdapter.sol";
 import {AdapterBase} from "../../contracts/adapters/AdapterBase.sol";
-import {ILevvaPool} from "../../contracts/adapters/levvaPool/ILevvaPool.sol";
+import {ILevvaPool} from "../../contracts/adapters/levvaPool/interfaces/ILevvaPool.sol";
 import {FP96} from "../../contracts/adapters/levvaPool/FP96.sol";
 import {EulerRouterMock} from "../mocks/EulerRouterMock.t.sol";
 import {LevvaVaultFactory} from "../../contracts/LevvaVaultFactory.sol";
@@ -104,8 +104,43 @@ contract LevvaPoolAdapterTest is Test {
         address[] memory pools = adapter.getPools();
         assertEq(pools.length, 0);
 
+        vm.expectEmit(true, true, false, false);
+        emit LevvaPoolAdapter.PoolAdded(PT_weETH_WETH_POOL);
+
         vm.prank(address(vault));
         adapter.deposit(address(WETH), depositAmount, 0, address(pool), 0, 0);
+        skip(30 days);
+
+        (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets();
+        assertEq(assets.length, 1);
+        assertEq(amounts.length, 1);
+        assertEq(assets[0], address(WETH));
+        assertApproxEqAbs(amounts[0], depositAmount, 10);
+
+        (address[] memory debtAssets, uint256[] memory debtAmounts) = adapter.getDebtAssets();
+        assertEq(debtAssets.length, 1);
+        assertEq(debtAssets[0], address(0));
+
+        assertEq(debtAmounts.length, 1);
+        assertEq(debtAmounts[0], 0);
+
+        pools = adapter.getPools();
+        assertEq(pools.length, 1);
+        assertEq(pools[0], address(pool));
+
+        _showAssets();
+    }
+
+    function test_depositAllExcept() public {
+        ILevvaPool pool = ILevvaPool(PT_weETH_WETH_POOL);
+        uint256 exceptAmount = 995e18;
+        uint256 depositAmount = IERC20(WETH).balanceOf(address(vault)) - exceptAmount;
+
+        address[] memory pools = adapter.getPools();
+        assertEq(pools.length, 0);
+
+        vm.prank(address(vault));
+        adapter.depositAllExcept(address(WETH), exceptAmount, 0, address(pool), 0, 0);
         skip(30 days);
 
         (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets();
@@ -473,6 +508,8 @@ contract LevvaPoolAdapterTest is Test {
         assertEq(uint8(position._type), uint8(ILevvaPool.PositionType.Lend));
 
         //withdraw
+        vm.expectEmit(true, true, false, false);
+        emit LevvaPoolAdapter.PoolRemoved(PT_weETH_WETH_POOL);
         uint256 withdrawAmount = type(uint256).max;
         adapter.withdraw(address(PT_weETH), withdrawAmount, address(pool));
 
@@ -905,6 +942,17 @@ contract LevvaPoolAdapterTest is Test {
         vm.prank(address(vault));
         vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, address(weETH)));
         adapter.emergencyWithdraw(address(pool));
+    }
+
+    function test_emergencyWithdrawShouldFailWhenWrongLevvaPoolMode() public {
+        uint256 depositAmount = 1e18; // deposit 1 WETH and flip to PT-weETH
+        deal(address(WETH), address(vault), depositAmount * 2);
+
+        vm.startPrank(address(vault));
+        adapter.deposit(address(WETH), depositAmount, 0, PT_weETH_WETH_POOL, 0, 0);
+
+        vm.expectRevert(LevvaPoolAdapter.LevvaPoolAdapter__WrongLevvaPoolMode.selector);
+        adapter.emergencyWithdraw(PT_weETH_WETH_POOL);
     }
 
     function _showAssets() private view {

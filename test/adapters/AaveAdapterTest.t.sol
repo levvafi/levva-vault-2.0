@@ -79,6 +79,18 @@ contract AaveAdapterTest is Test {
         assertEq(USDC.balanceOf(address(adapter)), 0);
     }
 
+    function testSupplyAllExcept() public {
+        uint256 usdcBalanceBefore = USDC.balanceOf(address(levvaVault));
+        uint256 exceptAmount = 1000 * 10 ** 6;
+        vm.prank(address(levvaVault));
+        adapter.supplyAllExcept(address(USDC), exceptAmount);
+
+        assertEq(USDC.balanceOf(address(levvaVault)), exceptAmount);
+        assertApproxEqAbs(aUsdc.balanceOf(address(levvaVault)), usdcBalanceBefore - exceptAmount, 1);
+        assertEq(aUsdc.balanceOf(address(adapter)), 0);
+        assertEq(USDC.balanceOf(address(adapter)), 0);
+    }
+
     function testSupplyNotTrackedAsset() public {
         uint256 supplyAmount = 1000 * 10 ** 6;
 
@@ -133,5 +145,21 @@ contract AaveAdapterTest is Test {
         vm.prank(address(levvaVault));
         vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, USDT));
         adapter.withdraw(address(USDT), type(uint256).max);
+    }
+
+    function testWithdrawAllExcept() public {
+        uint256 usdcBalanceBefore = USDC.balanceOf(address(levvaVault));
+        uint256 supplyAmount = 1000 * 10 ** 6;
+        vm.prank(address(levvaVault));
+        adapter.supply(address(USDC), supplyAmount);
+
+        vm.prank(address(levvaVault));
+        uint256 exceptAmount = 10 * 10 ** 6;
+        adapter.withdrawAllExcept(address(USDC), exceptAmount);
+
+        assertApproxEqAbs(usdcBalanceBefore, USDC.balanceOf(address(levvaVault)) + exceptAmount, 1);
+        assertApproxEqAbs(aUsdc.balanceOf(address(levvaVault)), exceptAmount, 1);
+        assertEq(aUsdc.balanceOf(address(adapter)), 0);
+        assertEq(USDC.balanceOf(address(adapter)), 0);
     }
 }
