@@ -3,6 +3,7 @@ pragma solidity ^0.8.28;
 
 import {Test} from "lib/forge-std/src/Test.sol";
 import {Vm} from "lib/forge-std/src/Vm.sol";
+import {console} from "lib/forge-std/src/console.sol";
 import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -87,6 +88,19 @@ contract EthenaAdapterTest is Test {
         _assertAdapterAssets(0);
     }
 
+    function testDepositAllExcept() public {
+        uint256 except = 1000 * 10 ** 6;
+        vm.prank(address(levvaVault));
+        uint256 expectedLpTokens = adapter.depositAllExcept(except);
+
+        assertEq(USDE.balanceOf(address(levvaVault)), except);
+        assertEq(S_USDE.balanceOf(address(levvaVault)), expectedLpTokens);
+        assertEq(USDE.balanceOf(address(adapter)), 0);
+        assertEq(S_USDE.balanceOf(address(adapter)), 0);
+
+        _assertAdapterAssets(0);
+    }
+
     function testDepositNotTrackedAsset() public {
         levvaVault.removeTrackedAsset(address(S_USDE));
 
@@ -110,6 +124,24 @@ contract EthenaAdapterTest is Test {
         assertEq(S_USDE.balanceOf(address(adapter)), 0);
 
         _assertAdapterAssets(S_USDE.convertToAssets(expectedLpTokens));
+    }
+
+    function testCooldownAllExcept() public {
+        uint256 usdeBalanceBefore = USDE.balanceOf(address(levvaVault));
+        uint256 depositAmount = 1000 * 10 ** 6;
+        vm.prank(address(levvaVault));
+        uint256 expectedLpTokens = adapter.deposit(depositAmount);
+
+        uint256 except = 100 * 10 ** 6;
+        vm.prank(address(levvaVault));
+        adapter.cooldownSharesAllExcept(except);
+
+        assertEq(USDE.balanceOf(address(levvaVault)), usdeBalanceBefore - depositAmount);
+        assertEq(S_USDE.balanceOf(address(levvaVault)), except);
+        assertEq(USDE.balanceOf(address(adapter)), 0);
+        assertEq(S_USDE.balanceOf(address(adapter)), 0);
+
+        _assertAdapterAssets(S_USDE.convertToAssets(expectedLpTokens - except));
     }
 
     function testCooldownOnlyVault() public {
@@ -177,6 +209,27 @@ contract EthenaAdapterTest is Test {
 
         assertApproxEqAbs(USDE.balanceOf(address(levvaVault)), usdeBalanceBefore, 1);
         assertEq(S_USDE.balanceOf(address(levvaVault)), 0);
+        assertEq(USDE.balanceOf(address(adapter)), 0);
+        assertEq(S_USDE.balanceOf(address(adapter)), 0);
+
+        _assertAdapterAssets(0);
+    }
+
+    function testRedeemAllExcept() public {
+        uint256 usdeBalanceBefore = USDE.balanceOf(address(levvaVault));
+        uint256 depositAmount = 1000 * 10 ** 6;
+        vm.prank(address(levvaVault));
+        adapter.deposit(depositAmount);
+
+        vm.prank(IStakedUSDeAdmin(address(S_USDE)).owner());
+        IStakedUSDeAdmin(address(S_USDE)).setCooldownDuration(0);
+
+        uint256 except = 100 * 10 ** 6;
+        vm.prank(address(levvaVault));
+        adapter.redeemAllExcept(except);
+
+        assertApproxEqAbs(USDE.balanceOf(address(levvaVault)), usdeBalanceBefore - S_USDE.convertToAssets(except), 1);
+        assertEq(S_USDE.balanceOf(address(levvaVault)), except);
         assertEq(USDE.balanceOf(address(adapter)), 0);
         assertEq(S_USDE.balanceOf(address(adapter)), 0);
 

@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.28;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "./FP96.sol";
+import "../FP96.sol";
 
 /// @notice Interface for LevvaPool ex Marginly v1.5 pools from https://github.com/eq-lab/marginly
 interface ILevvaPool {

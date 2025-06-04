@@ -5,7 +5,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {AdapterBase} from "../AdapterBase.sol";
 import {Asserts} from "../../libraries/Asserts.sol";
-import {ICurveRouterNg} from "./ICurveRouterNg.sol";
+import {ICurveRouterNg} from "./interfaces/ICurveRouterNg.sol";
 import {IAdapterCallback} from "../../interfaces/IAdapterCallback.sol";
 
 contract CurveRouterAdapter is AdapterBase {
@@ -62,7 +62,7 @@ contract CurveRouterAdapter is AdapterBase {
         uint256 amount,
         uint256 minDy,
         address[5] calldata pools
-    ) external returns (uint256 amountOut) {
+    ) public returns (uint256 amountOut) {
         address tokenIn = route[0];
         address tokenOut = route[10]; // assume last token is output token
         if (tokenOut == address(0)) {
@@ -86,5 +86,16 @@ contract CurveRouterAdapter is AdapterBase {
         if (amountOut < minDy) {
             revert CurveRouterAdapter__SlippageProtection();
         }
+    }
+
+    function exchangeAllExcept(
+        address[11] calldata route,
+        uint256[5][5] calldata swapParams,
+        uint256 except,
+        uint256 minDy,
+        address[5] calldata pools
+    ) external returns (uint256 amountOut) {
+        uint256 amountIn = IERC20(route[0]).balanceOf(msg.sender) - except;
+        return exchange(route, swapParams, amountIn, minDy, pools);
     }
 }

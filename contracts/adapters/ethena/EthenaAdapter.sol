@@ -36,9 +36,14 @@ contract EthenaAdapter is ERC4626AdapterBase, IExternalPositionAdapter {
     function cooldownShares(uint256 shares) external onlyVault returns (uint256 assets) {
         IStakedUSDe _stakedUSDe = stakedUSDe();
 
-        IAdapterCallback(msg.sender).adapterCallback(address(this), address(_stakedUSDe), shares);
-        assets = _stakedUSDe.cooldownShares(shares);
-        emit EthenaCooldown(shares, assets, block.timestamp);
+        assets = _cooldownShares(_stakedUSDe, shares);
+    }
+
+    function cooldownSharesAllExcept(uint256 except) external onlyVault returns (uint256 assets) {
+        IStakedUSDe _stakedUSDe = stakedUSDe();
+        uint256 shares = _stakedUSDe.balanceOf(msg.sender) - except;
+
+        assets = _cooldownShares(_stakedUSDe, shares);
     }
 
     function unstake() external onlyVault {
@@ -77,6 +82,12 @@ contract EthenaAdapter is ERC4626AdapterBase, IExternalPositionAdapter {
     /// @inheritdoc IExternalPositionAdapter
     /// @dev there is no debt assets
     function getDebtAssets() external view returns (address[] memory assets, uint256[] memory amounts) {}
+
+    function _cooldownShares(IStakedUSDe _stakedUsde, uint256 shares) private returns (uint256 assets) {
+        IAdapterCallback(msg.sender).adapterCallback(address(this), address(_stakedUsde), shares);
+        assets = _stakedUsde.cooldownShares(shares);
+        emit EthenaCooldown(shares, assets, block.timestamp);
+    }
 
     function _getManagedAssets(address vault)
         private

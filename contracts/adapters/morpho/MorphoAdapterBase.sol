@@ -5,9 +5,9 @@ import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import {IUniversalRewardsDistributorBase} from "./IUniversalRewardsDistributorBase.sol";
+import {IUniversalRewardsDistributorBase} from "./interfaces/IUniversalRewardsDistributorBase.sol";
 import {IAdapterCallback} from "../../interfaces/IAdapterCallback.sol";
-import {IMetaMorphoFactory} from "./IMetaMorphoFactory.sol";
+import {IMetaMorphoFactory} from "./interfaces/IMetaMorphoFactory.sol";
 import {AdapterBase} from "../AdapterBase.sol";
 import {Asserts} from "../../libraries/Asserts.sol";
 
@@ -28,26 +28,33 @@ abstract contract MorphoAdapterBase is AdapterBase {
     /// @param morphoVault The address of the Morpho vault to deposit into
     /// @param assets The amount of assets to deposit
     function deposit(address morphoVault, uint256 assets) external returns (uint256 shares) {
-        _ensureIsValidMorphoVault(morphoVault);
-        _ensureIsValidAsset(morphoVault);
+        shares = _deposit(morphoVault, IERC4626(morphoVault).asset(), assets);
+    }
 
+    function depositAllExcept(address morphoVault, uint256 except) external returns (uint256 shares) {
         address asset = IERC4626(morphoVault).asset();
-        IAdapterCallback(msg.sender).adapterCallback(address(this), asset, assets);
-        IERC20(asset).forceApprove(morphoVault, assets);
-
-        shares = IERC4626(morphoVault).deposit(assets, msg.sender);
+        uint256 assets = IERC20(asset).balanceOf(msg.sender) - except;
+        shares = _deposit(morphoVault, asset, assets);
     }
 
     /// @notice Withdraws assets from a Morpho vault, burns shares in return
     /// @param morphoVault The address of the Morpho vault to withdraw from
     /// @param shares The amount of shares to burn
-    function redeem(address morphoVault, uint256 shares) external returns (uint256 assets) {
+    function redeem(address morphoVault, uint256 shares) public returns (uint256 assets) {
         _ensureIsValidMorphoVault(morphoVault);
         address asset = IERC4626(morphoVault).asset();
         _ensureIsValidAsset(asset);
 
         IAdapterCallback(msg.sender).adapterCallback(address(this), morphoVault, shares);
         assets = IERC4626(morphoVault).redeem(shares, msg.sender, address(this));
+    }
+
+    /// @notice Withdraws assets from a Morpho vault, burns all shares except given amount
+    /// @param morphoVault The address of the Morpho vault to withdraw from
+    /// @param except The amount of shares to be left after redeem
+    function redeemAllExcept(address morphoVault, uint256 except) external returns (uint256 assets) {
+        uint256 shares = IERC4626(morphoVault).balanceOf(msg.sender) - except;
+        assets = redeem(morphoVault, shares);
     }
 
     /// @notice Claims rewards from a UniversalRewardsDistributor contract. Call data must be received from morpho api
@@ -70,5 +77,15 @@ abstract contract MorphoAdapterBase is AdapterBase {
         if (!i_metaMorphoFactory.isMetaMorpho(morphoVault)) {
             revert MorphoAdapterBase__InvalidMorphoVault();
         }
+    }
+
+    function _deposit(address morphoVault, address asset, uint256 assets) private returns (uint256 shares) {
+        _ensureIsValidMorphoVault(morphoVault);
+        _ensureIsValidAsset(morphoVault);
+
+        IAdapterCallback(msg.sender).adapterCallback(address(this), asset, assets);
+        IERC20(asset).forceApprove(morphoVault, assets);
+
+        shares = IERC4626(morphoVault).deposit(assets, msg.sender);
     }
 }

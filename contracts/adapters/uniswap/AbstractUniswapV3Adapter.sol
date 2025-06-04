@@ -22,7 +22,7 @@ abstract contract AbstractUniswapV3Adapter is AdapterBase {
         uniswapV3Router = ISwapRouter(_router);
     }
 
-    function swapExactInputV3(ISwapRouter.ExactInputParams calldata params) external returns (uint256 amountOut) {
+    function swapExactInputV3(ISwapRouter.ExactInputParams memory params) public returns (uint256 amountOut) {
         if (params.recipient != msg.sender) revert WrongRecipient(msg.sender, params.recipient);
 
         (address inputToken, address outputToken) = decodeTokens(params.path);
@@ -32,6 +32,16 @@ abstract contract AbstractUniswapV3Adapter is AdapterBase {
         ISwapRouter _uniswapV3Router = uniswapV3Router;
         IERC20(inputToken).forceApprove(address(_uniswapV3Router), params.amountIn);
         amountOut = _uniswapV3Router.exactInput(params);
+    }
+
+    /// @dev Swap all tokenIn, except params.amountIn
+    function swapExactInputV3AllExcept(ISwapRouter.ExactInputParams memory params)
+        external
+        returns (uint256 amountOut)
+    {
+        (address inputToken,) = decodeTokens(params.path);
+        params.amountIn = IERC20(inputToken).balanceOf(msg.sender) - params.amountIn;
+        amountOut = swapExactInputV3(params);
     }
 
     function swapExactOutputV3(ISwapRouter.ExactOutputParams calldata params) external returns (uint256 amountIn) {

@@ -182,6 +182,25 @@ contract PendleAdapterTest is Test {
         assertEq(USDC.balanceOf(address(vault)), tokenBalanceBefore - tokenIn);
     }
 
+    function testSwapTokenForPtAllExcept() public {
+        uint256 ptBalanceBefore = PT_TOKEN_1.balanceOf(address(vault));
+        uint256 except = 1000 * 10 * 18;
+        uint256 minPtOut = 1000e18;
+
+        hoax(address(vault));
+        pendleAdapter.swapExactTokenForPtAllExcept(
+            PT_MARKET_1, _createDefaultApproxParams(), _createTokenInputSimple(address(USDC), except), minPtOut
+        );
+
+        uint256 actualPtOut = PT_TOKEN_1.balanceOf(address(vault)) - ptBalanceBefore;
+
+        assertEq(PT_TOKEN_1.balanceOf(address(pendleAdapter)), 0);
+        assertEq(USDC.balanceOf(address(pendleAdapter)), 0);
+
+        assertGe(actualPtOut, minPtOut);
+        assertEq(USDC.balanceOf(address(vault)), except);
+    }
+
     function testSwapTokenForPtShouldFailWithSlippage() public {
         pendleRouter.addOffset(1);
 
@@ -213,6 +232,25 @@ contract PendleAdapterTest is Test {
         assertEq(PT_TOKEN_1.balanceOf(address(vault)), ptBalanceBefore - ptIn);
     }
 
+    function testSwapPtForTokenAllExcept() public {
+        uint256 tokenBalanceBefore = USDC.balanceOf(address(vault));
+        uint256 except = 1000e18;
+        uint256 minTokenOut = 1000e6;
+
+        hoax(address(vault));
+        pendleAdapter.swapExactPtForTokenAllExcept(
+            PT_MARKET_1, except, _createTokenOutputSimple(address(USDC), minTokenOut)
+        );
+
+        uint256 actualTokenOut = USDC.balanceOf(address(vault)) - tokenBalanceBefore;
+
+        assertEq(PT_TOKEN_1.balanceOf(address(pendleAdapter)), 0);
+        assertEq(USDC.balanceOf(address(pendleAdapter)), 0);
+
+        assertGe(actualTokenOut, minTokenOut);
+        assertEq(PT_TOKEN_1.balanceOf(address(vault)), except);
+    }
+
     function testSwapPtForTokenShouldFailWithSlippage() public {
         pendleRouter.addOffset(1);
 
@@ -242,6 +280,25 @@ contract PendleAdapterTest is Test {
 
         assertGe(actualLpOut, minLpOut);
         assertEq(USDC.balanceOf(address(vault)), tokenBalanceBefore - tokenIn);
+    }
+
+    function testAddLiquiditySingleTokenAllExcept() public {
+        uint256 except = 1000e6;
+        uint256 minLpOut = 1000e18;
+        uint256 lpBalanceBefore = IERC20(PT_MARKET_1).balanceOf(address(vault));
+
+        hoax(address(vault));
+        pendleAdapter.addLiquiditySingleTokenAllExcept(
+            PT_MARKET_1, _createDefaultApproxParams(), _createTokenInputSimple(address(USDC), except), minLpOut
+        );
+
+        uint256 actualLpOut = IERC20(PT_MARKET_1).balanceOf(address(vault)) - lpBalanceBefore;
+
+        assertEq(IERC20(PT_MARKET_1).balanceOf(address(pendleAdapter)), 0);
+        assertEq(USDC.balanceOf(address(pendleAdapter)), 0);
+
+        assertGe(actualLpOut, minLpOut);
+        assertEq(USDC.balanceOf(address(vault)), except);
     }
 
     function testAddLiquiditySingleTokenShouldFailWithSlippage() public {
@@ -277,6 +334,25 @@ contract PendleAdapterTest is Test {
         assertEq(IERC20(PT_MARKET_1).balanceOf(address(vault)), lpBalanceBefore - lpIn);
     }
 
+    function testRemoveLiquiditySingleTokenAllExcept() public {
+        uint256 except = 1000e18;
+        uint256 minTokenOut = 1000e6;
+        uint256 tokenBalanceBefore = USDC.balanceOf(address(vault));
+
+        hoax(address(vault));
+        pendleAdapter.removeLiquiditySingleTokenAllExcept(
+            PT_MARKET_1, except, _createTokenOutputSimple(address(USDC), minTokenOut)
+        );
+
+        uint256 actualTokenOut = USDC.balanceOf(address(vault)) - tokenBalanceBefore;
+
+        assertEq(IERC20(PT_MARKET_1).balanceOf(address(pendleAdapter)), 0);
+        assertEq(USDC.balanceOf(address(pendleAdapter)), 0);
+
+        assertGe(actualTokenOut, minTokenOut);
+        assertEq(IERC20(PT_MARKET_1).balanceOf(address(vault)), except);
+    }
+
     function testRemoveLiquiditySingleTokenShouldFailWithSlippage() public {
         pendleRouter.addOffset(1);
 
@@ -308,6 +384,25 @@ contract PendleAdapterTest is Test {
 
         assertGe(actualTokenOut, minTokenOut);
         assertEq(PT_TOKEN_1.balanceOf(address(vault)), ptBalanceBefore - ptIn);
+    }
+
+    function testRedeemPtAllExcept() public {
+        PendleMarketMock(PT_MARKET_1).setExpired(true);
+        uint256 tokenBalanceBefore = USDC.balanceOf(address(vault));
+        uint256 except = 1000e18;
+        uint256 minTokenOut = 1000e6;
+        pendleRouter.setRedeemPt(address(PT_TOKEN_1));
+
+        hoax(address(vault));
+        pendleAdapter.redeemPtAllExcept(PT_MARKET_1, except, _createTokenOutputSimple(address(USDC), minTokenOut));
+
+        uint256 actualTokenOut = USDC.balanceOf(address(vault)) - tokenBalanceBefore;
+
+        assertEq(PT_TOKEN_1.balanceOf(address(pendleAdapter)), 0);
+        assertEq(USDC.balanceOf(address(pendleAdapter)), 0);
+
+        assertGe(actualTokenOut, minTokenOut);
+        assertEq(PT_TOKEN_1.balanceOf(address(vault)), except);
     }
 
     function testRedeemPtShouldFailWithSlippage() public {
@@ -344,6 +439,26 @@ contract PendleAdapterTest is Test {
         uint256 newPtBalanceAfter = PT_TOKEN_2.balanceOf(address(vault));
 
         assertEq(oldPtBalanceBefore - oldPtBalanceAfter, ptIn);
+        assertGe(newPtBalanceAfter - newPtBalanceBefore, minNetPtTokenOut);
+
+        assertEq(PT_TOKEN_1.balanceOf(address(pendleAdapter)), 0);
+        assertEq(PT_TOKEN_2.balanceOf(address(pendleAdapter)), 0);
+        assertEq(USDC.balanceOf(address(pendleAdapter)), 0);
+    }
+
+    function testRollOverPtAllExcept() public {
+        uint256 newPtBalanceBefore = PT_TOKEN_2.balanceOf(address(vault));
+        uint256 except = 1000e18;
+        uint256 minNetPtTokenOut = 1000e18;
+
+        pendleRouter.addRollOverOffset(1000e6);
+
+        hoax(address(vault));
+        pendleAdapter.rollOverPtAllExcept(PT_MARKET_1, PT_MARKET_2, address(USDC), except, minNetPtTokenOut);
+
+        uint256 newPtBalanceAfter = PT_TOKEN_2.balanceOf(address(vault));
+
+        assertEq(PT_TOKEN_1.balanceOf(address(vault)), except);
         assertGe(newPtBalanceAfter - newPtBalanceBefore, minNetPtTokenOut);
 
         assertEq(PT_TOKEN_1.balanceOf(address(pendleAdapter)), 0);
@@ -389,13 +504,44 @@ contract PendleAdapterTest is Test {
 
     function testSwapTokenToToken() public {
         uint256 amountIn = 1000e6;
+        uint256 usdcBalanceBefore = USDC.balanceOf(address(vault));
+        uint256 wethBalanceBefore = WETH.balanceOf(address(vault));
+        uint256 minOut = 33e16;
 
         SwapData memory swap;
         SwapDataExtra memory swapDataExtra =
-            SwapDataExtra({tokenIn: address(USDC), tokenOut: address(WETH), minOut: 33e16, swapData: swap});
+            SwapDataExtra({tokenIn: address(USDC), tokenOut: address(WETH), minOut: minOut, swapData: swap});
 
         hoax(address(vault));
-        pendleAdapter.swapTokenToToken(IPSwapAggregator(address(1)), swapDataExtra, amountIn);
+        uint256 wethOut = pendleAdapter.swapTokenToToken(IPSwapAggregator(address(1)), swapDataExtra, amountIn);
+
+        assertEq(USDC.balanceOf(address(vault)), usdcBalanceBefore - amountIn);
+        assertEq(WETH.balanceOf(address(vault)), wethBalanceBefore + wethOut);
+        assertGe(wethOut, minOut);
+
+        assertEq(USDC.balanceOf(address(pendleAdapter)), 0);
+        assertEq(WETH.balanceOf(address(pendleAdapter)), 0);
+    }
+
+    function testSwapTokenToTokenAllExcept() public {
+        uint256 except = 1000e6;
+        uint256 minOut = 33e16;
+
+        uint256 wethBalanceBefore = WETH.balanceOf(address(vault));
+
+        SwapData memory swap;
+        SwapDataExtra memory swapDataExtra =
+            SwapDataExtra({tokenIn: address(USDC), tokenOut: address(WETH), minOut: minOut, swapData: swap});
+
+        hoax(address(vault));
+        uint256 wethOut = pendleAdapter.swapTokenToTokenAllExcept(IPSwapAggregator(address(1)), swapDataExtra, except);
+
+        assertEq(USDC.balanceOf(address(vault)), except);
+        assertEq(WETH.balanceOf(address(vault)), wethBalanceBefore + wethOut);
+        assertGe(wethOut, minOut);
+
+        assertEq(USDC.balanceOf(address(pendleAdapter)), 0);
+        assertEq(WETH.balanceOf(address(pendleAdapter)), 0);
     }
 
     function testSwapTokenToTokenShouldFailWhenTokenNotTracked() public {

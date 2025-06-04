@@ -24,24 +24,41 @@ abstract contract ERC4626AdapterBase is AdapterBase {
         _asset = IERC4626(_vault).asset();
     }
 
-    function deposit(uint256 assets) external virtual returns (uint256 shares) {
-        IERC4626 vault = IERC4626(_vault);
-        _ensureIsValidAsset(address(_vault));
+    function deposit(uint256 assets) public virtual returns (uint256 shares) {
+        shares = _deposit(_vault, _asset, assets);
+    }
 
+    function depositAllExcept(uint256 except) external virtual returns (uint256 shares) {
         address asset = _asset;
-        IAdapterCallback(msg.sender).adapterCallback(address(this), asset, assets);
-        IERC20(asset).forceApprove(address(vault), assets);
-
-        shares = vault.deposit(assets, msg.sender);
+        uint256 assets = IERC20(asset).balanceOf(msg.sender) - except;
+        shares = _deposit(_vault, asset, assets);
     }
 
     function redeem(uint256 shares) external virtual returns (uint256 withdrawn) {
+        withdrawn = _redeem(_vault, shares);
+    }
+
+    function redeemAllExcept(uint256 exceptShares) external virtual returns (uint256 withdrawn) {
+        address vault = _vault;
+        uint256 shares = IERC4626(vault).balanceOf(msg.sender) - exceptShares;
+        withdrawn = _redeem(vault, shares);
+    }
+
+    function _deposit(address vault, address asset, uint256 assets) private returns (uint256 shares) {
+        _ensureIsValidAsset(vault);
+
+        IAdapterCallback(msg.sender).adapterCallback(address(this), asset, assets);
+        IERC20(asset).forceApprove(vault, assets);
+
+        shares = IERC4626(vault).deposit(assets, msg.sender);
+    }
+
+    function _redeem(address vault, uint256 shares) private returns (uint256 withdrawn) {
         _ensureIsValidAsset(_asset);
-        IERC4626 vault = IERC4626(_vault);
 
         IAdapterCallback(msg.sender).adapterCallback(address(this), address(vault), shares);
-        vault.forceApprove(address(_vault), shares);
+        IERC4626(vault).forceApprove(vault, shares);
 
-        withdrawn = vault.redeem(shares, msg.sender, address(this));
+        withdrawn = IERC4626(vault).redeem(shares, msg.sender, address(this));
     }
 }
