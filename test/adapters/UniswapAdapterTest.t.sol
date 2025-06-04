@@ -2,7 +2,6 @@
 pragma solidity ^0.8.28;
 
 import {Test} from "lib/forge-std/src/Test.sol";
-import {console} from "lib/forge-std/src/console.sol";
 import {Vm} from "lib/forge-std/src/Vm.sol";
 import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
