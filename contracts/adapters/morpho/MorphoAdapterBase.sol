@@ -63,8 +63,9 @@ abstract contract MorphoAdapterBase is AdapterBase {
     /// @param proof The merkle proof to verify the claim
     function claimRewards(address rewardsDistributor, address reward, uint256 claimable, bytes32[] calldata proof)
         external
+        returns (uint256 amount)
     {
-        IUniversalRewardsDistributorBase(rewardsDistributor).claim(msg.sender, reward, claimable, proof);
+        amount = IUniversalRewardsDistributorBase(rewardsDistributor).claim(msg.sender, reward, claimable, proof);
     }
 
     function getMetaMorphoFactory() external view returns (address) {
