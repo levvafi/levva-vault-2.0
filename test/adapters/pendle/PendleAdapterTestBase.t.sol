@@ -16,10 +16,10 @@ import {
     SwapData,
     SwapType,
     TokenOutput
-} from "@pendle/core-v2/contracts/interfaces/IPAllActionTypeV3.sol";
-import {IPSwapAggregator, SwapDataExtra} from "@pendle/core-v2/contracts/router/swap-aggregator/IPSwapAggregator.sol";
-import {IPMarket} from "@pendle/core-v2/contracts/interfaces/IPMarket.sol";
-import {IPPrincipalToken} from "@pendle/core-v2/contracts/interfaces/IPPrincipalToken.sol";
+} from "@pendle/core-v2/interfaces/IPAllActionTypeV3.sol";
+import {IPSwapAggregator, SwapDataExtra} from "@pendle/core-v2/router/swap-aggregator/IPSwapAggregator.sol";
+import {IPMarket} from "@pendle/core-v2/interfaces/IPMarket.sol";
+import {IPPrincipalToken} from "@pendle/core-v2/interfaces/IPPrincipalToken.sol";
 import {EulerRouterMock} from "../../mocks/EulerRouterMock.t.sol";
 import {LevvaVaultFactory} from "../../../contracts/LevvaVaultFactory.sol";
 import {LevvaVault} from "../../../contracts/LevvaVault.sol";

@@ -10,7 +10,7 @@ import {
     LimitOrderData,
     SwapData,
     TokenOutput
-} from "@pendle/core-v2/contracts/interfaces/IPAllActionTypeV3.sol";
+} from "@pendle/core-v2/interfaces/IPAllActionTypeV3.sol";
 import {IAdapterCallback} from "../../contracts/interfaces/IAdapterCallback.sol";
 import {IMultiAssetVault} from "../../contracts/interfaces/IMultiAssetVault.sol";
 import {PendleAdapter} from "../../contracts/adapters/pendle/PendleAdapter.sol";

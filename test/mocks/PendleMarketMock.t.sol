@@ -4,9 +4,9 @@ pragma solidity ^0.8.28;
 import {Test} from "lib/forge-std/src/Test.sol";
 import {MintableERC20} from "./MintableERC20.t.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {IStandardizedYield} from "@pendle/core-v2/contracts/interfaces/IStandardizedYield.sol";
-import {IPPrincipalToken} from "@pendle/core-v2/contracts/interfaces/IPPrincipalToken.sol";
-import {IPYieldToken} from "@pendle/core-v2/contracts/interfaces/IPYieldToken.sol";
+import {IStandardizedYield} from "@pendle/core-v2/interfaces/IStandardizedYield.sol";
+import {IPPrincipalToken} from "@pendle/core-v2/interfaces/IPPrincipalToken.sol";
+import {IPYieldToken} from "@pendle/core-v2/interfaces/IPYieldToken.sol";
 
 /// @dev Mintable ERC20 token.
 contract PendleMarketMock is MintableERC20 {
