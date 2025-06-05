@@ -19,7 +19,7 @@ abstract contract MorphoAdapterBase is AdapterBase {
 
     error MorphoAdapterBase__InvalidMorphoVault();
 
-    constructor(address metaMorphoFactory) AdapterBase() {
+    constructor(address metaMorphoFactory) {
         metaMorphoFactory.assertNotZeroAddress();
         i_metaMorphoFactory = IMetaMorphoFactory(metaMorphoFactory);
     }
@@ -43,7 +43,6 @@ abstract contract MorphoAdapterBase is AdapterBase {
     function redeem(address morphoVault, uint256 shares) public returns (uint256 assets) {
         _ensureIsValidMorphoVault(morphoVault);
         address asset = IERC4626(morphoVault).asset();
-        _ensureIsValidAsset(asset);
 
         IAdapterCallback(msg.sender).adapterCallback(address(this), morphoVault, shares);
         assets = IERC4626(morphoVault).redeem(shares, msg.sender, address(this));
@@ -64,9 +63,9 @@ abstract contract MorphoAdapterBase is AdapterBase {
     /// @param proof The merkle proof to verify the claim
     function claimRewards(address rewardsDistributor, address reward, uint256 claimable, bytes32[] calldata proof)
         external
+        returns (uint256 amount)
     {
-        _ensureIsValidAsset(reward);
-        IUniversalRewardsDistributorBase(rewardsDistributor).claim(msg.sender, reward, claimable, proof);
+        amount = IUniversalRewardsDistributorBase(rewardsDistributor).claim(msg.sender, reward, claimable, proof);
     }
 
     function getMetaMorphoFactory() external view returns (address) {
@@ -81,7 +80,6 @@ abstract contract MorphoAdapterBase is AdapterBase {
 
     function _deposit(address morphoVault, address asset, uint256 assets) private returns (uint256 shares) {
         _ensureIsValidMorphoVault(morphoVault);
-        _ensureIsValidAsset(morphoVault);
 
         IAdapterCallback(msg.sender).adapterCallback(address(this), asset, assets);
         IERC20(asset).forceApprove(morphoVault, assets);

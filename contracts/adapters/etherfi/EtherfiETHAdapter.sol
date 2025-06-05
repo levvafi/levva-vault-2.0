@@ -77,7 +77,6 @@ contract EtherfiETHAdapter is AdapterBase, ERC721Holder, IExternalPositionAdapte
 
     function claimWithdraw() external returns (uint256 withdrawn) {
         IWETH9 _weth = weth;
-        _ensureIsValidAsset(address(_weth));
 
         uint256 requestId = _dequeueWithdrawalRequest();
         withdrawRequestNFT.claimWithdraw(requestId);
@@ -168,8 +167,6 @@ contract EtherfiETHAdapter is AdapterBase, ERC721Holder, IExternalPositionAdapte
 
     function _deposit(IWETH9 _weth, uint256 wethAmount) private returns (uint256 weETHAmount) {
         IweETH _weETH = weETH;
-        _ensureIsValidAsset(address(_weETH));
-
         ILiquidityPool _liquidityPool = liquidityPool;
 
         IAdapterCallback(msg.sender).adapterCallback(address(this), address(_weth), wethAmount);

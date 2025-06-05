@@ -31,8 +31,6 @@ abstract contract AbstractUniswapV4Adapter is AdapterBase {
 
     function swapExactInputV4(IV4Router.ExactInputParams memory params) public returns (uint256 amountOut) {
         address outputToken = Currency.unwrap(params.path[params.path.length - 1].intermediateCurrency);
-        _ensureIsValidAsset(outputToken);
-
         address inputToken = Currency.unwrap(params.currencyIn);
         IAdapterCallback(msg.sender).adapterCallback(address(this), inputToken, params.amountIn);
 
@@ -52,8 +50,6 @@ abstract contract AbstractUniswapV4Adapter is AdapterBase {
 
     function swapExactOutputV4(IV4Router.ExactOutputParams calldata params) external returns (uint256 amountIn) {
         address outputToken = Currency.unwrap(params.currencyOut);
-        _ensureIsValidAsset(outputToken);
-
         address inputToken = Currency.unwrap(params.path[0].intermediateCurrency);
         IAdapterCallback(msg.sender).adapterCallback(address(this), inputToken, params.amountInMaximum);
 

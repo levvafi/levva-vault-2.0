@@ -126,14 +126,6 @@ contract LidoAdapterTest is Test {
         assertEq(amounts.length, 0);
     }
 
-    function test_stakeShouldFailWhenAssetIsNotValid() public {
-        levvaVault.removeTrackedAsset(address(WSTETH));
-
-        vm.prank(address(levvaVault));
-        vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, address(WSTETH)));
-        adapter.stake(1 ether);
-    }
-
     function test_stakeShouldFailWhenTransferValueFails() public {
         uint256 amount = 5 ether;
 
@@ -265,13 +257,6 @@ contract LidoAdapterTest is Test {
         (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets();
         assertEq(assets.length, 0);
         assertEq(amounts.length, 0);
-    }
-
-    function test_claimWithdrawalShouldFailWhenAssetIsNotValid() public {
-        levvaVault.removeTrackedAsset(address(WETH));
-        vm.prank(address(levvaVault));
-        vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, address(WETH)));
-        adapter.claimWithdrawal();
     }
 
     function test_claimWithdrawalShouldFailWhenQueueIsEmpty() public {

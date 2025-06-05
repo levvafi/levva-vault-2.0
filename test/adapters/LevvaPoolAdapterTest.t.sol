@@ -552,13 +552,6 @@ contract LevvaPoolAdapterTest is Test {
         adapter.withdraw(address(0), 0, address(0));
     }
 
-    function test_withdrawShouldFailWhenTokenNotValid() public {
-        vm.prank(address(vault));
-        address asset = address(111);
-        vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, asset));
-        adapter.withdraw(asset, 0, address(0));
-    }
-
     function test_closePosition() public {
         //open short position
         ILevvaPool pool = ILevvaPool(weETH_WETH_POOL);
@@ -920,28 +913,6 @@ contract LevvaPoolAdapterTest is Test {
 
         address[] memory pools = adapter.getPools();
         assertEq(pools.length, 0);
-    }
-
-    function test_emergencyWithdrawShouldFailWhenInvalidAsset() public {
-        //deposit base
-        LevvaPoolMock pool = new LevvaPoolMock(address(weETH), address(WETH));
-        deal(address(weETH), address(pool), 10e18);
-        deal(address(WETH), address(pool), 10e18);
-
-        uint256 depositAmount = 1e18;
-        deal(address(weETH), address(vault), depositAmount * 2);
-        vm.prank(address(vault));
-        adapter.deposit(address(weETH), depositAmount, 0, address(pool), 0, 0);
-
-        pool.setPosition(ILevvaPool.PositionType.Lend, depositAmount, 0);
-        pool.setMode(ILevvaPool.Mode.ShortEmergency);
-
-        //emergencyWithdraw
-        deal(address(weETH), address(vault), 0);
-        vault.removeTrackedAsset(address(weETH));
-        vm.prank(address(vault));
-        vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, address(weETH)));
-        adapter.emergencyWithdraw(address(pool));
     }
 
     function test_emergencyWithdrawShouldFailWhenWrongLevvaPoolMode() public {

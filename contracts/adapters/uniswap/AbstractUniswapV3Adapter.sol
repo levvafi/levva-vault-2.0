@@ -25,8 +25,7 @@ abstract contract AbstractUniswapV3Adapter is AdapterBase {
     function swapExactInputV3(ISwapRouter.ExactInputParams memory params) public returns (uint256 amountOut) {
         if (params.recipient != msg.sender) revert WrongRecipient(msg.sender, params.recipient);
 
-        (address inputToken, address outputToken) = decodeTokens(params.path);
-        _ensureIsValidAsset(outputToken);
+        (address inputToken,) = decodeTokens(params.path);
 
         IAdapterCallback(msg.sender).adapterCallback(address(this), inputToken, params.amountIn);
         ISwapRouter _uniswapV3Router = uniswapV3Router;
@@ -47,8 +46,7 @@ abstract contract AbstractUniswapV3Adapter is AdapterBase {
     function swapExactOutputV3(ISwapRouter.ExactOutputParams calldata params) external returns (uint256 amountIn) {
         if (params.recipient != msg.sender) revert WrongRecipient(msg.sender, params.recipient);
 
-        (address outputToken, address inputToken) = decodeTokens(params.path);
-        _ensureIsValidAsset(outputToken);
+        (, address inputToken) = decodeTokens(params.path);
 
         IAdapterCallback(msg.sender).adapterCallback(address(this), inputToken, params.amountInMaximum);
 

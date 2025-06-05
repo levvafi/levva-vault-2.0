@@ -45,8 +45,6 @@ abstract contract ERC4626AdapterBase is AdapterBase {
     }
 
     function _deposit(address vault, address asset, uint256 assets) private returns (uint256 shares) {
-        _ensureIsValidAsset(vault);
-
         IAdapterCallback(msg.sender).adapterCallback(address(this), asset, assets);
         IERC20(asset).forceApprove(vault, assets);
 
@@ -54,8 +52,6 @@ abstract contract ERC4626AdapterBase is AdapterBase {
     }
 
     function _redeem(address vault, uint256 shares) private returns (uint256 withdrawn) {
-        _ensureIsValidAsset(_asset);
-
         IAdapterCallback(msg.sender).adapterCallback(address(this), address(vault), shares);
         withdrawn = IERC4626(vault).redeem(shares, msg.sender, address(this));
     }

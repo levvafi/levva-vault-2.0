@@ -149,19 +149,6 @@ contract PendleAdapterTest is Test {
         );
     }
 
-    function testSwapTokenForPtShouldFailWhenPtIsNotTracked() public {
-        deal(address(PT_TOKEN_1), address(vault), 0);
-        vault.removeTrackedAsset(address(PT_TOKEN_1));
-        uint256 tokenIn = 1000e6;
-        uint256 minPtOut = 1000e18;
-
-        vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, address(PT_TOKEN_1)));
-        hoax(address(vault));
-        pendleAdapter.swapExactTokenForPt(
-            PT_MARKET_1, _createDefaultApproxParams(), _createTokenInputSimple(address(USDC), tokenIn), minPtOut
-        );
-    }
-
     function testSwapTokenForPt() public {
         uint256 ptBalanceBefore = PT_TOKEN_1.balanceOf(address(vault));
         uint256 tokenBalanceBefore = USDC.balanceOf(address(vault));
@@ -542,20 +529,6 @@ contract PendleAdapterTest is Test {
 
         assertEq(USDC.balanceOf(address(pendleAdapter)), 0);
         assertEq(WETH.balanceOf(address(pendleAdapter)), 0);
-    }
-
-    function testSwapTokenToTokenShouldFailWhenTokenNotTracked() public {
-        deal(address(USDT), address(vault), 0);
-        vault.removeTrackedAsset(address(USDT));
-        uint256 amountIn = 1000e6;
-
-        SwapData memory swap;
-        SwapDataExtra memory swapDataExtra =
-            SwapDataExtra({tokenIn: address(USDC), tokenOut: address(USDT), minOut: 33e16, swapData: swap});
-
-        hoax(address(vault));
-        vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, address(USDT)));
-        pendleAdapter.swapTokenToToken(IPSwapAggregator(address(1)), swapDataExtra, amountIn);
     }
 
     function testSwapTokenToTokenShouldFailWhenSlippage() public {
