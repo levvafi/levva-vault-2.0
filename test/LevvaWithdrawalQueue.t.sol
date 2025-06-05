@@ -123,7 +123,7 @@ contract LevvaWithdrawalQueueTest is TestSetUp {
 
         uint256 userBalanceBefore = asset.balanceOf(USER);
         vm.prank(USER);
-        withdrawalQueue.claimWithdrawal(requestId);
+        withdrawalQueue.claimWithdrawal(requestId, USER);
 
         assertEq(asset.balanceOf(USER) - userBalanceBefore, DEPOSIT);
         assertEq(levvaVault.balanceOf(address(withdrawalQueue)), 0);
@@ -141,7 +141,7 @@ contract LevvaWithdrawalQueueTest is TestSetUp {
 
         vm.expectRevert(abi.encodeWithSelector(WithdrawalQueue.NotFinalized.selector));
         vm.prank(USER);
-        withdrawalQueue.claimWithdrawal(requestId);
+        withdrawalQueue.claimWithdrawal(requestId, USER);
     }
 
     function testClaimWithdrawalNotRequestOwner() public {
@@ -153,7 +153,7 @@ contract LevvaWithdrawalQueueTest is TestSetUp {
 
         vm.expectRevert(abi.encodeWithSelector(WithdrawalQueue.NotRequestOwner.selector));
         vm.prank(NO_ACCESS);
-        withdrawalQueue.claimWithdrawal(requestId);
+        withdrawalQueue.claimWithdrawal(requestId, USER);
     }
 
     function testFinalizeOnlyFinalizer() public {

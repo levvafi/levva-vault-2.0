@@ -33,16 +33,16 @@ contract WithdrawalQueue is ERC721Upgradeable, WithdrawalQueueBase {
         emit WithdrawalRequested(requestId, receiver, shares);
     }
 
-    function claimWithdrawal(uint256 requestId) external returns (uint256 claimedAssets) {
+    function claimWithdrawal(uint256 requestId, address receiver) external returns (uint256 claimedAssets) {
         if (msg.sender != ownerOf(requestId)) revert NotRequestOwner();
         if (!_isFinalized(requestId)) revert NotFinalized();
 
         uint256 requestedShares = _removeRequest(requestId);
-        claimedAssets = _getLevvaVault().redeem(requestedShares, msg.sender, address(this));
+        claimedAssets = _getLevvaVault().redeem(requestedShares, receiver, address(this));
 
         _burn(requestId);
 
-        emit WithdrawalClaimed(requestId, msg.sender, claimedAssets);
+        emit WithdrawalClaimed(requestId, receiver, claimedAssets);
     }
 
     function finalizeRequests(uint256 requestId) external onlyFinalizer {
