@@ -37,6 +37,7 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
     error LevvaPoolAdapter__OracleNotExists(address base, address quote);
     error LevvaPoolAdapter__WrongLevvaPoolMode();
     error LevvaPoolAdapter__NotSupported();
+    error LevvaPoolAdapter__NoPool();
 
     event PoolAdded(address indexed pool);
     event PoolRemoved(address indexed pool);
@@ -239,6 +240,11 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
         return s_pools;
     }
 
+    /// @notice Returns position of pool
+    function getPoolPosition(address pool) external view returns (uint256) {
+        return s_poolPosition[pool];
+    }
+
     function _onlyVault() private view {
         if (msg.sender != i_vault) {
             revert LevvaPoolAdapter__NotAuthorized();
@@ -259,7 +265,7 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
     function _removePool(address pool) internal {
         uint256 poolPosition = s_poolPosition[pool];
         if (poolPosition == 0) {
-            return;
+            revert LevvaPoolAdapter__NoPool();
         }
 
         uint256 poolIndex = poolPosition - 1;
