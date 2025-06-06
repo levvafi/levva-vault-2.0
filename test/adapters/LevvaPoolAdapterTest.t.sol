@@ -247,7 +247,7 @@ contract LevvaPoolAdapterTest is Test {
         assertTrue(debtAmounts[0] > 0);
     }
 
-    function test_depostiQuoteAndShortCoeffs() public {
+    function test_depositQuoteAndShortCoeffs() public {
         ILevvaPool pool = ILevvaPool(weETH_WETH_POOL);
         _openPositionsInPool(weETH_WETH_POOL);
         uint256 depositAmount = 1e18;
