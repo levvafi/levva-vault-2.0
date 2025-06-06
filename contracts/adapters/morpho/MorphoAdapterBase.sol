@@ -42,7 +42,6 @@ abstract contract MorphoAdapterBase is AdapterBase {
     /// @param shares The amount of shares to burn
     function redeem(address morphoVault, uint256 shares) public returns (uint256 assets) {
         _ensureIsValidMorphoVault(morphoVault);
-        address asset = IERC4626(morphoVault).asset();
 
         IAdapterCallback(msg.sender).adapterCallback(address(this), morphoVault, shares);
         assets = IERC4626(morphoVault).redeem(shares, msg.sender, address(this));

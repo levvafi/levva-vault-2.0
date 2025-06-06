@@ -143,7 +143,17 @@ contract LevvaVaultAdapterTest is Test {
     function test_depositShouldFailWhenNotLevvaVault() public {
         vm.expectRevert(LevvaVaultAdapter.LevvaVaultAdapter__UnknownVault.selector);
         hoax(address(vault));
-        adapter.deposit(address(1), 0);
+        address wstUSRVault = 0x1202F5C7b4B9E47a1A484E8B270be34dbbC75055;
+        adapter.deposit(address(wstUSRVault), 0);
+    }
+
+    function test_depositShouldFailWhenCircularDependency() public {
+        oracle.setPrice(oracle.ONE(), address(vault), address(WETH));
+        investVault1.addTrackedAsset(address(vault));
+
+        vm.expectRevert(LevvaVaultAdapter.LevvaVaultAdapter__Forbidden.selector);
+        hoax(address(vault));
+        adapter.deposit(address(investVault1), 0);
     }
 
     function test_requestRedeem() public {

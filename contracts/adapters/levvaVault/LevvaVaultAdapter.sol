@@ -10,6 +10,7 @@ import {IExternalPositionAdapter} from "../../interfaces/IExternalPositionAdapte
 import {IRequestWithdrawalVault} from "../../interfaces/IRequestWithdrawalVault.sol";
 import {IWithdrawalQueue} from "../../interfaces/IWithdrawalQueue.sol";
 import {ILevvaVaultFactory} from "../../interfaces/ILevvaVaultFactory.sol";
+import {IMultiAssetVault} from "../../interfaces/IMultiAssetVault.sol";
 import {Asserts} from "../../libraries/Asserts.sol";
 import {AdapterBase} from "../AdapterBase.sol";
 
@@ -55,7 +56,6 @@ contract LevvaVaultAdapter is AdapterBase, ERC721Holder, IExternalPositionAdapte
     /// @param assets Amount of assets to deposit
     /// @return shares Amount of shares
     function deposit(address vault, uint256 assets) external returns (uint256 shares) {
-        _ensureIsLevvaVault(vault);
         shares = _deposit(vault, IERC4626(vault).asset(), assets);
     }
 
@@ -64,7 +64,6 @@ contract LevvaVaultAdapter is AdapterBase, ERC721Holder, IExternalPositionAdapte
     /// @param except Amount of assets to be left after deposit
     /// @return shares Amount of shares
     function depositAllExcept(address vault, uint256 except) external returns (uint256 shares) {
-        _ensureIsLevvaVault(vault);
         address asset = IERC4626(vault).asset();
         uint256 amount = IERC20(asset).balanceOf(msg.sender) - except;
         shares = _deposit(vault, asset, amount);
@@ -75,7 +74,6 @@ contract LevvaVaultAdapter is AdapterBase, ERC721Holder, IExternalPositionAdapte
     /// @param shares Amount of shares to redeem
     /// @return requestId id of the withdrawal request
     function requestRedeem(address vault, uint256 shares) external returns (uint256 requestId) {
-        _ensureIsLevvaVault(vault);
         requestId = _requestRedeem(vault, shares);
     }
 
@@ -84,7 +82,6 @@ contract LevvaVaultAdapter is AdapterBase, ERC721Holder, IExternalPositionAdapte
     /// @param except Amount of shares to be left
     /// @return requestId id of the withdrawal request
     function requestRedeemAllExcept(address vault, uint256 except) external returns (uint256 requestId) {
-        _ensureIsLevvaVault(vault);
         uint256 shares = IERC20(vault).balanceOf(msg.sender) - except;
         requestId = _requestRedeem(vault, shares);
     }
@@ -143,6 +140,9 @@ contract LevvaVaultAdapter is AdapterBase, ERC721Holder, IExternalPositionAdapte
     function getDebtAssets() external view returns (address[] memory assets, uint256[] memory amounts) {}
 
     function _deposit(address vault, address asset, uint256 assets) private returns (uint256 shares) {
+        _ensureIsLevvaVault(vault);
+        _ensureNoCircularDependencies(msg.sender, vault);
+
         if (msg.sender == vault) revert LevvaVaultAdapter__Forbidden();
 
         IAdapterCallback(msg.sender).adapterCallback(address(this), asset, assets);
@@ -155,7 +155,13 @@ contract LevvaVaultAdapter is AdapterBase, ERC721Holder, IExternalPositionAdapte
         if (!i_levvaVaultFactory.isLevvaVault(vault)) revert LevvaVaultAdapter__UnknownVault();
     }
 
+    function _ensureNoCircularDependencies(address owner, address vault) private view {
+        if (IMultiAssetVault(vault).trackedAssetPosition(owner) != 0) revert LevvaVaultAdapter__Forbidden();
+    }
+
     function _requestRedeem(address vault, uint256 shares) private returns (uint256 requestId) {
+        _ensureIsLevvaVault(vault);
+
         IAdapterCallback(msg.sender).adapterCallback(address(this), vault, shares);
         requestId = IRequestWithdrawalVault(vault).requestRedeem(shares);
         _addWithdrawalRequest(msg.sender, vault, requestId, shares);
