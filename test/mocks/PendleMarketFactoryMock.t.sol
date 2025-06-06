@@ -12,7 +12,6 @@ import {
     TokenOutput
 } from "@pendle/core-v2/contracts/interfaces/IPAllActionTypeV3.sol";
 import {IAdapterCallback} from "../../contracts/interfaces/IAdapterCallback.sol";
-import {IMultiAssetVault} from "../../contracts/interfaces/IMultiAssetVault.sol";
 import {PendleAdapter} from "../../contracts/adapters/pendle/PendleAdapter.sol";
 
 /// @dev Mintable ERC20 token.

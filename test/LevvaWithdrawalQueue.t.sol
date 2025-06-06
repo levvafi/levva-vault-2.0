@@ -12,6 +12,7 @@ import {VaultAccessControl} from "../contracts/base/VaultAccessControl.sol";
 import {WithdrawalQueue} from "../contracts/WithdrawalQueue.sol";
 import {WithdrawalQueueBase} from "../contracts/base/WithdrawalQueueBase.sol";
 import {ERC4626Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgradeable.sol";
+import {Asserts} from "contracts/libraries/Asserts.sol";
 
 contract LevvaWithdrawalQueueTest is TestSetUp {
     uint256 constant DEPOSIT = 1_000_000;
@@ -47,6 +48,12 @@ contract LevvaWithdrawalQueueTest is TestSetUp {
 
         uint256 requestedShares = withdrawalQueue.getRequestedShares(requestId);
         assertEq(requestedShares, lpBalanceDelta);
+    }
+
+    function testRequestWithdrawalZeroAmount() public {
+        vm.prank(USER);
+        vm.expectRevert(Asserts.ZeroAmount.selector);
+        levvaVault.requestWithdrawal(0);
     }
 
     function testRequestWithdrawalExceedsMax() public {
@@ -86,6 +93,12 @@ contract LevvaWithdrawalQueueTest is TestSetUp {
 
         uint256 requestedShares = withdrawalQueue.getRequestedShares(requestId);
         assertEq(requestedShares, lpBalanceDelta);
+    }
+
+    function testRequestRedeemZeroAmount() public {
+        vm.prank(USER);
+        vm.expectRevert(Asserts.ZeroAmount.selector);
+        levvaVault.requestRedeem(0);
     }
 
     function testRequestRedeemExceedsMax() public {

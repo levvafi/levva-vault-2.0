@@ -7,10 +7,9 @@ import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IAdapterCallback} from "../../interfaces/IAdapterCallback.sol";
 import {IExternalPositionAdapter} from "../../interfaces/IExternalPositionAdapter.sol";
-import {IRequestWithdrawalVault} from "../../interfaces/IRequestWithdrawalVault.sol";
 import {IWithdrawalQueue} from "../../interfaces/IWithdrawalQueue.sol";
 import {ILevvaVaultFactory} from "../../interfaces/ILevvaVaultFactory.sol";
-import {IMultiAssetVault} from "../../interfaces/IMultiAssetVault.sol";
+import {ILevvaVault} from "../../interfaces/ILevvaVault.sol";
 import {Asserts} from "../../libraries/Asserts.sol";
 import {AdapterBase} from "../AdapterBase.sol";
 
@@ -25,12 +24,12 @@ contract LevvaVaultAdapter is AdapterBase, ERC721Holder, IExternalPositionAdapte
     struct VaultWithdrawals {
         uint256 shares;
         uint256 vaultPosition; // index = vaultPosition - 1;
+        mapping(uint256 requestId => bool) pendingRequests; // track owner of requestIds
     }
 
     struct PendingWithdrawals {
         address[] vaults;
         mapping(address vault => VaultWithdrawals) vaultWithdrawals;
-        mapping(uint256 requestId => bool) pendingRequests; // track owner of requestIds
     }
 
     mapping(address owner => PendingWithdrawals) private s_pendingWithdrawals;
@@ -41,6 +40,7 @@ contract LevvaVaultAdapter is AdapterBase, ERC721Holder, IExternalPositionAdapte
     error LevvaVaultAdapter__Forbidden();
     error LevvaVaultAdapter__UnknownVault();
     error LevvaVaultAdapter__ClaimUnauthorized();
+    error LevvaVaultAdapter__NoRequestId();
 
     constructor(address levvaVaultFactory) {
         levvaVaultFactory.assertNotZeroAddress();
@@ -93,7 +93,7 @@ contract LevvaVaultAdapter is AdapterBase, ERC721Holder, IExternalPositionAdapte
     function claimWithdrawal(address vault, uint256 requestId) external returns (uint256 assets) {
         _ensureIsLevvaVault(vault);
 
-        address withdrawalQueue = IRequestWithdrawalVault(vault).withdrawalQueue();
+        address withdrawalQueue = ILevvaVault(vault).withdrawalQueue();
         uint256 shares = IWithdrawalQueue(withdrawalQueue).getRequestedShares(requestId);
 
         _removeWithdrawalRequest(msg.sender, vault, requestId, shares);
@@ -103,11 +103,12 @@ contract LevvaVaultAdapter is AdapterBase, ERC721Holder, IExternalPositionAdapte
         emit ClaimWithdrawal(vault, requestId, assets);
     }
 
-    /// @notice Checks if claim is possible
+    /// @notice Checks if claim is possible.
+    /// @dev Check request finalized and belongs to this adapter
     function claimPossible(address vault, uint256 requestId) external view returns (bool) {
-        address withdrawalQueue = IRequestWithdrawalVault(vault).withdrawalQueue();
+        address withdrawalQueue = ILevvaVault(vault).withdrawalQueue();
         return IWithdrawalQueue(withdrawalQueue).lastFinalizedRequestId() >= requestId
-            && IWithdrawalQueue(withdrawalQueue).getRequestedShares(requestId) != 0;
+            && IWithdrawalQueue(withdrawalQueue).ownerOf(requestId) == address(this);
     }
 
     /// @notice Returns not zero when there are pending withdrawals
@@ -139,9 +140,28 @@ contract LevvaVaultAdapter is AdapterBase, ERC721Holder, IExternalPositionAdapte
     /// @notice Returns zero for this adapter
     function getDebtAssets() external view returns (address[] memory assets, uint256[] memory amounts) {}
 
+    function getLevvaVaultFactory() external view returns (address) {
+        return address(i_levvaVaultFactory);
+    }
+
+    function getPendingWithdrawalsVaults(address owner) external view returns (address[] memory) {
+        return s_pendingWithdrawals[owner].vaults;
+    }
+
+    function getPendingWithdrawalsVaultPosition(address owner, address vault) external view returns (uint256) {
+        return s_pendingWithdrawals[owner].vaultWithdrawals[vault].vaultPosition;
+    }
+
+    function getPendingWithdrawalsShares(address owner, address vault) external view returns (uint256) {
+        return s_pendingWithdrawals[owner].vaultWithdrawals[vault].shares;
+    }
+
+    function isRequestIdOwner(address owner, address vault, uint256 requestId) external view returns (bool) {
+        return s_pendingWithdrawals[owner].vaultWithdrawals[vault].pendingRequests[requestId];
+    }
+
     function _deposit(address vault, address asset, uint256 assets) private returns (uint256 shares) {
         _ensureIsLevvaVault(vault);
-        _ensureNoCircularDependencies(msg.sender, vault);
 
         if (msg.sender == vault) revert LevvaVaultAdapter__Forbidden();
 
@@ -155,23 +175,19 @@ contract LevvaVaultAdapter is AdapterBase, ERC721Holder, IExternalPositionAdapte
         if (!i_levvaVaultFactory.isLevvaVault(vault)) revert LevvaVaultAdapter__UnknownVault();
     }
 
-    function _ensureNoCircularDependencies(address owner, address vault) private view {
-        if (IMultiAssetVault(vault).trackedAssetPosition(owner) != 0) revert LevvaVaultAdapter__Forbidden();
-    }
-
     function _requestRedeem(address vault, uint256 shares) private returns (uint256 requestId) {
         _ensureIsLevvaVault(vault);
 
         IAdapterCallback(msg.sender).adapterCallback(address(this), vault, shares);
-        requestId = IRequestWithdrawalVault(vault).requestRedeem(shares);
+        requestId = ILevvaVault(vault).requestRedeem(shares);
         _addWithdrawalRequest(msg.sender, vault, requestId, shares);
         emit RequestWithdrawal(vault, requestId, shares);
     }
 
-    function _addWithdrawalRequest(address owner, address vault, uint256 requestId, uint256 shares) private {
+    function _addWithdrawalRequest(address owner, address vault, uint256 requestId, uint256 shares) internal {
         PendingWithdrawals storage pendingWithdrawals = s_pendingWithdrawals[owner];
+        VaultWithdrawals storage vaultWithdrawals = pendingWithdrawals.vaultWithdrawals[vault];
 
-        VaultWithdrawals memory vaultWithdrawals = pendingWithdrawals.vaultWithdrawals[vault];
         vaultWithdrawals.shares += shares;
 
         if (vaultWithdrawals.vaultPosition == 0) {
@@ -179,31 +195,31 @@ contract LevvaVaultAdapter is AdapterBase, ERC721Holder, IExternalPositionAdapte
             vaultWithdrawals.vaultPosition = pendingWithdrawals.vaults.length;
         }
 
-        pendingWithdrawals.vaultWithdrawals[vault] = vaultWithdrawals;
-        pendingWithdrawals.pendingRequests[requestId] = true;
+        vaultWithdrawals.pendingRequests[requestId] = true;
     }
 
-    function _removeWithdrawalRequest(address owner, address vault, uint256 requestId, uint256 shares) private {
+    function _removeWithdrawalRequest(address owner, address vault, uint256 requestId, uint256 shares) internal {
         PendingWithdrawals storage pendingWithdrawals = s_pendingWithdrawals[owner];
+        VaultWithdrawals storage vaultWithdrawals = pendingWithdrawals.vaultWithdrawals[vault];
 
-        VaultWithdrawals memory vaultWithdrawals = pendingWithdrawals.vaultWithdrawals[vault];
-        if (vaultWithdrawals.vaultPosition == 0) {
-            return;
+        uint256 position = vaultWithdrawals.vaultPosition;
+        if (position == 0) {
+            revert LevvaVaultAdapter__NoRequestId();
         }
 
-        if (!pendingWithdrawals.pendingRequests[requestId]) {
+        if (!vaultWithdrawals.pendingRequests[requestId]) {
             revert LevvaVaultAdapter__ClaimUnauthorized();
         }
-        delete pendingWithdrawals.pendingRequests[requestId];
 
+        delete vaultWithdrawals.pendingRequests[requestId];
         vaultWithdrawals.shares -= shares;
 
         if (vaultWithdrawals.shares == 0) {
-            uint256 vaultIndex = vaultWithdrawals.vaultPosition - 1;
-            uint256 vaultLastIndex = pendingWithdrawals.vaults.length - 1;
-
-            if (vaultIndex != vaultLastIndex) {
-                pendingWithdrawals.vaults[vaultIndex] = pendingWithdrawals.vaults[vaultLastIndex];
+            uint256 vaultCount = pendingWithdrawals.vaults.length;
+            if (position != vaultCount) {
+                address replacement = pendingWithdrawals.vaults[vaultCount - 1];
+                pendingWithdrawals.vaults[position - 1] = replacement;
+                pendingWithdrawals.vaultWithdrawals[replacement].vaultPosition = position;
             }
 
             pendingWithdrawals.vaults.pop();

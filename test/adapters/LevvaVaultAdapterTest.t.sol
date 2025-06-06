@@ -7,6 +7,8 @@ import {console} from "lib/forge-std/src/console.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC721} from "@openzeppelin/contracts/interfaces/IERC721.sol";
+import {IERC721Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
+
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {LevvaVaultAdapter} from "contracts/adapters/levvaVault/LevvaVaultAdapter.sol";
@@ -21,8 +23,22 @@ import {IAdapter} from "contracts/interfaces/IAdapter.sol";
 import {IExternalPositionAdapter} from "contracts/interfaces/IExternalPositionAdapter.sol";
 import {Asserts} from "contracts/libraries/Asserts.sol";
 import {LevvaPoolMock} from "../mocks/LevvaPoolMock.t.sol";
-import {IRequestWithdrawalVault} from "contracts/interfaces/IRequestWithdrawalVault.sol";
+import {ILevvaVault} from "contracts/interfaces/ILevvaVault.sol";
 import {IWithdrawalQueue} from "contracts/interfaces/IWithdrawalQueue.sol";
+
+contract LevvaVaultAdapterHarness is LevvaVaultAdapter {
+    constructor(address levvaVaultFactory) LevvaVaultAdapter(levvaVaultFactory) {}
+
+    function exposed_addWithdrawalRequest(address owner, address vault, uint256 requestId, uint256 shares) external {
+        _addWithdrawalRequest(owner, vault, requestId, shares);
+    }
+
+    function exposed_removeWithdrawalRequest(address owner, address vault, uint256 requestId, uint256 shares)
+        external
+    {
+        _removeWithdrawalRequest(owner, vault, requestId, shares);
+    }
+}
 
 contract LevvaVaultAdapterTest is Test {
     using FP96 for ILevvaPool.FixedPoint;
@@ -35,6 +51,7 @@ contract LevvaVaultAdapterTest is Test {
 
     LevvaVaultAdapter internal adapter;
 
+    LevvaVaultFactory private levvaVaultFactory;
     LevvaVault internal vault;
     LevvaVault internal vault2;
 
@@ -59,7 +76,7 @@ contract LevvaVaultAdapterTest is Test {
             LevvaVaultFactory.initialize.selector, levvaVaultImplementation, withdrawalQueueImplementation
         );
         ERC1967Proxy levvaVaultFactoryProxy = new ERC1967Proxy(levvaVaultFactoryImplementation, data);
-        LevvaVaultFactory levvaVaultFactory = LevvaVaultFactory(address(levvaVaultFactoryProxy));
+        levvaVaultFactory = LevvaVaultFactory(address(levvaVaultFactoryProxy));
 
         (address deployedVault,) =
             levvaVaultFactory.deployVault(address(WETH), "lpName", "lpSymbol", address(0xFEE), address(oracle));
@@ -147,15 +164,6 @@ contract LevvaVaultAdapterTest is Test {
         adapter.deposit(address(wstUSRVault), 0);
     }
 
-    function test_depositShouldFailWhenCircularDependency() public {
-        oracle.setPrice(oracle.ONE(), address(vault), address(WETH));
-        investVault1.addTrackedAsset(address(vault));
-
-        vm.expectRevert(LevvaVaultAdapter.LevvaVaultAdapter__Forbidden.selector);
-        hoax(address(vault));
-        adapter.deposit(address(investVault1), 0);
-    }
-
     function test_requestRedeem() public {
         uint256 depositAmount = 2 ether;
         vm.startPrank(address(vault));
@@ -182,9 +190,18 @@ contract LevvaVaultAdapterTest is Test {
         assertEq(amounts[0], redeemAmount);
 
         _assertNoDebtAssets();
+
+        assertEq(redeemAmount, adapter.getPendingWithdrawalsShares(address(vault), address(investVault1)));
+
+        (address[] memory vaultsWithPending) = adapter.getPendingWithdrawalsVaults(address(vault));
+        assertEq(vaultsWithPending.length, 1);
+        assertEq(vaultsWithPending[0], address(investVault1));
+        assertEq(1, adapter.getPendingWithdrawalsVaultPosition(address(vault), address(investVault1)));
+
+        assertTrue(adapter.isRequestIdOwner(address(vault), address(investVault1), requestId));
     }
 
-    function test_reqeustRedeemManyRequests() public {
+    function test_requestRedeemManyRequests() public {
         uint256 depositAmount = 2 ether;
         vm.startPrank(address(vault));
         adapter.deposit(address(investVault1), depositAmount);
@@ -201,6 +218,13 @@ contract LevvaVaultAdapterTest is Test {
 
         assertEq(adapter.claimPossible(address(investVault1), requestId1), false);
         assertEq(adapter.claimPossible(address(investVault1), requestId2), false);
+
+        assertEq(redeemAmount * 2, adapter.getPendingWithdrawalsShares(address(vault), address(investVault1)));
+
+        (address[] memory vaultsWithPending) = adapter.getPendingWithdrawalsVaults(address(vault));
+        assertEq(vaultsWithPending.length, 1);
+        assertEq(vaultsWithPending[0], address(investVault1));
+        assertEq(1, adapter.getPendingWithdrawalsVaultPosition(address(vault), address(investVault1)));
     }
 
     function test_requestRedeemManyVaults() public {
@@ -227,6 +251,20 @@ contract LevvaVaultAdapterTest is Test {
         assertEq(adapter.claimPossible(address(investVault1), requestId2), false);
 
         _assertNoDebtAssets();
+
+        assertEq(redeemAmount, adapter.getPendingWithdrawalsShares(address(vault), address(investVault1)));
+        assertEq(redeemAmount, adapter.getPendingWithdrawalsShares(address(vault), address(investVault2)));
+
+        (address[] memory vaultsWithPending) = adapter.getPendingWithdrawalsVaults(address(vault));
+        assertEq(vaultsWithPending.length, 2);
+        assertEq(vaultsWithPending[0], address(investVault1));
+        assertEq(1, adapter.getPendingWithdrawalsVaultPosition(address(vault), address(investVault1)));
+        assertEq(vaultsWithPending[1], address(investVault2));
+        assertEq(2, adapter.getPendingWithdrawalsVaultPosition(address(vault), address(investVault2)));
+
+        assertTrue(adapter.isRequestIdOwner(address(vault), address(investVault1), requestId1));
+        assertTrue(adapter.isRequestIdOwner(address(vault), address(investVault2), requestId2));
+        assertFalse(adapter.isRequestIdOwner(address(1), address(investVault1), requestId1));
     }
 
     function test_requestRedeemAllExcept() public {
@@ -306,7 +344,9 @@ contract LevvaVaultAdapterTest is Test {
         uint256 withdrawalAssets = adapter.claimWithdrawal(address(investVault1), requestId);
         assertEq(withdrawalAssets, depositAmount);
         assertEq(WETH.balanceOf(address(vault)), wethBalanceBefore + withdrawalAssets);
-        assertFalse(adapter.claimPossible(address(investVault1), requestId));
+
+        vm.expectRevert(abi.encodeWithSelector(IERC721Errors.ERC721NonexistentToken.selector, requestId));
+        adapter.claimPossible(address(investVault1), requestId);
 
         _assertNoManagedAssets();
         _assertNoDebtAssets();
@@ -390,6 +430,52 @@ contract LevvaVaultAdapterTest is Test {
         vm.expectRevert(LevvaVaultAdapter.LevvaVaultAdapter__UnknownVault.selector);
         hoax(address(vault));
         adapter.claimWithdrawal(address(1), 0);
+    }
+
+    function test_getLevvaVaultFactory() public view {
+        assertEq(adapter.getLevvaVaultFactory(), address(levvaVaultFactory));
+    }
+
+    function test_addWithdrawalRequest() public {
+        LevvaVaultAdapterHarness harness = new LevvaVaultAdapterHarness(address(levvaVaultFactory));
+
+        assertEq(harness.getPendingWithdrawalsShares(address(vault), address(investVault1)), 0);
+
+        harness.exposed_addWithdrawalRequest(address(vault), address(investVault1), 0, 1 ether);
+
+        assertEq(harness.getPendingWithdrawalsShares(address(vault), address(investVault1)), 1 ether);
+        address[] memory vaults = harness.getPendingWithdrawalsVaults(address(vault));
+        assertEq(vaults.length, 1);
+        assertEq(vaults[0], address(investVault1));
+
+        assertEq(harness.getPendingWithdrawalsVaultPosition(address(vault), address(investVault1)), 1);
+    }
+
+    function test_removeWithdrawalRequest() public {
+        LevvaVaultAdapterHarness harness = new LevvaVaultAdapterHarness(address(levvaVaultFactory));
+        harness.exposed_addWithdrawalRequest(address(vault), address(1), 1, 1 ether);
+        harness.exposed_addWithdrawalRequest(address(vault), address(2), 2, 0.5 ether);
+        harness.exposed_addWithdrawalRequest(address(vault), address(3), 3, 0.5 ether);
+
+        // check position of vaults
+        assertEq(harness.getPendingWithdrawalsVaultPosition(address(vault), address(1)), 1);
+        assertEq(harness.getPendingWithdrawalsVaultPosition(address(vault), address(2)), 2);
+        assertEq(harness.getPendingWithdrawalsVaultPosition(address(vault), address(3)), 3);
+
+        // remove first vault
+        harness.exposed_removeWithdrawalRequest(address(vault), address(1), 1, 1 ether);
+
+        // check last in first position
+        assertEq(harness.getPendingWithdrawalsVaultPosition(address(vault), address(3)), 1);
+        assertEq(harness.getPendingWithdrawalsVaultPosition(address(vault), address(2)), 2);
+        assertEq(harness.getPendingWithdrawalsVaultPosition(address(vault), address(1)), 0);
+    }
+
+    function test_removeWithdrawalRequestShouldFail() public {
+        LevvaVaultAdapterHarness harness = new LevvaVaultAdapterHarness(address(levvaVaultFactory));
+
+        vm.expectRevert(LevvaVaultAdapter.LevvaVaultAdapter__NoRequestId.selector);
+        harness.exposed_removeWithdrawalRequest(address(vault), address(1), 1, 1 ether);
     }
 
     function _finalizeRequest(address withdrawalQueue, uint256 requestId) private {

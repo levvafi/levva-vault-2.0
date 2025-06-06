@@ -103,6 +103,7 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, FeeCollector, Adapt
         }
 
         uint256 shares = _convertToShares(assets, _totalAssets, _totalSupply, Math.Rounding.Ceil);
+        shares.assertNotZeroAmount();
 
         address queue = _getWithdrawalQueue();
         _transfer(msg.sender, queue, shares);
@@ -110,6 +111,8 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, FeeCollector, Adapt
     }
 
     function requestRedeem(uint256 shares) public returns (uint256 requestId) {
+        shares.assertNotZeroAmount();
+
         uint256 maxShares = maxRedeem(msg.sender);
         if (shares > maxShares) {
             revert ERC4626ExceededMaxRedeem(msg.sender, shares, maxShares);

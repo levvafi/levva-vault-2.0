@@ -9,7 +9,7 @@ import {IERC20} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {IAdapterCallback} from "../../interfaces/IAdapterCallback.sol";
 import {IExternalPositionAdapter} from "../../interfaces/IExternalPositionAdapter.sol";
-import {IMultiAssetVault} from "../../interfaces/IMultiAssetVault.sol";
+import {ILevvaVault} from "../../interfaces/ILevvaVault.sol";
 import {IEulerPriceOracle} from "../../interfaces/IEulerPriceOracle.sol";
 import {ILevvaPool} from "./interfaces/ILevvaPool.sol";
 import {Asserts} from "../../libraries/Asserts.sol";
@@ -97,7 +97,7 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
         );
 
         // long - quoteToken in debt, check oracle for quoteToken
-        _assertOracleExists(ILevvaPool(pool).quoteToken(), IMultiAssetVault(msg.sender).asset());
+        _assertOracleExists(ILevvaPool(pool).quoteToken(), ILevvaVault(msg.sender).asset());
     }
 
     ///@notice Opens a short position
@@ -111,7 +111,7 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
         );
 
         // short - baseToken in debt, check oracle for baseToken
-        _assertOracleExists(ILevvaPool(pool).baseToken(), IMultiAssetVault(msg.sender).asset());
+        _assertOracleExists(ILevvaPool(pool).baseToken(), ILevvaVault(msg.sender).asset());
     }
 
     ///@notice Closes a position
@@ -245,7 +245,7 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
         }
     }
 
-    function _addPool(address pool) private {
+    function _addPool(address pool) internal {
         if (s_poolPosition[pool] != 0) {
             return;
         }
@@ -256,7 +256,7 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
         emit PoolAdded(pool);
     }
 
-    function _removePool(address pool) private {
+    function _removePool(address pool) internal {
         uint256 poolPosition = s_poolPosition[pool];
         if (poolPosition == 0) {
             return;
@@ -266,7 +266,9 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
         uint256 poolsLastIndex = s_pools.length - 1;
 
         if (poolIndex != poolsLastIndex) {
-            s_pools[poolIndex] = s_pools[poolsLastIndex];
+            address replacement = s_pools[poolsLastIndex];
+            s_pools[poolIndex] = replacement;
+            s_poolPosition[replacement] = poolIndex + 1;
         }
 
         s_pools.pop();
@@ -341,7 +343,7 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
     }
 
     function _assertOracleExists(address base, address quote) internal view {
-        IEulerPriceOracle eulerOracle = IEulerPriceOracle(IMultiAssetVault(msg.sender).oracle());
+        IEulerPriceOracle eulerOracle = IEulerPriceOracle(ILevvaVault(msg.sender).oracle());
         if (
             _callOracle(eulerOracle, _getOneToken(base), base, quote) == 0
                 && _callOracle(eulerOracle, _getOneToken(quote), quote, base) == 0
@@ -420,10 +422,10 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
 
         if (callType == ILevvaPool.CallType.DepositQuote && positionAmount < 0) {
             // depositQuote and long
-            _assertOracleExists(quoteToken, IMultiAssetVault(msg.sender).asset());
+            _assertOracleExists(quoteToken, ILevvaVault(msg.sender).asset());
         } else if (callType == ILevvaPool.CallType.DepositBase && positionAmount < 0) {
             // depositBase and short
-            _assertOracleExists(ILevvaPool(pool).baseToken(), IMultiAssetVault(msg.sender).asset());
+            _assertOracleExists(ILevvaPool(pool).baseToken(), ILevvaVault(msg.sender).asset());
         }
 
         IAdapterCallback(msg.sender).adapterCallback(address(this), asset, amount);
