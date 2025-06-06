@@ -101,14 +101,6 @@ contract EthenaAdapterTest is Test {
         _assertAdapterAssets(0);
     }
 
-    function testDepositNotTrackedAsset() public {
-        levvaVault.removeTrackedAsset(address(S_USDE));
-
-        vm.prank(address(levvaVault));
-        vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, S_USDE));
-        adapter.deposit(1000 * 10 ** 6);
-    }
-
     function testCooldown() public {
         uint256 usdeBalanceBefore = USDE.balanceOf(address(levvaVault));
         uint256 depositAmount = 1000 * 10 ** 6;
@@ -178,23 +170,6 @@ contract EthenaAdapterTest is Test {
         adapter.unstake();
     }
 
-    function testUnstakeNotTrackedAsset() public {
-        uint256 depositAmount = USDE.balanceOf(address(levvaVault));
-        vm.prank(address(levvaVault));
-        uint256 expectedLpTokens = adapter.deposit(depositAmount);
-
-        vm.prank(address(levvaVault));
-        adapter.cooldownShares(expectedLpTokens);
-
-        skip(S_USDE.cooldownDuration());
-
-        levvaVault.removeTrackedAsset(address(USDE));
-
-        vm.prank(address(levvaVault));
-        vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, USDE));
-        adapter.unstake();
-    }
-
     function testRedeem() public {
         uint256 usdeBalanceBefore = USDE.balanceOf(address(levvaVault));
         uint256 depositAmount = 1000 * 10 ** 6;
@@ -234,21 +209,6 @@ contract EthenaAdapterTest is Test {
         assertEq(S_USDE.balanceOf(address(adapter)), 0);
 
         _assertAdapterAssets(0);
-    }
-
-    function testRedeemNotTrackedAsset() public {
-        uint256 depositAmount = USDE.balanceOf(address(levvaVault));
-        vm.prank(address(levvaVault));
-        uint256 expectedLpTokens = adapter.deposit(depositAmount);
-
-        vm.prank(IStakedUSDeAdmin(address(S_USDE)).owner());
-        IStakedUSDeAdmin(address(S_USDE)).setCooldownDuration(0);
-
-        levvaVault.removeTrackedAsset(address(USDE));
-
-        vm.prank(address(levvaVault));
-        vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, USDE));
-        adapter.redeem(expectedLpTokens);
     }
 
     function testGetManagedAssetsSenderNotVault() public {

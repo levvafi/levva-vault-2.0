@@ -91,14 +91,6 @@ contract AaveAdapterTest is Test {
         assertEq(USDC.balanceOf(address(adapter)), 0);
     }
 
-    function testSupplyNotTrackedAsset() public {
-        uint256 supplyAmount = 1000 * 10 ** 6;
-
-        vm.prank(address(levvaVault));
-        vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, aUsdt));
-        adapter.supply(address(USDT), supplyAmount);
-    }
-
     function testFullWithdraw() public {
         uint256 usdcBalanceBefore = USDC.balanceOf(address(levvaVault));
         uint256 supplyAmount = 1000 * 10 ** 6;
@@ -131,20 +123,6 @@ contract AaveAdapterTest is Test {
         assertApproxEqAbs(aUsdc.balanceOf(address(levvaVault)), aTokenBalanceBefore - withdrawalAmount, 1);
         assertEq(aUsdc.balanceOf(address(adapter)), 0);
         assertEq(USDC.balanceOf(address(adapter)), 0);
-    }
-
-    function testWithdrawNotTrackedAsset() public {
-        levvaVault.addTrackedAsset(address(aUsdt));
-
-        uint256 supplyAmount = USDT.balanceOf(address(levvaVault));
-        vm.prank(address(levvaVault));
-        adapter.supply(address(USDT), supplyAmount);
-
-        levvaVault.removeTrackedAsset(address(USDT));
-
-        vm.prank(address(levvaVault));
-        vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, USDT));
-        adapter.withdraw(address(USDT), type(uint256).max);
     }
 
     function testWithdrawAllExcept() public {

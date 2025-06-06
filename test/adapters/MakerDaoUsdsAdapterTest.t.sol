@@ -78,14 +78,6 @@ contract MakerDaoUsdsAdapterTest is Test {
         assertEq(S_USDS.balanceOf(address(adapter)), 0);
     }
 
-    function testDepositNotTrackedAsset() public {
-        levvaVault.removeTrackedAsset(address(S_USDS));
-
-        vm.prank(address(levvaVault));
-        vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, S_USDS));
-        adapter.deposit(1000 * 10 ** 18);
-    }
-
     function testRedeem() public {
         uint256 usdeBalanceBefore = USDS.balanceOf(address(levvaVault));
         uint256 depositAmount = 1000 * 10 ** 18;
@@ -99,17 +91,5 @@ contract MakerDaoUsdsAdapterTest is Test {
         assertEq(S_USDS.balanceOf(address(levvaVault)), 0);
         assertEq(USDS.balanceOf(address(adapter)), 0);
         assertEq(S_USDS.balanceOf(address(adapter)), 0);
-    }
-
-    function testRedeemNotTrackedAsset() public {
-        uint256 depositAmount = USDS.balanceOf(address(levvaVault));
-        vm.prank(address(levvaVault));
-        uint256 expectedLpTokens = adapter.deposit(depositAmount);
-
-        levvaVault.removeTrackedAsset(address(USDS));
-
-        vm.prank(address(levvaVault));
-        vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, USDS));
-        adapter.redeem(expectedLpTokens);
     }
 }

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.28;
 
-import {IAdapter} from "../../interfaces/IAdapter.sol";
 import {AbstractUniswapV3Adapter} from "./AbstractUniswapV3Adapter.sol";
 import {AbstractUniswapV4Adapter} from "./AbstractUniswapV4Adapter.sol";
 

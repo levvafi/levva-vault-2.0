@@ -8,11 +8,11 @@ contract ResolvAdapter is ERC4626AdapterBase {
 
     constructor(address _wstUSR) ERC4626AdapterBase(_wstUSR) {}
 
-    function USR() public view returns (address) {
+    function USR() external view returns (address) {
         return _asset;
     }
 
-    function wstUSR() public view returns (address) {
+    function wstUSR() external view returns (address) {
         return _vault;
     }
 }

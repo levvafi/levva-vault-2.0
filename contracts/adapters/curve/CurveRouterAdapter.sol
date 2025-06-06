@@ -77,7 +77,6 @@ contract CurveRouterAdapter is AdapterBase {
         }
 
         IAdapterCallback(msg.sender).adapterCallback(address(this), tokenIn, amount);
-        _ensureIsValidAsset(tokenOut);
 
         ICurveRouterNg curveRouter = s_curveRouter;
         IERC20(tokenIn).forceApprove(address(curveRouter), amount);

@@ -35,7 +35,7 @@ contract LidoAdapter is AdapterBase, IExternalPositionAdapter {
     error LidoAdapter__StakeFailed();
     error LidoAdapter__NoWithdrawRequestInQueue();
 
-    constructor(address weth, address wstETH, address lidoWithdrawalQueue) AdapterBase() {
+    constructor(address weth, address wstETH, address lidoWithdrawalQueue) {
         weth.assertNotZeroAddress();
         wstETH.assertNotZeroAddress();
         lidoWithdrawalQueue.assertNotZeroAddress();
@@ -87,7 +87,6 @@ contract LidoAdapter is AdapterBase, IExternalPositionAdapter {
     /// @dev The function receives ETH from the Lido and wraps it into WETH if request was finalized
     function claimWithdrawal() external returns (uint256 wethAmount) {
         IWETH9 weth = i_WETH;
-        _ensureIsValidAsset(address(weth));
         uint256 requestId = _dequeueWithdrawalRequest();
 
         ILidoWithdrawalQueue(i_lidoWithdrawalQueue).claimWithdrawal(requestId);
@@ -204,7 +203,6 @@ contract LidoAdapter is AdapterBase, IExternalPositionAdapter {
 
     function _stake(IWETH9 weth, uint256 amount) private returns (uint256 wstETHAmount) {
         IWstETH wstETH = i_wstETH;
-        _ensureIsValidAsset(address(wstETH));
 
         IAdapterCallback(msg.sender).adapterCallback(address(this), address(weth), amount);
         weth.withdraw(amount);
@@ -235,10 +233,12 @@ contract LidoAdapter is AdapterBase, IExternalPositionAdapter {
         amounts[additionalWithdrawalsNumber] = wstETHAmount % maxLidoWithdrawal;
 
         uint256[] memory requestIds = withdrawalQueue.requestWithdrawalsWstETH(amounts, address(0));
-        unchecked {
-            for (uint256 i = 0; i < length; ++i) {
-                emit WithdrawalRequested(requestIds[i], amounts[i]);
-                _enqueueWithdrawalRequest(requestIds[i]);
+        for (uint256 i = 0; i < length;) {
+            emit WithdrawalRequested(requestIds[i], amounts[i]);
+            _enqueueWithdrawalRequest(requestIds[i]);
+
+            unchecked {
+                ++i;
             }
         }
     }

@@ -20,7 +20,6 @@ import {IPYieldToken} from "@pendle/core-v2/contracts/interfaces/IPYieldToken.so
 
 import {IAdapterCallback} from "../../interfaces/IAdapterCallback.sol";
 import {Asserts} from "../../libraries/Asserts.sol";
-import {IMultiAssetVault} from "../../interfaces/IMultiAssetVault.sol";
 import {AdapterBase} from "../AdapterBase.sol";
 
 /// @title Adapter for interaction with Pendle protocol
@@ -33,7 +32,6 @@ contract PendleAdapter is AdapterBase {
     address private immutable s_pendleRouter;
 
     error PendleAdapter__SlippageProtection();
-    error PendleAdapter__InvalidPendleMarket(address pendleMarket);
     error PendleAdapter__MarketNotExpired();
 
     constructor(address pendleRouter) {
@@ -59,8 +57,6 @@ contract PendleAdapter is AdapterBase {
         TokenInput memory tokenInput,
         uint256 minPtOut
     ) public returns (uint256 netPtOut) {
-        (, IPPrincipalToken ptToken,) = IPMarket(market).readTokens();
-        _ensureIsValidAsset(address(ptToken));
         IAdapterCallback(msg.sender).adapterCallback(address(this), tokenInput.tokenIn, tokenInput.netTokenIn);
 
         address pendleRouter = s_pendleRouter;
@@ -124,8 +120,6 @@ contract PendleAdapter is AdapterBase {
         TokenInput memory tokenInput,
         uint256 minLpOut
     ) public returns (uint256 netLpOut) {
-        _ensureIsValidAsset(market);
-
         IAdapterCallback(msg.sender).adapterCallback(address(this), tokenInput.tokenIn, tokenInput.netTokenIn);
 
         address pendleRouter = s_pendleRouter;
@@ -163,8 +157,6 @@ contract PendleAdapter is AdapterBase {
         public
         returns (uint256 netTokenOut)
     {
-        _ensureIsValidAsset(tokenOut.tokenOut);
-
         IAdapterCallback(msg.sender).adapterCallback(address(this), market, lpAmount);
 
         address pendleRouter = s_pendleRouter;
@@ -248,8 +240,6 @@ contract PendleAdapter is AdapterBase {
         public
         returns (uint256)
     {
-        _ensureIsValidAsset(address(swap.tokenOut));
-
         SwapDataExtra[] memory swaps = new SwapDataExtra[](1);
         swaps[0] = swap;
 
@@ -283,17 +273,6 @@ contract PendleAdapter is AdapterBase {
     function redeemRewards(address pendleMarket) external returns (address[] memory assets, uint256[] memory rewards) {
         assets = IPMarket(pendleMarket).getRewardTokens();
         rewards = IPMarket(pendleMarket).redeemRewards(msg.sender);
-
-        uint256 length = assets.length;
-        for (uint256 i; i < length;) {
-            if (rewards[i] != 0) {
-                _ensureIsValidAsset(assets[i]);
-            }
-
-            unchecked {
-                ++i;
-            }
-        }
     }
 
     /// @dev Creates default ApproxParams for on-chain approximation
@@ -310,8 +289,6 @@ contract PendleAdapter is AdapterBase {
         uint256 exactPtIn,
         TokenOutput calldata tokenOut
     ) private returns (uint256 netTokenOut) {
-        _ensureIsValidAsset(tokenOut.tokenOut);
-
         // transfer exact amount of ptToken from msg.sender to this contract
         IAdapterCallback(msg.sender).adapterCallback(address(this), address(ptToken), exactPtIn);
 
@@ -334,7 +311,6 @@ contract PendleAdapter is AdapterBase {
         uint256 ptIn,
         TokenOutput calldata tokenOut
     ) private returns (uint256 netTokenOut) {
-        _ensureIsValidAsset(tokenOut.tokenOut);
         if (!IPMarket(market).isExpired()) {
             revert PendleAdapter__MarketNotExpired();
         }
@@ -361,12 +337,6 @@ contract PendleAdapter is AdapterBase {
         uint256 ptAmount,
         uint256 minNewPtOut
     ) private returns (uint256 netPtOut) {
-        {
-            //avoid stack to deep
-            (, IPPrincipalToken newPtToken,) = IPMarket(newMarket).readTokens();
-            _ensureIsValidAsset(address(newPtToken));
-        }
-
         IAdapterCallback(msg.sender).adapterCallback(address(this), address(oldPtToken), ptAmount);
 
         SwapData memory noSwap;

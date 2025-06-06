@@ -228,20 +228,6 @@ contract CurveRouterAdapterTest is Test {
         curveRouterAdapter.exchange(route, swapParams, amount, minDy, pools);
     }
 
-    function testExchangeShouldFailWhenZeroTokenOut() public {
-        address[11] memory route;
-        route[0] = address(USDC);
-
-        uint256[5][5] memory swapParams;
-        uint256 amount = 3000e6;
-        uint256 minDy = 950e18;
-        address[5] memory pools;
-
-        vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, address(0)));
-        hoax(address(vault));
-        curveRouterAdapter.exchange(route, swapParams, amount, minDy, pools);
-    }
-
     function testExchangeAllExcept() public {
         IERC20 tokenIn = USDC;
         IERC20 tokenOut = DAI;

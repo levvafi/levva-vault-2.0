@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.28;
 
-import {IAdapter} from "../../interfaces/IAdapter.sol";
 import {AdapterBase} from "../AdapterBase.sol";
 
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -130,7 +129,6 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
     /// @param amount The amount to withdraw
     /// @param pool The pool to withdraw from
     function withdraw(address asset, uint256 amount, address pool) external onlyVault returns (uint256 amountOut) {
-        _ensureIsValidAsset(asset);
         ILevvaPool.CallType callType = ILevvaPool(pool).quoteToken() == asset
             ? ILevvaPool.CallType.WithdrawQuote
             : ILevvaPool.CallType.WithdrawBase;
@@ -167,8 +165,6 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
         } else {
             revert LevvaPoolAdapter__WrongLevvaPoolMode();
         }
-
-        _ensureIsValidAsset(address(asset));
 
         ILevvaPool(pool).execute(ILevvaPool.CallType.EmergencyWithdraw, 0, int256(0), 0, false, address(0), 0);
 

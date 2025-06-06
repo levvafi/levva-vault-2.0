@@ -78,14 +78,6 @@ contract ResolvAdapterTest is Test {
         assertEq(WSTUSR.balanceOf(address(adapter)), 0);
     }
 
-    function testDepositNotTrackedAsset() public {
-        levvaVault.removeTrackedAsset(address(WSTUSR));
-
-        vm.prank(address(levvaVault));
-        vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, WSTUSR));
-        adapter.deposit(1000 * 10 ** 18);
-    }
-
     function testRedeem() public {
         uint256 usdeBalanceBefore = USR.balanceOf(address(levvaVault));
         uint256 depositAmount = 1000 * 10 ** 18;
@@ -99,17 +91,5 @@ contract ResolvAdapterTest is Test {
         assertEq(WSTUSR.balanceOf(address(levvaVault)), 0);
         assertEq(USR.balanceOf(address(adapter)), 0);
         assertEq(WSTUSR.balanceOf(address(adapter)), 0);
-    }
-
-    function testRedeemNotTrackedAsset() public {
-        uint256 depositAmount = USR.balanceOf(address(levvaVault));
-        vm.prank(address(levvaVault));
-        uint256 expectedLpTokens = adapter.deposit(depositAmount);
-
-        levvaVault.removeTrackedAsset(address(USR));
-
-        vm.prank(address(levvaVault));
-        vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, USR));
-        adapter.redeem(expectedLpTokens);
     }
 }
