@@ -21,8 +21,8 @@ import {IAdapter} from "contracts/interfaces/IAdapter.sol";
 import {IExternalPositionAdapter} from "contracts/interfaces/IExternalPositionAdapter.sol";
 import {Asserts} from "contracts/libraries/Asserts.sol";
 import {LevvaPoolMock} from "../mocks/LevvaPoolMock.t.sol";
-import {IRequestWithdrawalVault} from "contracts/adapters/levvaVault/interfaces/IRequestWithdrawalVault.sol";
-import {IWithdrawalQueue} from "contracts/adapters/levvaVault/interfaces/IWithdrawalQueue.sol";
+import {IRequestWithdrawalVault} from "contracts/interfaces/IRequestWithdrawalVault.sol";
+import {IWithdrawalQueue} from "contracts/interfaces/IWithdrawalQueue.sol";
 
 contract LevvaVaultAdapterTest is Test {
     using FP96 for ILevvaPool.FixedPoint;

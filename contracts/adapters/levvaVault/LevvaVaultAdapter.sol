@@ -7,9 +7,9 @@ import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IAdapterCallback} from "../../interfaces/IAdapterCallback.sol";
 import {IExternalPositionAdapter} from "../../interfaces/IExternalPositionAdapter.sol";
-import {IRequestWithdrawalVault} from "./interfaces/IRequestWithdrawalVault.sol";
-import {IWithdrawalQueue} from "./interfaces/IWithdrawalQueue.sol";
-import {ILevvaVaultFactory} from "./interfaces/ILevvaVaultFactory.sol";
+import {IRequestWithdrawalVault} from "../../interfaces/IRequestWithdrawalVault.sol";
+import {IWithdrawalQueue} from "../../interfaces/IWithdrawalQueue.sol";
+import {ILevvaVaultFactory} from "../../interfaces/ILevvaVaultFactory.sol";
 import {Asserts} from "../../libraries/Asserts.sol";
 import {AdapterBase} from "../AdapterBase.sol";
 
