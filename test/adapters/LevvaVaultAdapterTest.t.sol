@@ -9,14 +9,13 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC721} from "@openzeppelin/contracts/interfaces/IERC721.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {LevvaPoolAdapter} from "contracts/adapters/levvaPool/LevvaPoolAdapter.sol";
+import {LevvaVaultAdapter} from "contracts/adapters/levvaVault/LevvaVaultAdapter.sol";
 import {AdapterBase} from "contracts/adapters/AdapterBase.sol";
 import {ILevvaPool} from "contracts/adapters/levvaPool/interfaces/ILevvaPool.sol";
 import {FP96} from "contracts/adapters/levvaPool/FP96.sol";
 import {EulerRouterMock} from "../mocks/EulerRouterMock.t.sol";
 import {LevvaVaultFactory} from "contracts/LevvaVaultFactory.sol";
 import {LevvaVault} from "contracts/LevvaVault.sol";
-import {LevvaVaultAdapter} from "contracts/adapters/levvaVault/LevvaVaultAdapter.sol";
 import {WithdrawalQueue} from "contracts/WithdrawalQueue.sol";
 import {IAdapter} from "contracts/interfaces/IAdapter.sol";
 import {IExternalPositionAdapter} from "contracts/interfaces/IExternalPositionAdapter.sol";
@@ -37,6 +36,8 @@ contract LevvaVaultAdapterTest is Test {
     LevvaVaultAdapter internal adapter;
 
     LevvaVault internal vault;
+    LevvaVault internal vault2;
+
     LevvaVault internal investVault1;
     LevvaVault internal investVault2;
     EulerRouterMock internal oracle;
@@ -63,10 +64,15 @@ contract LevvaVaultAdapterTest is Test {
         (address deployedVault,) =
             levvaVaultFactory.deployVault(address(WETH), "lpName", "lpSymbol", address(0xFEE), address(oracle));
 
-        vault = LevvaVault(deployedVault);
+        (address deployedVault2,) =
+            levvaVaultFactory.deployVault(address(WETH), "lpName", "lpSymbol", address(0xFEE), address(oracle));
 
-        adapter = new LevvaVaultAdapter(address(vault));
+        vault = LevvaVault(deployedVault);
+        vault2 = LevvaVault(deployedVault2);
+
+        adapter = new LevvaVaultAdapter(address(levvaVaultFactoryProxy));
         vault.addAdapter(address(adapter));
+        vault2.addAdapter(address(adapter));
 
         (deployedVault,) =
             levvaVaultFactory.deployVault(address(WETH), "lvvaWETH-1", "lvvaWETH-1", address(0xFEE), address(oracle));
@@ -78,16 +84,22 @@ contract LevvaVaultAdapterTest is Test {
 
         oracle.setPrice(oracle.ONE(), address(investVault1), address(WETH));
         oracle.setPrice(oracle.ONE(), address(investVault2), address(WETH));
+
         vault.addTrackedAsset(address(investVault1));
         vault.addTrackedAsset(address(investVault2));
+        vault2.addTrackedAsset(address(investVault1));
+        vault2.addTrackedAsset(address(investVault2));
 
         vm.deal(address(vault), 1 ether);
         deal(address(WETH), address(vault), 10 ether);
+
+        vm.deal(address(vault2), 1 ether);
+        deal(address(WETH), address(vault2), 10 ether);
     }
 
     function test_constructorShouldFailWhenZeroAddress() public {
         vm.expectRevert(Asserts.ZeroAddress.selector);
-        new LevvaPoolAdapter(address(0));
+        new LevvaVaultAdapter(address(0));
     }
 
     function test_deposit() public {
@@ -128,10 +140,10 @@ contract LevvaVaultAdapterTest is Test {
         adapter.deposit(address(vault), depositAmount);
     }
 
-    function test_depositShouldFailWhenNotVault() public {
-        vm.expectRevert(LevvaVaultAdapter.LevvaVaultAdapter__NoAccess.selector);
-        hoax(address(1));
-        adapter.deposit(address(vault), 0);
+    function test_depositShouldFailWhenNotLevvaVault() public {
+        vm.expectRevert(LevvaVaultAdapter.LevvaVaultAdapter__UnknownVault.selector);
+        hoax(address(vault));
+        adapter.deposit(address(1), 0);
     }
 
     function test_requestRedeem() public {
@@ -228,9 +240,9 @@ contract LevvaVaultAdapterTest is Test {
     }
 
     function test_requestRedeemShouldFailWhenNotVault() public {
-        vm.expectRevert(LevvaVaultAdapter.LevvaVaultAdapter__NoAccess.selector);
-        hoax(address(1));
-        adapter.requestRedeem(address(vault), 0);
+        vm.expectRevert(LevvaVaultAdapter.LevvaVaultAdapter__UnknownVault.selector);
+        hoax(address(vault));
+        adapter.requestRedeem(address(1), 0);
     }
 
     function test_claimWithdrawalPartial() public {
@@ -317,7 +329,7 @@ contract LevvaVaultAdapterTest is Test {
         vm.prank(address(vault));
         adapter.claimWithdrawal(address(investVault1), requestId1);
 
-        (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets();
+        (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets(address(vault));
         assertEq(assets.length, 1);
         assertEq(amounts.length, 1);
         assertEq(assets[0], address(investVault2));
@@ -326,10 +338,48 @@ contract LevvaVaultAdapterTest is Test {
         _assertNoDebtAssets();
     }
 
+    function test_claimShouldFailWhenUnauthorized() public {
+        // deposit
+        uint256 depositAmount = 2 ether;
+        vm.prank(address(vault));
+        adapter.deposit(address(investVault1), depositAmount);
+
+        uint256 depositAmount2 = 4 ether;
+        vm.prank(address(vault2));
+        adapter.deposit(address(investVault1), depositAmount2);
+
+        // request redeem
+        vm.prank(address(vault));
+        uint256 requestId1 = adapter.requestRedeem(address(investVault1), depositAmount);
+
+        vm.prank(address(vault2));
+        uint256 requestId2 = adapter.requestRedeem(address(investVault1), depositAmount);
+
+        (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets(address(vault));
+        assertEq(assets.length, 1);
+        assertEq(amounts.length, 1);
+        assertEq(assets[0], address(investVault1));
+        assertEq(amounts[0], depositAmount);
+
+        (assets, amounts) = adapter.getManagedAssets(address(vault2));
+        assertEq(assets.length, 1);
+        assertEq(amounts.length, 1);
+        assertEq(assets[0], address(investVault1));
+        assertEq(amounts[0], depositAmount);
+
+        _finalizeRequest(investVault1.withdrawalQueue(), requestId1);
+        _finalizeRequest(investVault1.withdrawalQueue(), requestId2);
+
+        //try to claim requestId1 by vault2
+        vm.prank(address(vault2));
+        vm.expectRevert(LevvaVaultAdapter.LevvaVaultAdapter__ClaimUnauthorized.selector);
+        adapter.claimWithdrawal(address(investVault1), requestId1);
+    }
+
     function test_claimWithdrawShouldFailWhenNotVault() public {
-        vm.expectRevert(LevvaVaultAdapter.LevvaVaultAdapter__NoAccess.selector);
-        hoax(address(1));
-        adapter.claimWithdrawal(address(vault), 0);
+        vm.expectRevert(LevvaVaultAdapter.LevvaVaultAdapter__UnknownVault.selector);
+        hoax(address(vault));
+        adapter.claimWithdrawal(address(1), 0);
     }
 
     function _finalizeRequest(address withdrawalQueue, uint256 requestId) private {
