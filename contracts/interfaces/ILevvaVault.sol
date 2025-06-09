@@ -11,4 +11,6 @@ interface ILevvaVault is IERC4626 {
     function withdrawalQueue() external view returns (address withdrawalQueue);
 
     function requestRedeem(uint256 shares) external returns (uint256 requestId);
+
+    function requestWithdrawal(uint256 assets) external returns (uint256 requestId);
 }
