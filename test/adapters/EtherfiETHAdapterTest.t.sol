@@ -120,7 +120,7 @@ contract EtherfiETHAdapterTest is Test {
         _assertNoDebtAssets();
     }
 
-    function testDeposiAllExcept() public {
+    function testDepositAllExcept() public {
         uint256 wethBalanceBefore = WETH.balanceOf(address(levvaVault));
 
         uint256 except = 2 ether;

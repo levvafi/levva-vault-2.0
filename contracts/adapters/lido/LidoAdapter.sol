@@ -7,7 +7,7 @@ import {IExternalPositionAdapter} from "../../interfaces/IExternalPositionAdapte
 import {AdapterBase} from "../AdapterBase.sol";
 import {IAdapterCallback} from "../../interfaces/IAdapterCallback.sol";
 import {Asserts} from "../../libraries/Asserts.sol";
-import {IWETH9} from "./interfaces/IWETH9.sol";
+import {IWETH9} from "../../interfaces/IWETH9.sol";
 import {IWstETH} from "./interfaces/IWstETH.sol";
 import {ILidoWithdrawalQueue} from "./interfaces/ILidoWithdrawalQueue.sol";
 

@@ -93,7 +93,7 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, FeeCollector, Adapt
         return assets;
     }
 
-    function requestWithdrawal(uint256 assets) public returns (uint256 requestId) {
+    function requestWithdrawal(uint256 assets) external returns (uint256 requestId) {
         uint256 _totalAssets = _totalAssetsWithFeeCollection();
         uint256 _totalSupply = totalSupply();
 
@@ -103,13 +103,16 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, FeeCollector, Adapt
         }
 
         uint256 shares = _convertToShares(assets, _totalAssets, _totalSupply, Math.Rounding.Ceil);
+        shares.assertNotZeroAmount();
 
         address queue = _getWithdrawalQueue();
         _transfer(msg.sender, queue, shares);
         return WithdrawalQueue(queue).requestWithdrawal(shares, msg.sender);
     }
 
-    function requestRedeem(uint256 shares) public returns (uint256 requestId) {
+    function requestRedeem(uint256 shares) external returns (uint256 requestId) {
+        shares.assertNotZeroAmount();
+
         uint256 maxShares = maxRedeem(msg.sender);
         if (shares > maxShares) {
             revert ERC4626ExceededMaxRedeem(msg.sender, shares, maxShares);
