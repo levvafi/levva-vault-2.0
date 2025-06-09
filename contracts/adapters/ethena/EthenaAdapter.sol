@@ -48,7 +48,6 @@ contract EthenaAdapter is ERC4626AdapterBase, IExternalPositionAdapter {
 
     function unstake() external onlyVault {
         IStakedUSDe _stakedUSDe = stakedUSDe();
-        _ensureIsValidAsset(_stakedUSDe.asset());
 
         _stakedUSDe.unstake(msg.sender);
         emit EthenaUnstake();

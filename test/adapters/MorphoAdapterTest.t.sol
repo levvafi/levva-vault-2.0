@@ -135,14 +135,6 @@ contract MorphoAdapterTest is Test {
         assertEq(cbBTCVault.balanceOf(address(adapter)), 0);
     }
 
-    function test_depositShouldFailWhenNotTrackedAsset() public {
-        levvaVault.removeTrackedAsset(address(SteakhouseUSDC));
-
-        vm.prank(address(levvaVault));
-        vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, SteakhouseUSDC));
-        adapter.deposit(address(SteakhouseUSDC), 0);
-    }
-
     function test_depositShouldFailWhenInvalidMorphoVault() public {
         vm.prank(address(levvaVault));
         vm.expectRevert(MorphoAdapterBase.MorphoAdapterBase__InvalidMorphoVault.selector);
@@ -180,30 +172,11 @@ contract MorphoAdapterTest is Test {
         assertEq(SteakhouseUSDC.balanceOf(address(adapter)), 0);
     }
 
-    function test_redeemShouldFailWhenNotTrackedAsset() public {
-        levvaVault.removeTrackedAsset(address(DAI));
-        deal(address(SparkDai), address(levvaVault), 1000 * 10 ** 18);
-        uint256 sharesToRedeem = 1000 * 10 ** 18;
-
-        vm.prank(address(levvaVault));
-        vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, DAI));
-        adapter.redeem(address(SparkDai), sharesToRedeem);
-    }
-
     function test_claimRewards() public {
         address rewardsAsset = address(USDC);
         uint256 claimable = 100 * 10 ** 6;
         bytes32[] memory proof = new bytes32[](0);
         vm.prank(address(levvaVault));
-        adapter.claimRewards(address(rewardsDistributorMock), rewardsAsset, claimable, proof);
-    }
-
-    function test_claimRewardsShouldFailWhenNotTrackedAsset() public {
-        address rewardsAsset = address(1);
-        uint256 claimable = 100 * 10 ** 6;
-        bytes32[] memory proof = new bytes32[](0);
-        vm.prank(address(levvaVault));
-        vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, rewardsAsset));
         adapter.claimRewards(address(rewardsDistributorMock), rewardsAsset, claimable, proof);
     }
 }

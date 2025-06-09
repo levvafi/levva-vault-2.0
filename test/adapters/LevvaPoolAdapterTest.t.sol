@@ -21,6 +21,18 @@ import {IExternalPositionAdapter} from "../../contracts/interfaces/IExternalPosi
 import {Asserts} from "../../contracts/libraries/Asserts.sol";
 import {LevvaPoolMock} from "../mocks/LevvaPoolMock.t.sol";
 
+contract LevvaPoolAdapterHarness is LevvaPoolAdapter {
+    constructor(address vault) LevvaPoolAdapter(vault) {}
+
+    function exposed_addPool(address pool) external {
+        _addPool(pool);
+    }
+
+    function exposed_removePool(address pool) external {
+        _removePool(pool);
+    }
+}
+
 contract LevvaPoolAdapterTest is Test {
     using FP96 for ILevvaPool.FixedPoint;
     using Math for uint256;
@@ -247,7 +259,7 @@ contract LevvaPoolAdapterTest is Test {
         assertTrue(debtAmounts[0] > 0);
     }
 
-    function test_depostiQuoteAndShortCoeffs() public {
+    function test_depositQuoteAndShortCoeffs() public {
         ILevvaPool pool = ILevvaPool(weETH_WETH_POOL);
         _openPositionsInPool(weETH_WETH_POOL);
         uint256 depositAmount = 1e18;
@@ -550,13 +562,6 @@ contract LevvaPoolAdapterTest is Test {
     function test_withdrawShouldFailWhenNotAuthorized() public {
         vm.expectRevert(LevvaPoolAdapter.LevvaPoolAdapter__NotAuthorized.selector);
         adapter.withdraw(address(0), 0, address(0));
-    }
-
-    function test_withdrawShouldFailWhenTokenNotValid() public {
-        vm.prank(address(vault));
-        address asset = address(111);
-        vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, asset));
-        adapter.withdraw(asset, 0, address(0));
     }
 
     function test_closePosition() public {
@@ -922,28 +927,6 @@ contract LevvaPoolAdapterTest is Test {
         assertEq(pools.length, 0);
     }
 
-    function test_emergencyWithdrawShouldFailWhenInvalidAsset() public {
-        //deposit base
-        LevvaPoolMock pool = new LevvaPoolMock(address(weETH), address(WETH));
-        deal(address(weETH), address(pool), 10e18);
-        deal(address(WETH), address(pool), 10e18);
-
-        uint256 depositAmount = 1e18;
-        deal(address(weETH), address(vault), depositAmount * 2);
-        vm.prank(address(vault));
-        adapter.deposit(address(weETH), depositAmount, 0, address(pool), 0, 0);
-
-        pool.setPosition(ILevvaPool.PositionType.Lend, depositAmount, 0);
-        pool.setMode(ILevvaPool.Mode.ShortEmergency);
-
-        //emergencyWithdraw
-        deal(address(weETH), address(vault), 0);
-        vault.removeTrackedAsset(address(weETH));
-        vm.prank(address(vault));
-        vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, address(weETH)));
-        adapter.emergencyWithdraw(address(pool));
-    }
-
     function test_emergencyWithdrawShouldFailWhenWrongLevvaPoolMode() public {
         uint256 depositAmount = 1e18; // deposit 1 WETH and flip to PT-weETH
         deal(address(WETH), address(vault), depositAmount * 2);
@@ -953,6 +936,33 @@ contract LevvaPoolAdapterTest is Test {
 
         vm.expectRevert(LevvaPoolAdapter.LevvaPoolAdapter__WrongLevvaPoolMode.selector);
         adapter.emergencyWithdraw(PT_weETH_WETH_POOL);
+    }
+
+    function test_addPool() public {
+        LevvaPoolAdapterHarness harness = new LevvaPoolAdapterHarness(address(1));
+        harness.exposed_addPool(address(2));
+        harness.exposed_addPool(address(3));
+        harness.exposed_addPool(address(4));
+
+        address[] memory pools = harness.getPools();
+        assertEq(pools.length, 3);
+        assertEq(pools[0], address(2));
+        assertEq(pools[1], address(3));
+        assertEq(pools[2], address(4));
+
+        assertEq(harness.getPoolPosition(address(2)), 1);
+        assertEq(harness.getPoolPosition(address(3)), 2);
+        assertEq(harness.getPoolPosition(address(4)), 3);
+
+        harness.exposed_removePool(address(2));
+        assertEq(harness.getPoolPosition(address(4)), 1);
+        assertEq(harness.getPoolPosition(address(3)), 2);
+    }
+
+    function test_removePoolShouldFail() public {
+        LevvaPoolAdapterHarness harness = new LevvaPoolAdapterHarness(address(1));
+        vm.expectRevert(LevvaPoolAdapter.LevvaPoolAdapter__NoPool.selector);
+        harness.exposed_removePool(address(1));
     }
 
     function _showAssets() private view {

@@ -120,7 +120,7 @@ contract EtherfiETHAdapterTest is Test {
         _assertNoDebtAssets();
     }
 
-    function testDeposiAllExcept() public {
+    function testDepositAllExcept() public {
         uint256 wethBalanceBefore = WETH.balanceOf(address(levvaVault));
 
         uint256 except = 2 ether;
@@ -150,15 +150,6 @@ contract EtherfiETHAdapterTest is Test {
         assertEq(amounts[0], 0);
 
         _assertNoDebtAssets();
-    }
-
-    function testDepositEthNotTrackedAsset() public {
-        levvaVault.removeTrackedAsset(address(WEETH));
-
-        uint256 depositAmount = 1 ether;
-        vm.prank(address(levvaVault));
-        vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, WEETH));
-        adapter.deposit(depositAmount);
     }
 
     function testRequestWithdrawEth() public {
@@ -281,26 +272,6 @@ contract EtherfiETHAdapterTest is Test {
     function testClaimNoRequests() public {
         vm.prank(address(levvaVault));
         vm.expectRevert(abi.encodeWithSelector(EtherfiETHAdapter.NoWithdrawRequestInQueue.selector));
-        adapter.claimWithdraw();
-    }
-
-    function testClaimEthNotTrackedAsset() public {
-        uint256 depositAmount = WETH.balanceOf(address(levvaVault));
-        vm.prank(address(levvaVault));
-        uint256 weethAmount = adapter.deposit(depositAmount);
-
-        vm.prank(address(levvaVault));
-        adapter.requestWithdraw(weethAmount);
-
-        IWithdrawRequestNFTAdmin nft = IWithdrawRequestNFTAdmin(ETHERFI_LIQUIDITY_POOL.withdrawRequestNFT());
-        uint256 lastRequest = nft.nextRequestId() - 1;
-        vm.prank(ETHERFI_ADMIN);
-        nft.finalizeRequests(lastRequest);
-
-        levvaVault.removeTrackedAsset(address(WETH));
-
-        vm.prank(address(levvaVault));
-        vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, WETH));
         adapter.claimWithdraw();
     }
 

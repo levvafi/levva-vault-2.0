@@ -12,6 +12,7 @@ import {VaultAccessControl} from "../contracts/base/VaultAccessControl.sol";
 import {WithdrawalQueue} from "../contracts/WithdrawalQueue.sol";
 import {WithdrawalQueueBase} from "../contracts/base/WithdrawalQueueBase.sol";
 import {ERC4626Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgradeable.sol";
+import {Asserts} from "contracts/libraries/Asserts.sol";
 
 contract LevvaWithdrawalQueueTest is TestSetUp {
     uint256 constant DEPOSIT = 1_000_000;
@@ -47,6 +48,12 @@ contract LevvaWithdrawalQueueTest is TestSetUp {
 
         uint256 requestedShares = withdrawalQueue.getRequestedShares(requestId);
         assertEq(requestedShares, lpBalanceDelta);
+    }
+
+    function testRequestWithdrawalZeroAmount() public {
+        vm.prank(USER);
+        vm.expectRevert(Asserts.ZeroAmount.selector);
+        levvaVault.requestWithdrawal(0);
     }
 
     function testRequestWithdrawalExceedsMax() public {
@@ -88,6 +95,12 @@ contract LevvaWithdrawalQueueTest is TestSetUp {
         assertEq(requestedShares, lpBalanceDelta);
     }
 
+    function testRequestRedeemZeroAmount() public {
+        vm.prank(USER);
+        vm.expectRevert(Asserts.ZeroAmount.selector);
+        levvaVault.requestRedeem(0);
+    }
+
     function testRequestRedeemExceedsMax() public {
         uint256 maxRedeem = levvaVault.balanceOf(USER);
         uint256 exceedsMaxRedeem = maxRedeem + 1;
@@ -123,7 +136,7 @@ contract LevvaWithdrawalQueueTest is TestSetUp {
 
         uint256 userBalanceBefore = asset.balanceOf(USER);
         vm.prank(USER);
-        withdrawalQueue.claimWithdrawal(requestId);
+        withdrawalQueue.claimWithdrawal(requestId, USER);
 
         assertEq(asset.balanceOf(USER) - userBalanceBefore, DEPOSIT);
         assertEq(levvaVault.balanceOf(address(withdrawalQueue)), 0);
@@ -141,7 +154,7 @@ contract LevvaWithdrawalQueueTest is TestSetUp {
 
         vm.expectRevert(abi.encodeWithSelector(WithdrawalQueue.NotFinalized.selector));
         vm.prank(USER);
-        withdrawalQueue.claimWithdrawal(requestId);
+        withdrawalQueue.claimWithdrawal(requestId, USER);
     }
 
     function testClaimWithdrawalNotRequestOwner() public {
@@ -153,7 +166,7 @@ contract LevvaWithdrawalQueueTest is TestSetUp {
 
         vm.expectRevert(abi.encodeWithSelector(WithdrawalQueue.NotRequestOwner.selector));
         vm.prank(NO_ACCESS);
-        withdrawalQueue.claimWithdrawal(requestId);
+        withdrawalQueue.claimWithdrawal(requestId, USER);
     }
 
     function testFinalizeOnlyFinalizer() public {

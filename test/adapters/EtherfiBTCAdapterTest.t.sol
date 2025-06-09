@@ -125,15 +125,6 @@ contract EtherfiBTCAdapterTest is Test {
         adapter.deposit(depositAmount, 0);
     }
 
-    function testDepositBtcNotTrackedAssets() public {
-        levvaVault.removeTrackedAsset(address(EBTC));
-
-        uint256 depositAmount = 10 ** 8;
-        vm.prank(address(levvaVault));
-        vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, EBTC));
-        adapter.deposit(depositAmount, 0);
-    }
-
     function testRequestWithdrawBtc() public {
         uint256 depositAmount = 2 * 10 ** 8;
         vm.prank(address(levvaVault));
@@ -230,23 +221,6 @@ contract EtherfiBTCAdapterTest is Test {
         adapter.claimWithdraw();
     }
 
-    function testClaimWithdrawBtcNotTrackedAsset() public {
-        uint256 depositAmount = WBTC.balanceOf(address(levvaVault));
-        vm.prank(address(levvaVault));
-        adapter.deposit(depositAmount, 0);
-
-        vm.prank(address(levvaVault));
-        adapter.requestWithdraw(uint96(depositAmount), 10 ** 8, type(uint64).max);
-
-        _prankResolve();
-
-        levvaVault.removeTrackedAsset(address(WBTC));
-
-        vm.prank(address(levvaVault));
-        vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, WBTC));
-        adapter.claimWithdraw();
-    }
-
     function testCancelWithdrawBtc() public {
         uint256 depositAmount = 10 ** 8;
         vm.prank(address(levvaVault));
@@ -275,21 +249,6 @@ contract EtherfiBTCAdapterTest is Test {
     function testCancelWithdrawRequestBtcNoAccess() public {
         vm.prank(NO_ACCESS);
         vm.expectRevert(abi.encodeWithSelector(EtherfiBTCAdapter.NoAccess.selector));
-        adapter.cancelWithdrawRequest();
-    }
-
-    function testCancelWithdrawBtcNotTrackedAsset() public {
-        uint256 depositAmount = WBTC.balanceOf(address(levvaVault));
-        vm.prank(address(levvaVault));
-        adapter.deposit(depositAmount, 0);
-
-        vm.prank(address(levvaVault));
-        adapter.requestWithdraw(uint96(depositAmount), 10 ** 8, type(uint64).max);
-
-        levvaVault.removeTrackedAsset(address(EBTC));
-
-        vm.prank(address(levvaVault));
-        vm.expectRevert(abi.encodeWithSelector(AdapterBase.AdapterBase__InvalidToken.selector, EBTC));
         adapter.cancelWithdrawRequest();
     }
 

@@ -8,11 +8,11 @@ contract MakerDaoDaiAdapter is ERC4626AdapterBase {
 
     constructor(address _sDAI) ERC4626AdapterBase(_sDAI) {}
 
-    function DAI() public view returns (address) {
+    function DAI() external view returns (address) {
         return _asset;
     }
 
-    function sDAI() public view returns (address) {
+    function sDAI() external view returns (address) {
         return _vault;
     }
 }
