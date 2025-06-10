@@ -9,5 +9,5 @@ make build
 ## Run uint tests
 
 ```bash
-yarn test
+make test
 ```
