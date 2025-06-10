@@ -6,8 +6,6 @@ import {console} from "lib/forge-std/src/console.sol";
 import {Vm} from "lib/forge-std/src/Vm.sol";
 import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {IPool} from "@aave/core-v3/contracts/interfaces/IPool.sol";
-import {IPoolAddressesProvider} from "@aave/core-v3/contracts/interfaces/IPoolAddressesProvider.sol";
 
 import {LevvaVaultFactory} from "../../contracts/LevvaVaultFactory.sol";
 import {LevvaVault} from "../../contracts/LevvaVault.sol";

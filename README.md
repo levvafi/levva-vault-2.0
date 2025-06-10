@@ -1,13 +1,19 @@
-# Sample Hardhat Project
+# Levva Vault 2.0
 
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, and a Hardhat Ignition module that deploys that contract.
+## Install dependencies
 
-Try running some of the following tasks:
+```bash
+yarn && forge install
+```
 
-```shell
-npx hardhat help
-npx hardhat test
-REPORT_GAS=true npx hardhat test
-npx hardhat node
-npx hardhat ignition deploy ./ignition/modules/Lock.ts
+## Compile contracts
+
+```bash
+make build
+```
+
+## Run uint tests
+
+```bash
+yarn test
 ```
