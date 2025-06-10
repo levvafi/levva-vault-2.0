@@ -37,28 +37,31 @@ contract AaveAdapter is AdapterBase {
         supply(asset, supplyAmount);
     }
 
-    function withdraw(address asset, uint256 amount) external {
+    function withdraw(address asset, uint256 amount) external returns (uint256 withdrawnAmount) {
         IPool aavePool = IPool(aavePoolAddressProvider.getPool());
         address aToken = _getAToken(aavePool, asset);
-        _withdraw(asset, aavePool, aToken, amount);
+        withdrawnAmount = _withdraw(asset, aavePool, aToken, amount);
     }
 
-    function withdrawAllExcept(address asset, uint256 except) external {
+    function withdrawAllExcept(address asset, uint256 except) external returns (uint256 withdrawnAmount) {
         IPool aavePool = IPool(aavePoolAddressProvider.getPool());
         address aToken = _getAToken(aavePool, asset);
         uint256 amount = IERC20(aToken).balanceOf(msg.sender) - except;
-        _withdraw(asset, aavePool, aToken, amount);
+        withdrawnAmount = _withdraw(asset, aavePool, aToken, amount);
     }
 
     function _getAToken(IPool pool, address asset) private view returns (address) {
         return pool.getReserveData(asset).aTokenAddress;
     }
 
-    function _withdraw(address asset, IPool aavePool, address aToken, uint256 amount) private {
+    function _withdraw(address asset, IPool aavePool, address aToken, uint256 amount)
+        private
+        returns (uint256 withdrawnAmount)
+    {
         uint256 toTransfer = amount == type(uint256).max ? IERC20(aToken).balanceOf(msg.sender) : amount;
         IAdapterCallback(msg.sender).adapterCallback(address(this), aToken, toTransfer);
         IERC20(asset).forceApprove(aToken, toTransfer);
 
-        aavePool.withdraw(asset, amount, msg.sender);
+        withdrawnAmount = aavePool.withdraw(asset, amount, msg.sender);
     }
 }
