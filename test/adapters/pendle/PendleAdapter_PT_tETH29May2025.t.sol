@@ -14,7 +14,7 @@ import {
     SwapData,
     SwapType,
     TokenOutput
-} from "@pendle/core-v2/contracts/interfaces/IPAllActionTypeV3.sol";
+} from "@pendle/core-v2/interfaces/IPAllActionTypeV3.sol";
 import {PendleAdapterTestBase} from "./PendleAdapterTestBase.t.sol";
 
 contract PendleAdapterTest is PendleAdapterTestBase {

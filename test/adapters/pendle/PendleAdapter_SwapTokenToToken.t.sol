@@ -14,9 +14,9 @@ import {
     SwapData,
     SwapType,
     TokenOutput
-} from "@pendle/core-v2/contracts/interfaces/IPAllActionTypeV3.sol";
+} from "@pendle/core-v2/interfaces/IPAllActionTypeV3.sol";
 
-import {IPSwapAggregator, SwapDataExtra} from "@pendle/core-v2/contracts/router/swap-aggregator/IPSwapAggregator.sol";
+import {IPSwapAggregator, SwapDataExtra} from "@pendle/core-v2/router/swap-aggregator/IPSwapAggregator.sol";
 import {PendleAdapterTestBase} from "./PendleAdapterTestBase.t.sol";
 
 contract PendleAdapter_SwapTokenToToken is PendleAdapterTestBase {

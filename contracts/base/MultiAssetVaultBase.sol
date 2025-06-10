@@ -188,7 +188,7 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, FeeCollector, Adapt
             for (uint256 i; i < length; ++i) {
                 IERC20 trackedAsset = trackedAssets[i];
                 uint256 trackedAssetBalance = _tokenBalance(trackedAsset);
-                if (balance != 0) {
+                if (trackedAssetBalance != 0) {
                     balance += _callOracle(eulerOracle, trackedAssetBalance, address(trackedAsset), asset);
                 }
             }

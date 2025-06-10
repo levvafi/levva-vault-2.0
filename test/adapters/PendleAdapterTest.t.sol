@@ -28,8 +28,8 @@ import {
     LimitOrderData,
     SwapData,
     TokenOutput
-} from "@pendle/core-v2/contracts/interfaces/IPAllActionTypeV3.sol";
-import {IPSwapAggregator, SwapDataExtra} from "@pendle/core-v2/contracts/router/swap-aggregator/IPSwapAggregator.sol";
+} from "@pendle/core-v2/interfaces/IPAllActionTypeV3.sol";
+import {IPSwapAggregator, SwapDataExtra} from "@pendle/core-v2/router/swap-aggregator/IPSwapAggregator.sol";
 
 contract PendleAdapterTest is Test {
     using Math for uint256;
