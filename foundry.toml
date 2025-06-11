@@ -23,3 +23,5 @@ remappings = [
     "@uniswap/v3-core/=lib/v3-core/",
     "@uniswap/universal-router/=lib/universal-router/",
 ]
+
+fs_permissions = [{ access = "read-write", path = "./script/deployment/" }]
