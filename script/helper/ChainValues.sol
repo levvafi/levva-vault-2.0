@@ -1,0 +1,128 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.28;
+
+import {Script, console} from "forge-std/Script.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {AddressToBytes32Lib} from "./AddressToBytes32Lib.sol";
+
+contract ChainValues {
+    using AddressToBytes32Lib for address;
+    using AddressToBytes32Lib for bytes32;
+
+    mapping(string chainName => mapping(string valueName => bytes32 value)) private s_values;
+
+    error ChainValues__ZeroAddress(string chainName, string valueName);
+    error ChainValues__ZeroBytes32(string chainName, string valueName);
+    error ChainValues__ValueAlreadySet(string chainName, string valueName);
+
+    constructor() {
+        _addEthMainnetValues();
+    }
+
+    function getChainName() public view returns (string memory) {
+        if (block.chainid == 1) {
+            return "ethereum";
+        } else if (block.chainid == 42161) {
+            return "arbitrum";
+        } else if (block.chainid == 31337) {
+            return "localhost";
+        }
+
+        revert("Not supported chainId");
+    }
+
+    function getAddress(string memory valueName) public view returns (address a) {
+        a = getAddress(getChainName(), valueName);
+    }
+
+    function getAddress(string memory chainName, string memory valueName) public view returns (address a) {
+        a = s_values[chainName][valueName].toAddress();
+        if (a == address(0)) {
+            revert ChainValues__ZeroAddress(chainName, valueName);
+        }
+    }
+
+    function getERC20(string memory chainName, string memory valueName) public view returns (ERC20 erc20) {
+        address a = getAddress(chainName, valueName);
+        erc20 = ERC20(a);
+    }
+
+    function getBytes32(string memory chainName, string memory valueName) public view returns (bytes32 b) {
+        b = s_values[chainName][valueName];
+        if (b == bytes32(0)) {
+            revert ChainValues__ZeroBytes32(chainName, valueName);
+        }
+    }
+
+    function setValue(bool overrideOk, string memory valueName, bytes32 value) public {
+        setValue(overrideOk, getChainName(), valueName, value);
+    }
+
+    function setValue(bool overrideOk, string memory chainName, string memory valueName, bytes32 value) public {
+        if (!overrideOk && s_values[chainName][valueName] != bytes32(0)) {
+            revert ChainValues__ValueAlreadySet(chainName, valueName);
+        }
+        s_values[chainName][valueName] = value;
+    }
+
+    function setAddress(bool overrideOk, string memory valueName, address value) public {
+        setAddress(overrideOk, getChainName(), valueName, value);
+    }
+
+    function setAddress(bool overrideOk, string memory chainName, string memory valueName, address value) public {
+        setValue(overrideOk, chainName, valueName, value.toBytes32());
+    }
+
+    function _addEthMainnetValues() private {
+        /* ============ LEVVA VAULTS ========== */
+        s_values["ethereum"]["LevvaVaultFactory"] = address(0).toBytes32();
+        s_values["ethereum"]["EulerOracle"] = address(0).toBytes32();
+        s_values["ethereum"]["FeeCollector"] = address(0).toBytes32();
+        s_values["ethereum"]["VaultManager"] = address(0).toBytes32();
+
+        /* =========== TOKENS ================ */
+        s_values["ethereum"]["aUSDC"] = 0x98C23E9d8f34FEFb1B7BD6a91B7FF122F4e16F5c.toBytes32();
+        s_values["ethereum"]["DAI"] = 0x6B175474E89094C44Da98b954EedeAC495271d0F.toBytes32();
+        s_values["ethereum"]["eBTC"] = 0x657e8C867D8B37dCC18fA4Caead9C45EB088C642.toBytes32();
+        s_values["ethereum"]["sDAI"] = 0x83F20F44975D03b1b09e64809B757c47f942BEeA.toBytes32();
+        s_values["ethereum"]["sUSDE"] = 0x9D39A5DE30e57443BfF2A8307A4256c8797A3497.toBytes32();
+        s_values["ethereum"]["sUSDS"] = 0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD.toBytes32();
+        s_values["ethereum"]["USDS"] = 0xdC035D45d973E3EC169d2276DDab16f1e407384F.toBytes32();
+        s_values["ethereum"]["USDT"] = 0xdAC17F958D2ee523a2206206994597C13D831ec7.toBytes32();
+        s_values["ethereum"]["USDC"] = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48.toBytes32();
+        s_values["ethereum"]["USR"] = 0x66a1E37c9b0eAddca17d3662D6c05F4DECf3e110.toBytes32();
+        s_values["ethereum"]["WETH"] = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2.toBytes32();
+        s_values["ethereum"]["WSTUSR"] = 0x1202F5C7b4B9E47a1A484E8B270be34dbbC75055.toBytes32();
+        s_values["ethereum"]["WSTETH"] = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0.toBytes32();
+        s_values["ethereum"]["WEETH"] = 0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee.toBytes32();
+        s_values["ethereum"]["WBTC"] = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599.toBytes32();
+
+        /* ============== AAVE ================ */
+        s_values["ethereum"]["AavePoolAddressProvider"] = 0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e.toBytes32();
+
+        /* ============== CURVE ================ */
+        s_values["ethereum"]["CurveRouterV1_2"] = 0x45312ea0eFf7E09C83CBE249fa1d7598c4C8cd4e.toBytes32();
+
+        /* ============== EtherFi ================ */
+        s_values["ethereum"]["EtherFiLiquidityPool"] = 0x308861A430be4cce5502d0A12724771Fc6DaF216.toBytes32();
+        s_values["ethereum"]["EtherFiBtcTeller"] = 0x6Ee3aaCcf9f2321E49063C4F8da775DdBd407268.toBytes32();
+        s_values["ethereum"]["EtherFiBtcAtomicQueue"] = 0xD45884B592E316eB816199615A95C182F75dea07.toBytes32();
+
+        /* ============== LIDO ================ */
+        s_values["ethereum"]["LidoWithdrawalQueue"] = 0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1.toBytes32();
+
+        /* ============== MORPHO ================ */
+        s_values["ethereum"]["MetaMorphoFactory"] = 0xA9c3D3a366466Fa809d1Ae982Fb2c46E5fC41101.toBytes32();
+        s_values["ethereum"]["MetaMorphoFactoryV1_1"] = 0x1897A8997241C1cD4bD0698647e4EB7213535c24.toBytes32();
+
+        /* ============== PENDLE =============== */
+        s_values["ethereum"]["PendleRouter"] = 0x888888888889758F76e7103c6CbF23ABbF58F946.toBytes32();
+
+        /* ============== UNISWAP =============== */
+        s_values["ethereum"]["UniswapV3Router"] = 0xE592427A0AEce92De3Edee1F18E0157C05861564.toBytes32();
+        s_values["ethereum"]["UniversalRouter"] = 0x66a9893cC07D91D95644AEDD05D03f95e1dBA8Af.toBytes32();
+        s_values["ethereum"]["UniswapPermit2"] = 0x000000000022D473030F116dDEE9F6B43aC78BA3.toBytes32();
+    }
+
+    function _addLocalhost() private {}
+}

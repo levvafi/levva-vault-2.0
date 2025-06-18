@@ -1,12 +1,13 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.28;
 
 import {Script, console} from "forge-std/Script.sol";
 import {VmSafe} from "forge-std/Vm.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+import {ChainValues} from "./ChainValues.sol";
 
-abstract contract DeployHelper is Script {
+abstract contract DeployHelper is Script, ChainValues {
     using stdJson for string;
     using Strings for uint256;
 
@@ -15,8 +16,8 @@ abstract contract DeployHelper is Script {
 
         string memory root = vm.projectRoot();
         string memory path = isDryRunMode
-            ? string.concat(root, "/", "script/deployment/", vm.toString(block.chainid), "/dry-run/", deploymentName)
-            : string.concat(root, "/", "script/deployment/", vm.toString(block.chainid), "/", deploymentName);
+            ? string.concat(root, "/script/deployment/", vm.toString(block.chainid), "/dry-run/", deploymentName)
+            : string.concat(root, "/script/deployment/", vm.toString(block.chainid), "/", deploymentName);
         return path;
     }
 
@@ -25,7 +26,7 @@ abstract contract DeployHelper is Script {
     }
 
     function _saveInDeploymentFile(string memory path, string memory valueKey, address value) internal {
-        if(!vm.exists(path)) {
+        if (!vm.exists(path)) {
             _createEmptyDeploymentFile(path);
         }
 
@@ -55,6 +56,11 @@ abstract contract DeployHelper is Script {
             return address(0);
         }
 
-        return jsonFile.readAddress(jsonKey);
+        address targetAddress = jsonFile.readAddress(jsonKey);
+        if (targetAddress.code.length == 0) {
+            return address(0);
+        }
+
+        return targetAddress;
     }
 }
