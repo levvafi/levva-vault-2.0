@@ -3,18 +3,18 @@ pragma solidity ^0.8.28;
 
 import {Script, console} from "forge-std/Script.sol";
 import {stdJson} from "forge-std/StdJson.sol";
-import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+
 import {LevvaVaultFactory} from "contracts/LevvaVaultFactory.sol";
 import {LevvaVault} from "contracts/LevvaVault.sol";
 import {WithdrawalQueue} from "contracts/WithdrawalQueue.sol";
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {ChainValues} from "../helper/ChainValues.sol";
 import {DeployHelper} from "../helper/DeployHelper.sol";
+import {Adapter, AdaptersLib} from "../helper/AdaptersLib.sol";
 import {DeployLevvaVaultFactory} from "../DeployLevvaVaultFactory.s.sol";
 import {Adapter, DeployAdapter} from "../DeployAdapter.s.sol";
-import {Adapter, AdaptersLib} from "../helper/AdaptersLib.sol";
 
 struct VaultConfig {
     address asset;
@@ -33,7 +33,6 @@ struct VaultConfig {
 
 abstract contract LevvaVaultDeployer is DeployHelper {
     using stdJson for string;
-    using Strings for address;
     using AdaptersLib for Adapter;
 
     string public constant DEPLOYMENT_FILE = "vaults.json";

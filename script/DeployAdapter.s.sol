@@ -3,7 +3,6 @@ pragma solidity ^0.8.28;
 
 import {Script, console} from "forge-std/Script.sol";
 import {stdJson} from "forge-std/StdJson.sol";
-import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
 import {LevvaVaultFactory} from "contracts/LevvaVaultFactory.sol";
 import {LevvaVault} from "contracts/LevvaVault.sol";
@@ -11,6 +10,7 @@ import {WithdrawalQueue} from "contracts/WithdrawalQueue.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {ChainValues} from "./helper/ChainValues.sol";
 import {DeployHelper} from "./helper/DeployHelper.sol";
+import {Adapter, AdaptersLib} from "./helper/AdaptersLib.sol";
 import {AaveAdapter} from "contracts/adapters/aave/AaveAdapter.sol";
 import {CurveRouterAdapter} from "contracts/adapters/curve/CurveRouterAdapter.sol";
 import {EthenaAdapter} from "contracts/adapters/ethena/EthenaAdapter.sol";
@@ -27,7 +27,6 @@ import {UniswapAdapter} from "contracts/adapters/uniswap/UniswapAdapter.sol";
 import {PendleAdapter} from "contracts/adapters/pendle/PendleAdapter.sol";
 import {ResolvAdapter} from "contracts/adapters/resolv/ResolvAdapter.sol";
 import {DeployLevvaVaultFactory} from "./DeployLevvaVaultFactory.s.sol";
-import {Adapter, AdaptersLib} from "./helper/AdaptersLib.sol";
 
 /**
  * @dev Uncomment lines you want to deploy
@@ -35,7 +34,6 @@ import {Adapter, AdaptersLib} from "./helper/AdaptersLib.sol";
  */
 contract DeployAdapter is DeployHelper {
     using stdJson for string;
-    using Strings for address;
     using AdaptersLib for Adapter;
 
     string public constant DEPLOYMENT_FILE = "adapters.json";

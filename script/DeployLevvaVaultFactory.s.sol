@@ -7,14 +7,12 @@ import {LevvaVault} from "contracts/LevvaVault.sol";
 import {WithdrawalQueue} from "contracts/WithdrawalQueue.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {stdJson} from "forge-std/StdJson.sol";
-import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {DeployHelper} from "./helper/DeployHelper.sol";
 
 ///@dev Before deploy: create directory "deployment/{chainId}/dry-run" for dry-run or create "deployment/{chainId}" for deploy
 ///@dev forge script script/DeployLevvaVaultFactory.s.sol:DeployLevvaVaultFactory -vvvv --account testDeployer --rpc-url $ETH_RPC_URL
 contract DeployLevvaVaultFactory is Script, DeployHelper {
     using stdJson for string;
-    using Strings for address;
 
     string public constant DEPLOYMENT_FILE = "factory.json";
 
@@ -30,7 +28,7 @@ contract DeployLevvaVaultFactory is Script, DeployHelper {
 
         address deployedFactory = getDeployedFactoryAddress();
         if (deployedFactory != address(0)) {
-            console.log("Factory already deployed at", deployedFactory.toHexString());
+            console.log("Factory already deployed at", vm.toString(deployedFactory));
             return;
         }
 
