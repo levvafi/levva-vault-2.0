@@ -56,6 +56,7 @@ abstract contract LevvaVaultDeployer is DeployHelper {
             return LevvaVault(deployedVault);
         }
 
+        //LevvaVault factory should be deployed first
         LevvaVaultFactory factory = LevvaVaultFactory(getAddress("LevvaVaultFactory"));
 
         vm.startBroadcast();
@@ -76,7 +77,7 @@ abstract contract LevvaVaultDeployer is DeployHelper {
         vm.stopBroadcast();
 
         //configure tracked assets
-        for (uint256 i = 0; i < config.trackedAssets.length; i++) {
+        for (uint256 i = 0; i < config.trackedAssets.length; ++i) {
             vm.broadcast();
             vault.addTrackedAsset(config.trackedAssets[i]);
         }
@@ -85,7 +86,6 @@ abstract contract LevvaVaultDeployer is DeployHelper {
     }
 
     function _deployAdapters(VaultConfig memory config, LevvaVault vault) internal {
-        //deploy adapters
         for (uint256 i = 0; i < config.adapters.length; ++i) {
             Adapter adapter = config.adapters[i];
 
