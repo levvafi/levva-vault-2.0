@@ -11,7 +11,7 @@ import {LevvaVault} from "contracts/LevvaVault.sol";
 import {WithdrawalQueue} from "contracts/WithdrawalQueue.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {ChainValues} from "../helper/ChainValues.sol";
-import {Adapter, AdaptersLib} from "../helper/AdaptersLib.sol";
+import {Adapter} from "../helper/AdapterUtils.sol";
 import {VaultConfig, LevvaVaultDeployer} from "./LevvaVaultDeployer.sol";
 import {DeployHelper} from "../helper/DeployHelper.sol";
 import {DeployLevvaVaultFactory} from "../DeployLevvaVaultFactory.s.sol";
@@ -21,7 +21,6 @@ import {Adapter, DeployAdapter} from "../DeployAdapter.s.sol";
 contract DeployUSDCVaultExample is LevvaVaultDeployer {
     using stdJson for string;
     using Strings for address;
-    using AdaptersLib for Adapter;
 
     function _getDeployConfig() internal view override returns (VaultConfig memory) {
         if (block.chainid == 1) {

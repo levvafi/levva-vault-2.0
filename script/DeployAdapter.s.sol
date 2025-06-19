@@ -10,7 +10,7 @@ import {WithdrawalQueue} from "contracts/WithdrawalQueue.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {ChainValues} from "./helper/ChainValues.sol";
 import {DeployHelper} from "./helper/DeployHelper.sol";
-import {Adapter, AdaptersLib} from "./helper/AdaptersLib.sol";
+import {Adapter, AdapterUtils} from "./helper/AdapterUtils.sol";
 import {AaveAdapter} from "contracts/adapters/aave/AaveAdapter.sol";
 import {CurveRouterAdapter} from "contracts/adapters/curve/CurveRouterAdapter.sol";
 import {EthenaAdapter} from "contracts/adapters/ethena/EthenaAdapter.sol";
@@ -32,9 +32,8 @@ import {DeployLevvaVaultFactory} from "./DeployLevvaVaultFactory.s.sol";
  * @dev Uncomment lines you want to deploy
  * @dev source .env && forge script script/DeployAdapter.s.sol:DeployAdapter -vvvv --account testDeployer --rpc-url $ETH_RPC_URL
  */
-contract DeployAdapter is DeployHelper {
+contract DeployAdapter is DeployHelper, AdapterUtils {
     using stdJson for string;
-    using AdaptersLib for Adapter;
 
     string public constant DEPLOYMENT_FILE = "adapters.json";
 
@@ -57,8 +56,8 @@ contract DeployAdapter is DeployHelper {
     }
 
     function getDeployedAdapter(Adapter adapter, address vault) public view returns (address) {
-        string memory deploymentKey = adapter.getAdapterName();
-        if (adapter.isPerVaultAdapter()) {
+        string memory deploymentKey = _getAdapterName(adapter);
+        if (_isPerVaultAdapter(adapter)) {
             deploymentKey = string.concat(deploymentKey, "_", vm.toString(vault));
         }
 
@@ -250,8 +249,8 @@ contract DeployAdapter is DeployHelper {
             _createEmptyDeploymentFile(path);
         }
 
-        string memory deploymentKey = adapter.getAdapterName();
-        if (adapter.isPerVaultAdapter()) {
+        string memory deploymentKey = _getAdapterName(adapter);
+        if (_isPerVaultAdapter(adapter)) {
             deploymentKey = string.concat(deploymentKey, "_", vm.toString(levvaVault));
         }
         _saveInDeploymentFile(path, deploymentKey, adapterAddress);

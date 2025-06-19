@@ -19,12 +19,12 @@ enum Adapter {
     UniswapAdapter
 }
 
-library AdaptersLib {
-    function isPerVaultAdapter(Adapter adapter) public pure returns (bool) {
+abstract contract AdapterUtils {
+    function _isPerVaultAdapter(Adapter adapter) internal pure returns (bool) {
         return adapter == Adapter.EthenaAdapter || adapter == Adapter.LevvaPoolAdapter || adapter == Adapter.EtherfiBTC;
     }
 
-    function getAdapterName(Adapter adapter) public pure returns (string memory) {
+    function _getAdapterName(Adapter adapter) internal pure returns (string memory) {
         if (adapter == Adapter.AaveAdapter) {
             return "AaveAdapter";
         } else if (adapter == Adapter.CurveRouterAdapter) {
@@ -60,8 +60,8 @@ library AdaptersLib {
         revert("Adapter not supported");
     }
 
-    function getAdapterId(Adapter adapter) public pure returns (bytes4) {
-        string memory adapterName = getAdapterName(adapter);
+    function _getAdapterId(Adapter adapter) internal pure returns (bytes4) {
+        string memory adapterName = _getAdapterName(adapter);
         return bytes4(keccak256(bytes(adapterName)));
     }
 }

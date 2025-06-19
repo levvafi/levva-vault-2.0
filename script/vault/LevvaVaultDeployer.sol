@@ -12,7 +12,7 @@ import {LevvaVault} from "contracts/LevvaVault.sol";
 import {WithdrawalQueue} from "contracts/WithdrawalQueue.sol";
 import {ChainValues} from "../helper/ChainValues.sol";
 import {DeployHelper} from "../helper/DeployHelper.sol";
-import {Adapter, AdaptersLib} from "../helper/AdaptersLib.sol";
+import {Adapter, AdapterUtils} from "../helper/AdapterUtils.sol";
 import {DeployLevvaVaultFactory} from "../DeployLevvaVaultFactory.s.sol";
 import {Adapter, DeployAdapter} from "../DeployAdapter.s.sol";
 
@@ -31,15 +31,12 @@ struct VaultConfig {
     uint256 initialDeposit;
 }
 
-abstract contract LevvaVaultDeployer is DeployHelper {
+abstract contract LevvaVaultDeployer is DeployHelper, AdapterUtils {
     using stdJson for string;
-    using AdaptersLib for Adapter;
 
     string public constant DEPLOYMENT_FILE = "vaults.json";
 
-    DeployAdapter adapterDeployer = new DeployAdapter();
-
-    function run() external {
+    function run() external virtual {
         VaultConfig memory deployConfig = _getDeployConfig();
 
         LevvaVault vault = _deployVault(deployConfig);
@@ -85,11 +82,13 @@ abstract contract LevvaVaultDeployer is DeployHelper {
     }
 
     function _deployAdapters(VaultConfig memory config, LevvaVault vault) internal {
+        DeployAdapter adapterDeployer = new DeployAdapter();
+
         for (uint256 i = 0; i < config.adapters.length; ++i) {
             Adapter adapter = config.adapters[i];
 
             //skip if adapter already connected
-            bytes4 adapterId = adapter.getAdapterId();
+            bytes4 adapterId = _getAdapterId(adapter);
             if (address(vault.getAdapter(adapterId)) != address(0)) {
                 continue;
             }

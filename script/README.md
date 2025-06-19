@@ -23,7 +23,7 @@ If you deploy in dry-run mode ensure `script/deployment/<chainid>/dry-run` direc
 1. Deploy LevvaVault factory
 
 ```sh
-forge script script/DeployLevvaVaultFactory.s.sol:DeployLevvaVaultFactory -vvvv --account deployer --rpc-url $ETH_RPC_URL --broadcast --etherscan-api-key $ETHERSCAN_KEY --verify
+forge script script/DeployLevvaVaultFactory.s.sol:DeployLevvaVaultFactory -vvvv --account deployer --rpc-url $ETH_RPC_URL --broadcast --etherscan-api-key $ETHERSCAN_KEY --verify --delay 7 --retries 15
 ```
 
 2. Before deploying a vault ensure addresses for LevvaVaultFactory, EulerOracle, FeeCollector and VaultManager are set in ChainValues
@@ -33,11 +33,11 @@ forge script script/DeployLevvaVaultFactory.s.sol:DeployLevvaVaultFactory -vvvv 
 4. Prepare DeployVault script for concrete vault with implemented getDeployConfig function and run deploy
 
 ```sh
-forge script script/vault/DeployUSDCVaultExample.s.sol:DeployUSDCVaultExample -vvvv  --account deployer --rpc-url $ETH_RPC_URL --broadcast --etherscan-api-key $ETHERSCAN_KEY --verify
+forge script script/vault/DeployUSDCVaultExample.s.sol:DeployUSDCVaultExample -vvvv  --account deployer --rpc-url $ETH_RPC_URL --broadcast --etherscan-api-key $ETHERSCAN_KEY --verify --delay 7 --retries 15
 ```
 
 3. Additionally you can deploy adapters and connect it to a vault
 
 ```sh
-forge script script/DeployAdapter.s.sol:DeployAdapter -vvvv --account deployer --rpc-url $ETH_RPC_URL --broadcast --etherscan-api-key $ETHERSCAN_KEY --verify
+forge script script/DeployAdapter.s.sol:DeployAdapter -vvvv --account deployer --rpc-url $ETH_RPC_URL --broadcast --etherscan-api-key $ETHERSCAN_KEY --verify --delay 7 --retries 15
 ```

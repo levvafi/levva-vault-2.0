@@ -9,6 +9,11 @@ contract ChainValues {
     using AddressToBytes32Lib for address;
     using AddressToBytes32Lib for bytes32;
 
+    uint256 public constant ETHEREUM = 1;
+    uint256 public constant ARBITRUM = 42161;
+    uint256 public constant LOCALHOST = 31337;
+    uint256 public constant ETH_HOODIE = 560048;
+
     mapping(string chainName => mapping(string valueName => bytes32 value)) private s_values;
 
     error ChainValues__ZeroAddress(string chainName, string valueName);
@@ -17,15 +22,19 @@ contract ChainValues {
 
     constructor() {
         _addEthMainnetValues();
+        _addLocalhost();
+        _addEthHoodie();
     }
 
     function getChainName() public view returns (string memory) {
-        if (block.chainid == 1) {
+        if (block.chainid == ETHEREUM) {
             return "ethereum";
-        } else if (block.chainid == 42161) {
+        } else if (block.chainid == ARBITRUM) {
             return "arbitrum";
-        } else if (block.chainid == 31337) {
+        } else if (block.chainid == LOCALHOST) {
             return "localhost";
+        } else if (block.chainid == ETH_HOODIE) {
+            return "ethHoodie";
         }
 
         revert("Not supported chainId");
@@ -125,4 +134,15 @@ contract ChainValues {
     }
 
     function _addLocalhost() private {}
+
+    function _addEthHoodie() private {
+        /* ============ LEVVA VAULTS ========== */
+        s_values["ethHoodie"]["LevvaVaultFactory"] = 0x4A3678bD3B2d49EED3937b971D87b5716aCAC789.toBytes32();
+        s_values["ethHoodie"]["EulerOracle"] = 0xAD70a0ab951780fF3397882fc5372db83dEb0606.toBytes32();
+        s_values["ethHoodie"]["FeeCollector"] = 0xAD70a0ab951780fF3397882fc5372db83dEb0606.toBytes32();
+        s_values["ethHoodie"]["VaultManager"] = 0xAD70a0ab951780fF3397882fc5372db83dEb0606.toBytes32();
+
+        /* =========== TOKENS ==================== */
+        s_values["ethHoodie"]["USDC"] = 0x0B81B675509e13D192AFd96080217B8b36520A62.toBytes32();
+    }
 }
