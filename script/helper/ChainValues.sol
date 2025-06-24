@@ -14,7 +14,6 @@ contract ChainValues {
     uint256 public constant LOCALHOST = 31337;
     uint256 public constant ETH_HOODIE = 560048;
 
-    /* same for all chain */
     address public constant USD = 0x0000000000000000000000000000000000000348;
 
     mapping(string chainName => mapping(string valueName => bytes32 value)) private s_values;
