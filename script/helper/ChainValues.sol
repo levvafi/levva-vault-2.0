@@ -51,9 +51,17 @@ contract ChainValues {
         }
     }
 
+    function getERC20(string memory valueName) public view returns (ERC20 erc20) {
+        erc20 = getERC20(getChainName(), valueName);
+    }
+
     function getERC20(string memory chainName, string memory valueName) public view returns (ERC20 erc20) {
         address a = getAddress(chainName, valueName);
         erc20 = ERC20(a);
+    }
+
+    function getBytes32(string memory valueName) public view returns (bytes32 b) {
+        b = getBytes32(getChainName(), valueName);
     }
 
     function getBytes32(string memory chainName, string memory valueName) public view returns (bytes32 b) {
