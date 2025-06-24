@@ -21,7 +21,7 @@ contract SetupEulerOracle is Script, DeployHelper {
     EulerRouter private eulerRouter;
 
     function run() external {
-        eulerRouter = _deployEulerRouter(); //EulerRouter(getAddress("EulerOracle"));
+        eulerRouter = EulerRouter(getAddress("EulerOracle"));
         setupUltraSafeVaultOracle();
     }
 
@@ -43,7 +43,7 @@ contract SetupEulerOracle is Script, DeployHelper {
 
     /// @dev For testing purposes, when  EulerRouter is not deployed yet
     function _deployEulerRouter() private returns (EulerRouter) {
-        address oracleGovernor = 0xAD70a0ab951780fF3397882fc5372db83dEb0606; //getAddress("EulerOracleGovernor");
+        address oracleGovernor = getAddress("EulerOracleGovernor");
 
         vm.startBroadcast();
         EulerRouter _eulerRouter = new EulerRouter(address(1), oracleGovernor);
@@ -236,7 +236,7 @@ contract SetupEulerOracle is Script, DeployHelper {
 
     function _getLogTokenName(address token) private view returns (string memory) {
         ERC20 tokenContract = ERC20(token);
-        if (keccak256(abi.encodePacked(tokenContract.name())) == keccak256(abi.encodePacked("Pendle market"))) {
+        if (keccak256(abi.encodePacked(tokenContract.name())) == keccak256(abi.encodePacked("Pendle Market"))) {
             (, IPPrincipalToken pt,) = IPMarket(token).readTokens();
             return string.concat("Pendle LP ", pt.symbol());
         } else {
