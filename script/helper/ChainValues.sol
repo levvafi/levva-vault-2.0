@@ -112,6 +112,7 @@ contract ChainValues {
         s_values["ethereum"]["USDS"] = 0xdC035D45d973E3EC169d2276DDab16f1e407384F.toBytes32();
         s_values["ethereum"]["USDT"] = 0xdAC17F958D2ee523a2206206994597C13D831ec7.toBytes32();
         s_values["ethereum"]["USDC"] = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48.toBytes32();
+        s_values["ethereum"]["USDE"] = 0x4c9EDD5852cd905f086C759E8383e09bff1E68B3.toBytes32();
         s_values["ethereum"]["USR"] = 0x66a1E37c9b0eAddca17d3662D6c05F4DECf3e110.toBytes32();
         s_values["ethereum"]["WETH"] = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2.toBytes32();
         s_values["ethereum"]["WSTUSR"] = 0x1202F5C7b4B9E47a1A484E8B270be34dbbC75055.toBytes32();
@@ -152,6 +153,7 @@ contract ChainValues {
 
         s_values["ethereum"]["PendleMarket_sUSDE_25sep2025"] = 0xA36b60A14A1A5247912584768C6e53E1a269a9F7.toBytes32();
         s_values["ethereum"]["PendleMarket_wstUSR_25sep2025"] = 0x09fA04Aac9c6d1c6131352EE950CD67ecC6d4fB9.toBytes32();
+        s_values["ethereum"]["CurvePool_USR_USDC"] = 0x3eE841F47947FEFbE510366E4bbb49e145484195.toBytes32();
 
         /* ============= DEPLOYED CHAINLINK EULER ADAPTERS ========== */
         s_values["ethereum"]["Chainlink_USDE_USD_oracle"] = 0x8211B9ae40b06d3Db0215E520F232184Af355378.toBytes32();
