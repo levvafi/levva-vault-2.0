@@ -9,8 +9,8 @@ interface IEulerRouterFactory {
     function deploy(address governor) external returns (address);
 }
 
-///@dev forge script script/DeployEulerPriceOracle.s.sol:DeployEulerPriceOracle -vvvv --account testDeployer --rpc-url $ETH_RPC_URL
-contract DeployEulerPriceOracle is Script, DeployHelper {
+///@dev forge script script/DeployEulerOracle.s.sol:DeployEulerOracle -vvvv --account testDeployer --rpc-url $ETH_RPC_URL
+contract DeployEulerOracle is Script, DeployHelper {
     string public constant DEPLOYMENT_FILE = "price-oracle.json";
 
     function run() external {

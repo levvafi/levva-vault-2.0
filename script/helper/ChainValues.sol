@@ -25,6 +25,8 @@ contract ChainValues {
 
     constructor() {
         _addEthMainnetValues();
+        _addArbitrumValues();
+
         _addLocalhost();
         _addEthHoodie();
     }
@@ -137,7 +139,7 @@ contract ChainValues {
         s_values["ethereum"]["UniswapPermit2"] = 0x000000000022D473030F116dDEE9F6B43aC78BA3.toBytes32();
 
         /* ============= PRICE ORACLES ============ */
-        s_values["ethereum"]["EulerOracleGovernor"] = 0x70B3f6F61b7Bf237DF04589DdAA842121072326A.toBytes32();
+        s_values["ethereum"]["EulerOracleGovernor"] = address(0).toBytes32();
         s_values["ethereum"]["EulerOracleFactory"] = 0x70B3f6F61b7Bf237DF04589DdAA842121072326A.toBytes32();
         s_values["ethereum"]["PendleOracle"] = 0x9a9Fa8338dd5E5B2188006f1Cd2Ef26d921650C2.toBytes32();
 
@@ -148,6 +150,39 @@ contract ChainValues {
         s_values["ethereum"]["Chainlink_USDE_USD_oracle"] = 0x8211B9ae40b06d3Db0215E520F232184Af355378.toBytes32();
         s_values["ethereum"]["Chainlink_USDC_USD_oracle"] = 0x6213f24332D35519039f2afa7e3BffE105a37d3F.toBytes32();
         s_values["ethereum"]["Chainlink_sUSDE_USD_oracle"] = 0xD4fF9D4e0A3E5995A0E040632F34271b2e9c8a42.toBytes32();
+    }
+
+    function _addArbitrumValues() private {
+        /* ============ LEVVA VAULTS ========== */
+        s_values["arbitrum"]["LevvaVaultFactory"] = address(0xb59B489e734Cafd650ddF30575d783f7732Fd369).toBytes32();
+        s_values["arbitrum"]["EulerOracle"] = address(0xA17864e2f8E4daECA09a984Eb8ADC2cDDE84d9D0).toBytes32();
+        s_values["arbitrum"]["FeeCollector"] = address(0xAD70a0ab951780fF3397882fc5372db83dEb0606).toBytes32();
+        s_values["arbitrum"]["VaultManager"] = address(0xAD70a0ab951780fF3397882fc5372db83dEb0606).toBytes32();
+
+        /* =========== TOKENS ================ */
+        s_values["arbitrum"]["USDC"] = 0xaf88d065e77c8cC2239327C5EDb3A432268e5831.toBytes32();
+        s_values["arbitrum"]["USDT"] = 0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9.toBytes32();
+
+        /* ============== AAVE ================ */
+        s_values["arbitrum"]["AavePoolAddressProvider"] = 0xa97684ead0e402dC232d5A977953DF7ECBaB3CDb.toBytes32();
+
+        /* ============== CURVE ================ */
+        s_values["arbitrum"]["CurveRouterV1_2"] = address(0x2191718CD32d02B8E60BAdFFeA33E4B5DD9A0A0D).toBytes32();
+
+        /* ============== MORPHO ================ */
+        s_values["arbitrum"]["MetaMorphoFactoryV1_1"] = 0x878988f5f561081deEa117717052164ea1Ef0c82.toBytes32();
+
+        /* ============== PENDLE =============== */
+        s_values["arbitrum"]["PendleRouter"] = 0x888888888889758F76e7103c6CbF23ABbF58F946.toBytes32();
+
+        /* ============== UNISWAP =============== */
+        s_values["arbitrum"]["UniswapV3Router"] = 0xE592427A0AEce92De3Edee1F18E0157C05861564.toBytes32();
+        s_values["arbitrum"]["UniversalRouter"] = 0xA51afAFe0263b40EdaEf0Df8781eA9aa03E381a3.toBytes32();
+        s_values["arbitrum"]["UniswapPermit2"] = 0x000000000022D473030F116dDEE9F6B43aC78BA3.toBytes32();
+
+        /* ============= PRICE ORACLES ============ */
+        s_values["arbitrum"]["EulerOracleGovernor"] = 0xAD70a0ab951780fF3397882fc5372db83dEb0606.toBytes32();
+        s_values["arbitrum"]["EulerOracleFactory"] = 0x22d51Db42A59862D4F8c135C4406AEf9854ABFF3.toBytes32();
     }
 
     function _addLocalhost() private {}

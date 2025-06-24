@@ -9,6 +9,7 @@ import {EulerRouter} from "euler-price-oracle/EulerRouter.sol";
 import {PendleUniversalOracle} from "euler-price-oracle/adapter/pendle/PendleUniversalOracle.sol";
 import {FixedRateOracle} from "euler-price-oracle/adapter/fixed/FixedRateOracle.sol";
 import {CrossAdapter} from "euler-price-oracle/adapter/CrossAdapter.sol";
+import {CurveEMAOracle} from "euler-price-oracle/adapter/curve/CurveEMAOracle.sol";
 
 ///@dev forge script script/DeployEulerPriceOracle.s.sol:DeployEulerPriceOracle -vvvv --account testDeployer --rpc-url $ETH_RPC_URL
 contract SetupEulerOracle is Script, DeployHelper {
@@ -22,11 +23,11 @@ contract SetupEulerOracle is Script, DeployHelper {
 
         address USDE_USD_oracle = getAddress("Chainlink_USDE_USD_oracle");
         address USDC_USD_oracle = getAddress("Chainlink_USDC_USD_oracle");
-        address USDE_USDC_oracle = 
+        address USDE_USDC_oracle =
             addCrossOracle(getAddress("USDE"), USD, getAddress("USDC"), USDE_USD_oracle, USDC_USD_oracle);
     }
 
-    function addPendleOracle_LP_sUSDE_25Sep2025__USDE() public returns (address) {
+    function addPendleOracle_LP_sUSDE_25Sep2025_USDE() public returns (address) {
         address eulerRouter = getAddress("EulerOracle");
 
         address pendleOracle = getAddress("PendleOracle");
@@ -89,7 +90,7 @@ contract SetupEulerOracle is Script, DeployHelper {
 
         vm.startBroadcast();
         CrossAdapter crossOracle = new CrossAdapter(base, cross, quote, oracleBaseCross, oracleCrossQuote);
-        EulerRouter(eulerRouter).govSetConfig(aUSDC, USDC, address(aUSDC_USDC_oracle));
+        EulerRouter(eulerRouter).govSetConfig(base, quote, address(crossOracle));
         vm.stopBroadcast();
     }
 

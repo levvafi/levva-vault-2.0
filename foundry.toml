@@ -12,6 +12,7 @@ via_ir = true
 
 remappings = [
     "forge-std/=lib/forge-std/src/",
+    "ethereum-vault-connector/=lib/euler-price-oracle/lib/ethereum-vault-connector/src/",
     "euler-price-oracle/=lib/euler-price-oracle/src/",
     "@pendle/core-v2/=lib/pendle-core-v2-public/contracts/",
     "@aave/core-v3/=lib/aave-v3-core/",
