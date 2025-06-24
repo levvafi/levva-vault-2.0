@@ -15,9 +15,10 @@ abstract contract DeployHelper is Script, ChainValues {
         bool isDryRunMode = vm.isContext(VmSafe.ForgeContext.ScriptDryRun);
 
         string memory root = vm.projectRoot();
+        string memory chainDir = string.concat(vm.toString(block.chainid), "-", getChainName());
         string memory path = isDryRunMode
-            ? string.concat(root, "/script/deployment/", vm.toString(block.chainid), "/dry-run/", deploymentName)
-            : string.concat(root, "/script/deployment/", vm.toString(block.chainid), "/", deploymentName);
+            ? string.concat(root, "/script/deployment/", chainDir, "/dry-run/", deploymentName)
+            : string.concat(root, "/script/deployment/", chainDir, "/", deploymentName);
         return path;
     }
 

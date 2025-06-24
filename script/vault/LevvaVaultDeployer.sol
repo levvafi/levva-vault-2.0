@@ -93,13 +93,10 @@ abstract contract LevvaVaultDeployer is DeployHelper, AdapterUtils {
                 continue;
             }
 
-            address deployedAdapter = adapterDeployer.getDeployedAdapter(adapter, address(vault));
-            if (deployedAdapter == address(0)) {
-                deployedAdapter = adapterDeployer.deployAdapter(adapter, address(vault));
-            }
+            address adapterAddress = adapterDeployer.getOrDeployAdapter(adapter, address(vault));
 
             vm.broadcast();
-            vault.addAdapter(deployedAdapter);
+            vault.addAdapter(adapterAddress);
         }
     }
 
