@@ -31,7 +31,10 @@ contract ChainValues {
             return "ethereum";
         } else if (block.chainid == ARBITRUM) {
             return "arbitrum";
-        } else if (block.chainid == LOCALHOST) {
+        }
+        
+        /*  Test chains */
+        else if (block.chainid == LOCALHOST) {
             return "localhost";
         } else if (block.chainid == ETH_HOODIE) {
             return "ethHoodie";
