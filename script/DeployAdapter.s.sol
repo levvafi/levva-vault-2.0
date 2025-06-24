@@ -77,6 +77,13 @@ contract DeployAdapter is DeployHelper, AdapterUtils {
                             DEPLOY ADAPTERS
     //////////////////////////////////////////////////////////////*/
 
+    function getOrDeployAdapter(Adapter adapter, address vault) public returns (address deployedAdapter) {
+        deployedAdapter = getDeployedAdapter(adapter, address(vault));
+        if (deployedAdapter == address(0)) {
+            deployedAdapter = deployAdapter(adapter, address(vault));
+        }
+    }
+
     function deployAdapter(Adapter adapter, address levvaVault) public returns (address deployedAdapter) {
         if (adapter == Adapter.AaveAdapter) {
             deployedAdapter = _deployAave();
