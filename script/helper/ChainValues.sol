@@ -9,13 +9,13 @@ contract ChainValues {
     using AddressToBytes32Lib for address;
     using AddressToBytes32Lib for bytes32;
 
-    /* same for all chain */
-    address public constant USD = 0x0000000000000000000000000000000000000348;
-
     uint256 public constant ETHEREUM = 1;
     uint256 public constant ARBITRUM = 42161;
     uint256 public constant LOCALHOST = 31337;
     uint256 public constant ETH_HOODIE = 560048;
+
+    /* same for all chain */
+    address public constant USD = 0x0000000000000000000000000000000000000348;
 
     mapping(string chainName => mapping(string valueName => bytes32 value)) private s_values;
 
@@ -35,7 +35,6 @@ contract ChainValues {
         } else if (block.chainid == ARBITRUM) {
             return "arbitrum";
         }
-        
         /*  Test chains */
         else if (block.chainid == LOCALHOST) {
             return "localhost";
@@ -113,7 +112,6 @@ contract ChainValues {
         s_values["ethereum"]["USDS"] = 0xdC035D45d973E3EC169d2276DDab16f1e407384F.toBytes32();
         s_values["ethereum"]["USDT"] = 0xdAC17F958D2ee523a2206206994597C13D831ec7.toBytes32();
         s_values["ethereum"]["USDC"] = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48.toBytes32();
-        s_values["ethereum"]["USDE"] = 0x4c9EDD5852cd905f086C759E8383e09bff1E68B3.toBytes32();
         s_values["ethereum"]["USR"] = 0x66a1E37c9b0eAddca17d3662D6c05F4DECf3e110.toBytes32();
         s_values["ethereum"]["WETH"] = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2.toBytes32();
         s_values["ethereum"]["WSTUSR"] = 0x1202F5C7b4B9E47a1A484E8B270be34dbbC75055.toBytes32();
@@ -148,7 +146,7 @@ contract ChainValues {
         s_values["ethereum"]["UniswapPermit2"] = 0x000000000022D473030F116dDEE9F6B43aC78BA3.toBytes32();
 
         /* ============= PRICE ORACLES ============ */
-        s_values["ethereum"]["EulerOracleGovernor"] = 0x70B3f6F61b7Bf237DF04589DdAA842121072326A.toBytes32();
+        s_values["ethereum"]["EulerOracleGovernor"] = address(0).toBytes32();
         s_values["ethereum"]["EulerOracleFactory"] = 0x70B3f6F61b7Bf237DF04589DdAA842121072326A.toBytes32();
         s_values["ethereum"]["PendleOracle"] = 0x9a9Fa8338dd5E5B2188006f1Cd2Ef26d921650C2.toBytes32();
 
