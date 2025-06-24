@@ -129,6 +129,11 @@ contract SetupEulerOracle is Script, DeployHelper {
         address USDE = getAddress("USDE");
         uint32 twapWindow = 5 minutes;
 
+        address deployedOracle = _getOracleConfig(LP_sUSDE_25sep2025, USDE);
+        if (deployedOracle != address(0)) {
+            return deployedOracle;
+        }
+
         vm.startBroadcast();
         PendleUniversalOracle pendleUniversalOracle =
             new PendleUniversalOracle(pendleOracle, LP_sUSDE_25sep2025, LP_sUSDE_25sep2025, USDE, twapWindow);
@@ -145,6 +150,11 @@ contract SetupEulerOracle is Script, DeployHelper {
         address USR = getAddress("USR");
         uint32 twapWindow = 5 minutes;
 
+        address deployedOracle = _getOracleConfig(LP_wstUSR_25sep2025, USR);
+        if (deployedOracle != address(0)) {
+            return deployedOracle;
+        }
+
         vm.startBroadcast();
         PendleUniversalOracle pendleUniversalOracle =
             new PendleUniversalOracle(pendleOracle, LP_wstUSR_25sep2025, LP_wstUSR_25sep2025, USR, twapWindow);
@@ -159,6 +169,11 @@ contract SetupEulerOracle is Script, DeployHelper {
         address aUSDC = getAddress("aUSDC");
         address USDC = getAddress("USDC");
         uint256 rate = 1e6; // fixed conversion rate between aUSDC and USDC
+
+        address deployedOracle = _getOracleConfig(aUSDC, USDC);
+        if (deployedOracle != address(0)) {
+            return deployedOracle;
+        }
 
         vm.startBroadcast();
         FixedRateOracle aUSDC_USDC_oracle = new FixedRateOracle(aUSDC, USDC, rate);
@@ -175,6 +190,11 @@ contract SetupEulerOracle is Script, DeployHelper {
         address oracleBaseCross,
         address oracleCrossQuote
     ) private returns (address) {
+        address deployedOracle = _getOracleConfig(base, quote);
+        if (deployedOracle != address(0)) {
+            return deployedOracle;
+        }
+
         vm.startBroadcast();
         CrossAdapter crossOracle = new CrossAdapter(base, cross, quote, oracleBaseCross, oracleCrossQuote);
         eulerRouter.govSetConfig(base, quote, address(crossOracle));
@@ -185,13 +205,18 @@ contract SetupEulerOracle is Script, DeployHelper {
 
     function _addCurveEma_USR_USDC() private returns (address) {
         address curvePool = getAddress("CurvePool_USR_USDC");
-        address baseToken = getAddress("USDC");
-        address quoteToken = getAddress("USR");
+        address USDC = getAddress("USDC");
+        address USR = getAddress("USR");
         uint256 priceOracleIndex = 0; // curve parameter type(uint256).max for price_oracle(), and index for price_oracle(priceOracleIndex)
 
+        address deployedOracle = _getOracleConfig(USR, USDC);
+        if (deployedOracle != address(0)) {
+            return deployedOracle;
+        }
+
         vm.startBroadcast();
-        CurveEMAOracle oracle = new CurveEMAOracle(curvePool, baseToken, priceOracleIndex);
-        eulerRouter.govSetConfig(baseToken, quoteToken, address(oracle));
+        CurveEMAOracle oracle = new CurveEMAOracle(curvePool, USDC, priceOracleIndex);
+        eulerRouter.govSetConfig(USDC, USR, address(oracle));
         vm.stopBroadcast();
 
         return address(oracle);
@@ -199,6 +224,11 @@ contract SetupEulerOracle is Script, DeployHelper {
 
     function _addResolvedVault_wstUSR_USR() private returns (address) {
         address wstUSR = getAddress("WSTUSR");
+
+        if (_isResolvedVault(wstUSR)) {
+            return address(eulerRouter);
+        }
+
         vm.startBroadcast();
         eulerRouter.govSetResolvedVault(wstUSR, true);
         vm.stopBroadcast();
@@ -207,10 +237,20 @@ contract SetupEulerOracle is Script, DeployHelper {
 
     function _addResolvedVault_LVVA_sUSDE_sUSDE() private returns (address) {
         address LVVA_sUSDE = getAddress("LVVA_sUSDE");
+
+        if (_isResolvedVault(LVVA_sUSDE)) {
+            return address(eulerRouter);
+        }
+
         vm.startBroadcast();
         eulerRouter.govSetResolvedVault(LVVA_sUSDE, true);
         vm.stopBroadcast();
         return address(eulerRouter);
+    }
+
+    function _isResolvedVault(address vault) private view returns (bool) {
+        address asset = eulerRouter.resolvedVaults(vault);
+        return asset != address(0);
     }
 
     function _getOracleConfig(address base, address quote) private view returns (address oracle) {
