@@ -20,23 +20,30 @@ If you deploy in dry-run mode ensure `script/deployment/<chainid>/dry-run` direc
 
 ## Deployment steps
 
-1. Deploy LevvaVault factory
+1. Deploy EulerOracle and save value to ChainValues
+
+```sh
+forge script script/DeployEulerOracle.s.sol:DeployEulerOracle -vvvv --account testDeployer --rpc-url $ETH_RPC_URL
+--broadcast --verify --delay 7 --retries 15 --verifier etherscan --etherscan-api-key $ETHERSCAN_KEY --verifier-url https://api.etherscan.io/api
+```
+
+2. Deploy LevvaVault factory and save value to ChainValues
 
 ```sh
 forge script script/DeployLevvaVaultFactory.s.sol:DeployLevvaVaultFactory -vvvv --account deployer --rpc-url $ETH_RPC_URL --broadcast --etherscan-api-key $ETHERSCAN_KEY --verify --delay 7 --retries 15
 ```
 
-2. Before deploying a vault ensure addresses for LevvaVaultFactory, EulerOracle, FeeCollector and VaultManager are set in ChainValues
+3. Before deploying a vault ensure addresses for LevvaVaultFactory, EulerOracle, FeeCollector and VaultManager are set in ChainValues
 
-3. Ensure EulerOracle prices are set up for all tokens. For deploy and set up prices use `https://github.com/levvafi/euler-price-oracle` repo
+4. Ensure EulerOracle prices are set up for all tokens. For deploy and set up prices use `https://github.com/levvafi/euler-price-oracle` repo
 
-4. Prepare DeployVault script for concrete vault with implemented getDeployConfig function and run deploy
+5. Prepare DeployVault script for concrete vault with implemented getDeployConfig function and run deploy
 
 ```sh
 forge script script/vault/DeployUSDCVaultExample.s.sol:DeployUSDCVaultExample -vvvv  --account deployer --rpc-url $ETH_RPC_URL --broadcast --etherscan-api-key $ETHERSCAN_KEY --verify --delay 7 --retries 15
 ```
 
-3. Additionally you can deploy adapters and connect it to a vault
+6. Additionally you can deploy adapters and connect it to a vault
 
 ```sh
 forge script script/DeployAdapter.s.sol:DeployAdapter -vvvv --account deployer --rpc-url $ETH_RPC_URL --broadcast --etherscan-api-key $ETHERSCAN_KEY --verify --delay 7 --retries 15
