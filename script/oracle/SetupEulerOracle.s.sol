@@ -39,8 +39,10 @@ contract SetupEulerOracle is Script, DeployHelper {
         //_setupPrice_LVVA_wstUSR__USDC();
     }
 
+    /// @dev For testing purposes, when  EulerRouter is not deployed yet
     function _deployEulerRouter() private {
-        address oracleGovernor = 0xAD70a0ab951780fF3397882fc5372db83dEb0606; //getAddress("EulerOracleGovernor");
+        address oracleGovernor = getAddress("EulerOracleGovernor");
+
         vm.startBroadcast();
         eulerRouter = new EulerRouter(address(1), oracleGovernor);
         vm.stopBroadcast();
