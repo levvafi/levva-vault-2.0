@@ -11,6 +11,8 @@ import {PendleUniversalOracle} from "euler-price-oracle/adapter/pendle/PendleUni
 import {FixedRateOracle} from "euler-price-oracle/adapter/fixed/FixedRateOracle.sol";
 import {CrossAdapter} from "euler-price-oracle/adapter/CrossAdapter.sol";
 import {CurveEMAOracle} from "euler-price-oracle/adapter/curve/CurveEMAOracle.sol";
+import {IPMarket} from "@pendle/core-v2/interfaces/IPMarket.sol";
+import {IPPrincipalToken} from "@pendle/core-v2/interfaces/IPPrincipalToken.sol";
 
 ///@dev forge script script/oracle/SetupEulerOracle.s.sol:SetupEulerOracle -vvvv --account testDeployer --rpc-url $ETH_RPC_URL
 contract SetupEulerOracle is Script, DeployHelper {
@@ -19,7 +21,7 @@ contract SetupEulerOracle is Script, DeployHelper {
     EulerRouter private eulerRouter;
 
     function run() external {
-        eulerRouter = EulerRouter(getAddress("EulerOracle"));
+        eulerRouter = _deployEulerRouter(); //EulerRouter(getAddress("EulerOracle"));
         setupUltraSafeVaultOracle();
     }
 
@@ -40,14 +42,16 @@ contract SetupEulerOracle is Script, DeployHelper {
     }
 
     /// @dev For testing purposes, when  EulerRouter is not deployed yet
-    function _deployEulerRouter() private {
-        address oracleGovernor = getAddress("EulerOracleGovernor");
+    function _deployEulerRouter() private returns (EulerRouter) {
+        address oracleGovernor = 0xAD70a0ab951780fF3397882fc5372db83dEb0606; //getAddress("EulerOracleGovernor");
 
         vm.startBroadcast();
-        eulerRouter = new EulerRouter(address(1), oracleGovernor);
+        EulerRouter _eulerRouter = new EulerRouter(address(1), oracleGovernor);
         vm.stopBroadcast();
 
-        console.log("EulerRouter deployed at:", address(eulerRouter));
+        console.log("EulerRouter deployed at:", address(_eulerRouter));
+
+        return _eulerRouter;
     }
 
     function _setupPrice_aUSDC__USDC() private {
@@ -224,18 +228,19 @@ contract SetupEulerOracle is Script, DeployHelper {
         uint256 inAmount = 1 * 10 ** ERC20(base).decimals();
         uint256 price = eulerRouter.getQuote(inAmount, base, quote);
 
-        console.log(
-            string.concat(
-                "Oracle price for ",
-                ERC20(base).symbol(),
-                "(",
-                ERC20(base).name(),
-                ")",
-                "/",
-                ERC20(quote).symbol(),
-                " ",
-                vm.toString(price)
-            )
-        );
+        string memory baseToken = _getLogTokenName(base);
+        string memory quoteToken = _getLogTokenName(quote);
+
+        console.log(string.concat("Oracle price for ", baseToken, "/", quoteToken, " ", vm.toString(price)));
+    }
+
+    function _getLogTokenName(address token) private view returns (string memory) {
+        ERC20 tokenContract = ERC20(token);
+        if (keccak256(abi.encodePacked(tokenContract.name())) == keccak256(abi.encodePacked("Pendle market"))) {
+            (, IPPrincipalToken pt,) = IPMarket(token).readTokens();
+            return string.concat("Pendle LP ", pt.symbol());
+        } else {
+            return tokenContract.symbol();
+        }
     }
 }
