@@ -158,6 +158,9 @@ contract ChainValues {
         s_values["ethereum"]["Chainlink_USDE_USD_oracle"] = 0x8211B9ae40b06d3Db0215E520F232184Af355378.toBytes32();
         s_values["ethereum"]["Chainlink_USDC_USD_oracle"] = 0x6213f24332D35519039f2afa7e3BffE105a37d3F.toBytes32();
         s_values["ethereum"]["Chainlink_sUSDE_USD_oracle"] = 0xD4fF9D4e0A3E5995A0E040632F34271b2e9c8a42.toBytes32();
+
+        /* ============= CHAINLINK DATA FEEDS =======================*/
+        s_values["ethereum"]["ChainlinkFeed_USR_USD"] = 0x34ad75691e25A8E9b681AAA85dbeB7ef6561B42c.toBytes32();
     }
 
     function _addLocalhost() private {}
