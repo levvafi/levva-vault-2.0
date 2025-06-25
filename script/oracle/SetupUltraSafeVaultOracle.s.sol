@@ -131,7 +131,8 @@ contract SetupUltraSafeVaultOracle is SetupEulerOracleBase {
     function _addAave_aUsdc_USDC_price() private returns (address) {
         address aUSDC = getAddress("aUSDC");
         address USDC = getAddress("USDC");
-        uint256 rate = 1e6; // fixed conversion rate between aUSDC and USDC
+        uint256 baseDecimals = ERC20(aUSDC).decimals();
+        uint256 rate = 10 ** baseDecimals; // fixed conversion rate between aUSDC and USDC
 
         return _deployFixedRateOracle(aUSDC, USDC, rate);
     }
