@@ -100,6 +100,7 @@ contract ChainValues {
         s_values["ethereum"]["EulerOracle"] = address(0).toBytes32();
         s_values["ethereum"]["FeeCollector"] = address(0).toBytes32();
         s_values["ethereum"]["VaultManager"] = address(0).toBytes32();
+        s_values["ethereum"]["WithdrawalQueueFinalizer"] = address(0).toBytes32();
 
         /* =========== TOKENS ================ */
         s_values["ethereum"]["aUSDC"] = 0x98C23E9d8f34FEFb1B7BD6a91B7FF122F4e16F5c.toBytes32();
@@ -171,6 +172,7 @@ contract ChainValues {
         s_values["ethHoodie"]["EulerOracle"] = 0xAD70a0ab951780fF3397882fc5372db83dEb0606.toBytes32();
         s_values["ethHoodie"]["FeeCollector"] = 0xAD70a0ab951780fF3397882fc5372db83dEb0606.toBytes32();
         s_values["ethHoodie"]["VaultManager"] = 0xAD70a0ab951780fF3397882fc5372db83dEb0606.toBytes32();
+        s_values["ethHoodie"]["WithdrawQueueFinalizer"] = 0xAD70a0ab951780fF3397882fc5372db83dEb0606.toBytes32();
 
         /* =========== TOKENS ==================== */
         s_values["ethHoodie"]["USDC"] = 0x0B81B675509e13D192AFd96080217B8b36520A62.toBytes32();

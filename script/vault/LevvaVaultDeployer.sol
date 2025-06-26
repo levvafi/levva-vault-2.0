@@ -29,6 +29,7 @@ struct VaultConfig {
     address vaultManager;
     uint24 maxSlippage;
     uint256 initialDeposit;
+    address withdrawQueueFinalizer;
 }
 
 abstract contract LevvaVaultDeployer is DeployHelper, AdapterUtils {
@@ -64,6 +65,9 @@ abstract contract LevvaVaultDeployer is DeployHelper, AdapterUtils {
         vault.setMaxSlippage(config.maxSlippage);
         vault.setManagementFeeIR(config.managementFee);
         vault.setPerformanceFeeRatio(config.performanceFee);
+
+        WithdrawalQueue withdrawalQueue = WithdrawalQueue(vault.withdrawalQueue());
+        withdrawalQueue.addFinalizer(config.withdrawQueueFinalizer, true);
 
         //initial deposit
         if (config.initialDeposit != 0) {
