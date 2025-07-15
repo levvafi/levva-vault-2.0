@@ -54,6 +54,7 @@ abstract contract WithdrawalQueueBase is Initializable, Ownable2StepUpgradeable 
     }
 
     function addFinalizer(address finalizer, bool add) external onlyOwner {
+        finalizer.assertNotZeroAddress();
         _getWithdrawalQueueBaseStorage().finalizers[finalizer] = add;
         emit FinalizerSet(finalizer, add);
     }

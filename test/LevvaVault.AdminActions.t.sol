@@ -161,4 +161,9 @@ contract LevvaVaultAdminActionsTest is TestSetUp {
         vm.expectRevert(abi.encodeWithSelector(Asserts.ZeroAddress.selector));
         levvaVault.setOracle(address(0));
     }
+
+    function testAddVaultManagerZeroAddress() public {
+        vm.expectRevert(abi.encodeWithSelector(Asserts.ZeroAddress.selector));
+        levvaVault.addVaultManager(address(0), true);
+    }
 }

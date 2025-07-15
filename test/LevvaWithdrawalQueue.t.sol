@@ -204,4 +204,9 @@ contract LevvaWithdrawalQueueTest is TestSetUp {
         vm.prank(NO_ACCESS);
         withdrawalQueue.addFinalizer(NO_ACCESS, true);
     }
+
+    function testAddFinalizerZeroAddress() public {
+        vm.expectRevert(abi.encodeWithSelector(Asserts.ZeroAddress.selector));
+        withdrawalQueue.addFinalizer(address(0), true);
+    }
 }
