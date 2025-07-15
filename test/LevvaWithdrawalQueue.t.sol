@@ -204,4 +204,9 @@ contract LevvaWithdrawalQueueTest is TestSetUp {
         vm.prank(NO_ACCESS);
         withdrawalQueue.addFinalizer(NO_ACCESS, true);
     }
+
+    function test_renounceOwnership() public {
+        vm.expectRevert(abi.encodeWithSelector(WithdrawalQueue.Forbidden.selector));
+        levvaVaultFactory.renounceOwnership();
+    }
 }

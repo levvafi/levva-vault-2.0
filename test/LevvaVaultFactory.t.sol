@@ -5,6 +5,7 @@ import {Vm} from "lib/forge-std/src/Vm.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import {TestSetUp} from "./TestSetUp.t.sol";
+import {LevvaVaultFactory} from "../contracts/LevvaVaultFactory.sol";
 
 contract LevvaVaultFactoryTest is TestSetUp {
     function test_deployVaultOnlyOwner() public {
@@ -19,5 +20,10 @@ contract LevvaVaultFactoryTest is TestSetUp {
             FEE_COLLECTOR,
             address(oracle)
         );
+    }
+
+    function test_renounceOwnership() public {
+        vm.expectRevert(abi.encodeWithSelector(LevvaVaultFactory.Forbidden.selector));
+        levvaVaultFactory.renounceOwnership();
     }
 }
