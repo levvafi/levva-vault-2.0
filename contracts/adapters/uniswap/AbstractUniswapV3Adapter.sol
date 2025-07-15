@@ -53,9 +53,11 @@ abstract contract AbstractUniswapV3Adapter is AdapterBase {
         ISwapRouter _uniswapV3Router = uniswapV3Router;
         IERC20(inputToken).forceApprove(address(_uniswapV3Router), params.amountInMaximum);
         amountIn = _uniswapV3Router.exactOutput(params);
-        if (amountIn < params.amountInMaximum - amountIn) {
+
+        uint256 unused = params.amountInMaximum - amountIn;
+        if (unused != 0) {
             IERC20(inputToken).forceApprove(address(_uniswapV3Router), 0);
-            IERC20(inputToken).safeTransfer(msg.sender, params.amountInMaximum - amountIn);
+            IERC20(inputToken).safeTransfer(msg.sender, unused);
         }
     }
 
