@@ -17,12 +17,17 @@ contract WithdrawalQueue is ERC721Upgradeable, WithdrawalQueueBase {
 
     error NotRequestOwner();
     error NotFinalized();
+    error Forbidden();
 
     constructor() {
         _disableInitializers();
     }
 
-    function initialize(address owner, address levvaVault) external initializer {
+    function initialize(address owner, address levvaVault, string calldata name, string calldata symbol)
+        external
+        initializer
+    {
+        __ERC721_init(name, symbol);
         __WithdrawalQueueBase_init(owner, levvaVault);
     }
 
@@ -48,5 +53,9 @@ contract WithdrawalQueue is ERC721Upgradeable, WithdrawalQueueBase {
     function finalizeRequests(uint256 requestId) external onlyFinalizer {
         _finalizeRequests(requestId);
         emit RequestsFinalized(requestId);
+    }
+
+    function renounceOwnership() public pure override {
+        revert Forbidden();
     }
 }

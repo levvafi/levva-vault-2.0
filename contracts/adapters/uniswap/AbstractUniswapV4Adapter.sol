@@ -29,44 +29,53 @@ abstract contract AbstractUniswapV4Adapter is AdapterBase {
         permit2 = IAllowanceTransfer(_permit2);
     }
 
-    function swapExactInputV4(IV4Router.ExactInputParams memory params) public returns (uint256 amountOut) {
+    function swapExactInputV4(IV4Router.ExactInputParams memory params, uint256 deadline)
+        public
+        returns (uint256 amountOut)
+    {
         address outputToken = Currency.unwrap(params.path[params.path.length - 1].intermediateCurrency);
         address inputToken = Currency.unwrap(params.currencyIn);
         IAdapterCallback(msg.sender).adapterCallback(address(this), inputToken, params.amountIn);
 
         IUniversalRouter _universalRouter = universalRouter;
-        _permit2Approve(inputToken, address(_universalRouter), params.amountIn);
+        _permit2Approve(inputToken, address(_universalRouter), params.amountIn, deadline);
 
-        _universalRouter.execute(_getSwapCommandByteArray(), _getExecuteInputs(params), block.timestamp);
+        _universalRouter.execute(_getSwapCommandByteArray(), _getExecuteInputs(params), deadline);
         return _sendTokenToVault(outputToken);
     }
 
     ///@dev Swap all tokenIn except params.amountIn
-    function swapExactInputV4AllExcept(IV4Router.ExactInputParams memory params) external returns (uint256 amountOut) {
+    function swapExactInputV4AllExcept(IV4Router.ExactInputParams memory params, uint256 deadline)
+        external
+        returns (uint256 amountOut)
+    {
         address inputToken = Currency.unwrap(params.currencyIn);
         params.amountIn = uint128(IERC20(inputToken).balanceOf(msg.sender) - params.amountIn);
-        return swapExactInputV4(params);
+        return swapExactInputV4(params, deadline);
     }
 
-    function swapExactOutputV4(IV4Router.ExactOutputParams calldata params) external returns (uint256 amountIn) {
+    function swapExactOutputV4(IV4Router.ExactOutputParams calldata params, uint256 deadline)
+        external
+        returns (uint256 amountIn)
+    {
         address outputToken = Currency.unwrap(params.currencyOut);
         address inputToken = Currency.unwrap(params.path[0].intermediateCurrency);
         IAdapterCallback(msg.sender).adapterCallback(address(this), inputToken, params.amountInMaximum);
 
         IUniversalRouter _universalRouter = universalRouter;
-        _permit2Approve(inputToken, address(_universalRouter), params.amountInMaximum);
+        _permit2Approve(inputToken, address(_universalRouter), params.amountInMaximum, deadline);
 
-        _universalRouter.execute(_getSwapCommandByteArray(), _getExecuteInputs(params), block.timestamp);
+        _universalRouter.execute(_getSwapCommandByteArray(), _getExecuteInputs(params), deadline);
         IERC20(inputToken).forceApprove(address(_universalRouter), 0);
 
         amountIn = params.amountInMaximum - _sendTokenToVault(inputToken);
         _sendTokenToVault(outputToken);
     }
 
-    function _permit2Approve(address token, address spender, uint256 amount) private {
+    function _permit2Approve(address token, address spender, uint256 amount, uint256 deadline) private {
         IAllowanceTransfer _permit2 = permit2;
         IERC20(token).forceApprove(address(_permit2), amount);
-        _permit2.approve(token, spender, uint160(amount), uint48(block.timestamp));
+        _permit2.approve(token, spender, uint160(amount), uint48(deadline));
     }
 
     function _sendTokenToVault(address token) private returns (uint256 sent) {

@@ -27,9 +27,7 @@ abstract contract FactoryBase is Initializable, Ownable2StepUpgradeable {
         }
     }
 
-    event NewVaultDeployed(
-        address indexed vault, address indexed withdrawalQueue, string indexed lpName, address asset
-    );
+    event NewVaultDeployed(address asset, address indexed vault, address indexed withdrawalQueue, string lpName);
 
     function __FactoryBase_init(address owner, address vaultImplementation, address withdrawalQueueImplementation)
         internal
@@ -58,19 +56,28 @@ abstract contract FactoryBase is Initializable, Ownable2StepUpgradeable {
         address asset,
         string calldata lpName,
         string calldata lpSymbol,
+        string calldata withdrawalQueueName,
+        string calldata withdrawalQueueSymbol,
         address feeCollector,
         address eulerOracle
     ) internal returns (address vault, address queue) {
         vault = address(new BeaconProxy(vaultBeacon(), ""));
-
-        bytes memory queueInitializeCalldata =
-            abi.encodeWithSelector(WithdrawalQueue.initialize.selector, msg.sender, vault);
-        queue = address(new BeaconProxy(withdrawalQueueBeacon(), queueInitializeCalldata));
+        queue = _deployQueue(vault, withdrawalQueueName, withdrawalQueueSymbol);
 
         LevvaVault(vault).initialize(msg.sender, asset, lpName, lpSymbol, feeCollector, eulerOracle, queue);
 
         _getFactoryBaseStorage().isLevvaVault[vault] = true;
 
-        emit NewVaultDeployed(vault, queue, lpName, asset);
+        emit NewVaultDeployed(asset, vault, queue, lpName);
+    }
+
+    function _deployQueue(address vault, string calldata withdrawalQueueName, string calldata withdrawalQueueSymbol)
+        private
+        returns (address queue)
+    {
+        bytes memory queueInitializeCalldata = abi.encodeWithSelector(
+            WithdrawalQueue.initialize.selector, msg.sender, vault, withdrawalQueueName, withdrawalQueueSymbol
+        );
+        queue = address(new BeaconProxy(withdrawalQueueBeacon(), queueInitializeCalldata));
     }
 }

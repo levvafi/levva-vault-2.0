@@ -55,8 +55,15 @@ contract CurveRouterAdapterTest is Test {
         ERC1967Proxy levvaVaultFactoryProxy = new ERC1967Proxy(levvaVaultFactoryImplementation, data);
         LevvaVaultFactory levvaVaultFactory = LevvaVaultFactory(address(levvaVaultFactoryProxy));
 
-        (address deployedVault,) =
-            levvaVaultFactory.deployVault(address(USDC), "lpName", "lpSymbol", address(0xFEE), address(oracle));
+        (address deployedVault,) = levvaVaultFactory.deployVault(
+            address(USDC),
+            "lpName",
+            "lpSymbol",
+            "withdrawalQueueName",
+            "withdrawalQueueSymbol",
+            address(0xFEE),
+            address(oracle)
+        );
 
         vault = LevvaVault(deployedVault);
         vault.addAdapter(address(curveRouterAdapter));

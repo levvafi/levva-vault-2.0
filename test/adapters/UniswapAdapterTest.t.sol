@@ -53,8 +53,15 @@ contract UniswapAdapterTest is Test {
         ERC1967Proxy levvaVaultFactoryProxy = new ERC1967Proxy(levvaVaultFactoryImplementation, data);
         LevvaVaultFactory levvaVaultFactory = LevvaVaultFactory(address(levvaVaultFactoryProxy));
 
-        (address deployedVault,) =
-            levvaVaultFactory.deployVault(address(USDC), "lpName", "lpSymbol", address(0xFEE), address(oracle));
+        (address deployedVault,) = levvaVaultFactory.deployVault(
+            address(USDC),
+            "lpName",
+            "lpSymbol",
+            "withdrawalQueueName",
+            "withdrawalQueueSymbol",
+            address(0xFEE),
+            address(oracle)
+        );
 
         levvaVault = LevvaVault(deployedVault);
 
@@ -200,7 +207,7 @@ contract UniswapAdapterTest is Test {
         });
 
         vm.prank(address(levvaVault));
-        adapter.swapExactInputV4(params);
+        adapter.swapExactInputV4(params, block.timestamp);
 
         uint256 usdcBalanceAfter = USDC.balanceOf(address(levvaVault));
         assertEq(usdcBalanceBefore - usdcBalanceAfter, amountIn);
@@ -231,7 +238,7 @@ contract UniswapAdapterTest is Test {
         });
 
         vm.prank(address(levvaVault));
-        adapter.swapExactInputV4AllExcept(params);
+        adapter.swapExactInputV4AllExcept(params, block.timestamp);
 
         uint256 usdcBalanceAfter = USDC.balanceOf(address(levvaVault));
         assertEq(usdcBalanceAfter, except);
@@ -262,7 +269,7 @@ contract UniswapAdapterTest is Test {
         });
 
         vm.prank(address(levvaVault));
-        adapter.swapExactOutputV4(params);
+        adapter.swapExactOutputV4(params, block.timestamp);
 
         uint256 usdcBalanceAfter = USDC.balanceOf(address(levvaVault));
         assertGt(usdcBalanceBefore, usdcBalanceAfter);

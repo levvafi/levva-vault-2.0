@@ -7,6 +7,7 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 import {TestSetUp} from "./TestSetUp.t.sol";
 import {Asserts} from "../contracts/libraries/Asserts.sol";
 import {MultiAssetVaultBase} from "../contracts/base/MultiAssetVaultBase.sol";
+import {AdapterActionExecutor} from "../contracts/base/AdapterActionExecutor.sol";
 import {VaultAccessControl} from "../contracts/base/VaultAccessControl.sol";
 import {OraclePriceProvider} from "../contracts/base/OraclePriceProvider.sol";
 import {MintableERC20} from "./mocks/MintableERC20.t.sol";
@@ -165,5 +166,10 @@ contract LevvaVaultAdminActionsTest is TestSetUp {
     function testAddVaultManagerZeroAddress() public {
         vm.expectRevert(abi.encodeWithSelector(Asserts.ZeroAddress.selector));
         levvaVault.addVaultManager(address(0), true);
+    }
+
+    function test_renounceOwnership() public {
+        vm.expectRevert(abi.encodeWithSelector(AdapterActionExecutor.Forbidden.selector));
+        levvaVaultFactory.renounceOwnership();
     }
 }
