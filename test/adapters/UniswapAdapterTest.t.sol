@@ -207,7 +207,7 @@ contract UniswapAdapterTest is Test {
         });
 
         vm.prank(address(levvaVault));
-        adapter.swapExactInputV4(params);
+        adapter.swapExactInputV4(params, block.timestamp);
 
         uint256 usdcBalanceAfter = USDC.balanceOf(address(levvaVault));
         assertEq(usdcBalanceBefore - usdcBalanceAfter, amountIn);
@@ -238,7 +238,7 @@ contract UniswapAdapterTest is Test {
         });
 
         vm.prank(address(levvaVault));
-        adapter.swapExactInputV4AllExcept(params);
+        adapter.swapExactInputV4AllExcept(params, block.timestamp);
 
         uint256 usdcBalanceAfter = USDC.balanceOf(address(levvaVault));
         assertEq(usdcBalanceAfter, except);
@@ -269,7 +269,7 @@ contract UniswapAdapterTest is Test {
         });
 
         vm.prank(address(levvaVault));
-        adapter.swapExactOutputV4(params);
+        adapter.swapExactOutputV4(params, block.timestamp);
 
         uint256 usdcBalanceAfter = USDC.balanceOf(address(levvaVault));
         assertGt(usdcBalanceBefore, usdcBalanceAfter);
