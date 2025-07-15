@@ -21,10 +21,13 @@ contract LevvaVaultFactory is UUPSUpgradeable, FactoryBase {
         address asset,
         string calldata lpName,
         string calldata lpSymbol,
+        string calldata withdrawalQueueName,
+        string calldata withdrawalQueueSymbol,
         address feeCollector,
         address eulerOracle
     ) external onlyOwner returns (address vault, address queue) {
-        return _deployVault(asset, lpName, lpSymbol, feeCollector, eulerOracle);
+        return
+            _deployVault(asset, lpName, lpSymbol, withdrawalQueueName, withdrawalQueueSymbol, feeCollector, eulerOracle);
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}

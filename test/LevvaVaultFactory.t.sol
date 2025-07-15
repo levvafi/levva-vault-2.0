@@ -10,6 +10,14 @@ contract LevvaVaultFactoryTest is TestSetUp {
     function test_deployVaultOnlyOwner() public {
         vm.prank(NO_ACCESS);
         vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, NO_ACCESS));
-        levvaVaultFactory.deployVault(address(asset), LP_NAME, LP_SYMBOL, FEE_COLLECTOR, address(oracle));
+        levvaVaultFactory.deployVault(
+            address(asset),
+            LP_NAME,
+            LP_SYMBOL,
+            WITHDRAWAL_QUEUE_NAME,
+            WITHDRAWAL_QUEUE_SYMBOL,
+            FEE_COLLECTOR,
+            address(oracle)
+        );
     }
 }

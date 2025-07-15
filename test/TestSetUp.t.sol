@@ -21,6 +21,9 @@ contract TestSetUp is Test {
     string internal constant LP_NAME = "lpName";
     string internal constant LP_SYMBOL = "lpSymbol";
 
+    string internal constant WITHDRAWAL_QUEUE_NAME = "withdrawalQueueName";
+    string internal constant WITHDRAWAL_QUEUE_SYMBOL = "withdrawalQueueSymbol";
+
     address internal constant NO_ACCESS = address(0xDEAD);
     address internal constant VAULT_MANAGER = address(0x123456789);
     address internal constant FINALIZER = address(0x1234567890);
@@ -79,6 +82,8 @@ contract TestSetUp is Test {
         assertEq(address(withdrawalQueue.levvaVault()), address(levvaVault));
         assertEq(withdrawalQueue.owner(), address(this));
         assert(withdrawalQueue.isFinalizer(FINALIZER));
+        assertEq(withdrawalQueue.name(), WITHDRAWAL_QUEUE_NAME);
+        assertEq(withdrawalQueue.symbol(), WITHDRAWAL_QUEUE_SYMBOL);
     }
 
     function _createLevvaVaultFactory() private {
@@ -96,8 +101,15 @@ contract TestSetUp is Test {
     }
 
     function _deployLevvaVault() private {
-        (address vault, address queue) =
-            levvaVaultFactory.deployVault(address(asset), LP_NAME, LP_SYMBOL, FEE_COLLECTOR, address(oracle));
+        (address vault, address queue) = levvaVaultFactory.deployVault(
+            address(asset),
+            LP_NAME,
+            LP_SYMBOL,
+            WITHDRAWAL_QUEUE_NAME,
+            WITHDRAWAL_QUEUE_SYMBOL,
+            FEE_COLLECTOR,
+            address(oracle)
+        );
 
         levvaVault = LevvaVault(vault);
         withdrawalQueue = WithdrawalQueue(queue);
