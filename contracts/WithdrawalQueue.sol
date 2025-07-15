@@ -17,6 +17,7 @@ contract WithdrawalQueue is ERC721Upgradeable, WithdrawalQueueBase {
 
     error NotRequestOwner();
     error NotFinalized();
+    error Forbidden();
 
     constructor() {
         _disableInitializers();
@@ -48,5 +49,9 @@ contract WithdrawalQueue is ERC721Upgradeable, WithdrawalQueueBase {
     function finalizeRequests(uint256 requestId) external onlyFinalizer {
         _finalizeRequests(requestId);
         emit RequestsFinalized(requestId);
+    }
+
+    function renounceOwnership() public pure override {
+        revert Forbidden();
     }
 }

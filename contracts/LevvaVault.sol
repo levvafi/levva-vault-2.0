@@ -25,4 +25,8 @@ contract LevvaVault is MultiAssetVaultBase {
         __MultiAssetVaultBase_init(IERC20(asset), lpName, lpSymbol, feeCollector);
         __OraclePriceProvider_init(eulerOracle);
     }
+
+    function renounceOwnership() public pure override {
+        revert Forbidden();
+    }
 }

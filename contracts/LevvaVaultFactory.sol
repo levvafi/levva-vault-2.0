@@ -7,6 +7,8 @@ import {FactoryBase} from "./base/FactoryBase.sol";
 
 /// @custom:oz-upgrades-unsafe-allow constructor
 contract LevvaVaultFactory is UUPSUpgradeable, FactoryBase {
+    error Forbidden();
+
     /// @dev Disabling initializers for implementation contract
     constructor() {
         _disableInitializers();
@@ -25,6 +27,10 @@ contract LevvaVaultFactory is UUPSUpgradeable, FactoryBase {
         address eulerOracle
     ) external onlyOwner returns (address vault, address queue) {
         return _deployVault(asset, lpName, lpSymbol, feeCollector, eulerOracle);
+    }
+
+    function renounceOwnership() public pure override {
+        revert Forbidden();
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
