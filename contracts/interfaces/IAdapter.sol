@@ -2,6 +2,8 @@
 pragma solidity ^0.8.28;
 
 interface IAdapter {
+    event Swap(address indexed vault, address assetIn, uint256 amountIn, address assetOut, uint256 amountOut);
+
     /// @notice Get the identifier of adapter
     /// @dev Levva adapters should implement this function
     function getAdapterId() external view returns (bytes4);

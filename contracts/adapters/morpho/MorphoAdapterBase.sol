@@ -45,6 +45,8 @@ abstract contract MorphoAdapterBase is AdapterBase {
 
         IAdapterCallback(msg.sender).adapterCallback(address(this), morphoVault, shares);
         assets = IERC4626(morphoVault).redeem(shares, msg.sender, address(this));
+
+        emit Swap(msg.sender, morphoVault, shares, IERC4626(morphoVault).asset(), assets);
     }
 
     /// @notice Withdraws assets from a Morpho vault, burns all shares except given amount
@@ -84,5 +86,7 @@ abstract contract MorphoAdapterBase is AdapterBase {
         IERC20(asset).forceApprove(morphoVault, assets);
 
         shares = IERC4626(morphoVault).deposit(assets, msg.sender);
+
+        emit Swap(msg.sender, asset, assets, morphoVault, shares);
     }
 }
