@@ -52,6 +52,7 @@ abstract contract VaultAccessControl is Initializable, Ownable2StepUpgradeable {
     }
 
     function addVaultManager(address manager, bool add) external onlyOwner {
+        manager.assertNotZeroAddress();
         _getVaultAccessControlStorage()._vaultManagers[manager] = add;
         emit VaultManagerSet(manager, add);
     }

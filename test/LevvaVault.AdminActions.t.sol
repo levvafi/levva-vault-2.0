@@ -163,6 +163,11 @@ contract LevvaVaultAdminActionsTest is TestSetUp {
         levvaVault.setOracle(address(0));
     }
 
+    function testAddVaultManagerZeroAddress() public {
+        vm.expectRevert(abi.encodeWithSelector(Asserts.ZeroAddress.selector));
+        levvaVault.addVaultManager(address(0), true);
+    }
+
     function test_renounceOwnership() public {
         vm.expectRevert(abi.encodeWithSelector(AdapterActionExecutor.Forbidden.selector));
         levvaVaultFactory.renounceOwnership();
