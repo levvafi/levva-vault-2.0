@@ -58,13 +58,16 @@ abstract contract FactoryBase is Initializable, Ownable2StepUpgradeable {
         address asset,
         string calldata lpName,
         string calldata lpSymbol,
+        string calldata withdrawalQueueName,
+        string calldata withdrawalQueueSymbol,
         address feeCollector,
         address eulerOracle
     ) internal returns (address vault, address queue) {
         vault = address(new BeaconProxy(vaultBeacon(), ""));
 
-        bytes memory queueInitializeCalldata =
-            abi.encodeWithSelector(WithdrawalQueue.initialize.selector, msg.sender, vault);
+        bytes memory queueInitializeCalldata = abi.encodeWithSelector(
+            WithdrawalQueue.initialize.selector, msg.sender, vault, withdrawalQueueName, withdrawalQueueSymbol
+        );
         queue = address(new BeaconProxy(withdrawalQueueBeacon(), queueInitializeCalldata));
 
         LevvaVault(vault).initialize(msg.sender, asset, lpName, lpSymbol, feeCollector, eulerOracle, queue);

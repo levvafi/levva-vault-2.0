@@ -22,7 +22,11 @@ contract WithdrawalQueue is ERC721Upgradeable, WithdrawalQueueBase {
         _disableInitializers();
     }
 
-    function initialize(address owner, address levvaVault) external initializer {
+    function initialize(address owner, address levvaVault, string calldata name, string calldata symbol)
+        external
+        initializer
+    {
+        __ERC721_init(name, symbol);
         __WithdrawalQueueBase_init(owner, levvaVault);
     }
 

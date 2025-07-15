@@ -157,7 +157,13 @@ contract UltraSafeVaultTest is Test {
         levvaVaultFactory = LevvaVaultFactory(address(levvaVaultFactoryProxy));
 
         (address deployedVault,) = levvaVaultFactory.deployVault(
-            address(USDC), "Levva USDC Vault", "LEVVA-USDC-1", address(0xFEE), address(_oracle)
+            address(USDC),
+            "Levva USDC Vault",
+            "LEVVA-USDC-1",
+            "Levva USDC Vault Withdrawal Queue",
+            "LEVVA-USDC-1-WITHDRAWAL-QUEUE",
+            address(0xFEE),
+            address(_oracle)
         );
         levvaVault = LevvaVault(deployedVault);
 
@@ -188,7 +194,13 @@ contract UltraSafeVaultTest is Test {
         // levvaVault sUSDE
         {
             (address deployedVault,) = levvaVaultFactory.deployVault(
-                address(sUSDE), "Levva sUSDE Vault", "LEVVA-sUSDE-1", address(0xFEE), address(oracle)
+                address(sUSDE),
+                "Levva sUSDE Vault",
+                "LEVVA-sUSDE-1",
+                "Levva sUSDE Vault Withdrawal Queue",
+                "LEVVA-sUSDE-1-WITHDRAWAL-QUEUE",
+                address(0xFEE),
+                address(oracle)
             );
             levvaVault_sUSDE = LevvaVault(deployedVault);
 
@@ -201,7 +213,13 @@ contract UltraSafeVaultTest is Test {
         // levvaVault wstUSR
         {
             (address deployedVault,) = levvaVaultFactory.deployVault(
-                address(wstUSR), "Levva wstUSR Vault", "LEVVA-wstUSR-1", address(0xFEE), address(oracle)
+                address(wstUSR),
+                "Levva wstUSR Vault",
+                "LEVVA-wstUSR-1",
+                "Levva wstUSR Vault Withdrawal Queue",
+                "LEVVA-wstUSR-1-WITHDRAWAL-QUEUE",
+                address(0xFEE),
+                address(oracle)
             );
             levvaVault_wstUSR = LevvaVault(deployedVault);
 

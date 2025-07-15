@@ -22,6 +22,8 @@ struct VaultConfig {
     address eulerOracle;
     string lpName;
     string lpSymbol;
+    string withdrawalQueueName;
+    string withdrawalQueueSymbol;
     address[] trackedAssets;
     uint48 performanceFee;
     uint48 managementFee;
@@ -57,8 +59,15 @@ abstract contract LevvaVaultDeployer is DeployHelper, AdapterUtils {
         LevvaVaultFactory factory = LevvaVaultFactory(getAddress("LevvaVaultFactory"));
 
         vm.startBroadcast();
-        (deployedVault,) =
-            factory.deployVault(config.asset, config.lpName, config.lpSymbol, config.feeCollector, config.eulerOracle);
+        (deployedVault,) = factory.deployVault(
+            config.asset,
+            config.lpName,
+            config.lpSymbol,
+            config.withdrawalQueueName,
+            config.withdrawalQueueSymbol,
+            config.feeCollector,
+            config.eulerOracle
+        );
         vault = LevvaVault(deployedVault);
 
         vault.addVaultManager(config.vaultManager, true);

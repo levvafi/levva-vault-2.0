@@ -49,6 +49,8 @@ contract DeployUSDCVaultExample is LevvaVaultDeployer {
                 eulerOracle: getAddress("EulerOracle"),
                 lpName: "Ultra Safe Levva Vault USDC",
                 lpSymbol: "LEVVA-USDC-EXAMPLE",
+                withdrawalQueueName: "Ultra Safe Levva Vault USDC Withdrawal Queue",
+                withdrawalQueueSymbol: "LEVVA-USDC-EXAMPLE-WITHDRAWAL-QUEUE",
                 trackedAssets: trackedAssets,
                 performanceFee: 10_000, // 1%
                 managementFee: 10_000, // 1%

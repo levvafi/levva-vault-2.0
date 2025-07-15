@@ -78,11 +78,25 @@ contract LevvaVaultAdapterTest is Test {
         ERC1967Proxy levvaVaultFactoryProxy = new ERC1967Proxy(levvaVaultFactoryImplementation, data);
         levvaVaultFactory = LevvaVaultFactory(address(levvaVaultFactoryProxy));
 
-        (address deployedVault,) =
-            levvaVaultFactory.deployVault(address(WETH), "lpName", "lpSymbol", address(0xFEE), address(oracle));
+        (address deployedVault,) = levvaVaultFactory.deployVault(
+            address(WETH),
+            "lpName",
+            "lpSymbol",
+            "withdrawalQueueName",
+            "withdrawalQueueSymbol",
+            address(0xFEE),
+            address(oracle)
+        );
 
-        (address deployedVault2,) =
-            levvaVaultFactory.deployVault(address(WETH), "lpName", "lpSymbol", address(0xFEE), address(oracle));
+        (address deployedVault2,) = levvaVaultFactory.deployVault(
+            address(WETH),
+            "lpName",
+            "lpSymbol",
+            "withdrawalQueueName",
+            "withdrawalQueueSymbol",
+            address(0xFEE),
+            address(oracle)
+        );
 
         vault = LevvaVault(deployedVault);
         vault2 = LevvaVault(deployedVault2);
@@ -91,12 +105,26 @@ contract LevvaVaultAdapterTest is Test {
         vault.addAdapter(address(adapter));
         vault2.addAdapter(address(adapter));
 
-        (deployedVault,) =
-            levvaVaultFactory.deployVault(address(WETH), "lvvaWETH-1", "lvvaWETH-1", address(0xFEE), address(oracle));
+        (deployedVault,) = levvaVaultFactory.deployVault(
+            address(WETH),
+            "lvvaWETH-1",
+            "lvvaWETH-1",
+            "lvvaWETH-1-withdrawal-queue",
+            "lvvaWETH-1-withdrawal-queue",
+            address(0xFEE),
+            address(oracle)
+        );
         investVault1 = LevvaVault(deployedVault);
 
-        (deployedVault,) =
-            levvaVaultFactory.deployVault(address(WETH), "lvvaWETH-2", "lvvaWETH-2", address(0xFEE), address(oracle));
+        (deployedVault,) = levvaVaultFactory.deployVault(
+            address(WETH),
+            "lvvaWETH-2",
+            "lvvaWETH-2",
+            "lvvaWETH-1-withdrawal-queue",
+            "lvvaWETH-1-withdrawal-queue",
+            address(0xFEE),
+            address(oracle)
+        );
         investVault2 = LevvaVault(deployedVault);
 
         oracle.setPrice(oracle.ONE(), address(investVault1), address(WETH));
