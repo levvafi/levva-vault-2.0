@@ -62,6 +62,7 @@ contract AaveAdapterTest is Test {
         );
 
         levvaVault = LevvaVault(deployedVault);
+        levvaVault.setMaxTrackedAssets(type(uint8).max);
 
         adapter = new AaveAdapter(address(AAVE_POOL_PROVIDER));
         levvaVault.addAdapter(address(adapter));

@@ -112,6 +112,7 @@ contract PendleAdapterTest is Test {
         );
 
         vault = LevvaVault(deployedVault);
+        vault.setMaxTrackedAssets(type(uint8).max);
 
         vault.addTrackedAsset(address(USDC));
         vault.addTrackedAsset(address(USDT));

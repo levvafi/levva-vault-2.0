@@ -172,6 +172,7 @@ contract UltraSafeVaultTest is Test {
         levvaVault.setManagementFeeIR(100_000); //10%
         levvaVault.setPerformanceFeeRatio(100_000); // 10%
         levvaVault.setMaxExternalPositionAdapters(10);
+        levvaVault.setMaxTrackedAssets(10);
 
         console.log("LevvaVault", address(levvaVault));
     }

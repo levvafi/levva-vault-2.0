@@ -118,6 +118,7 @@ contract TestSetUp is Test {
         withdrawalQueue.addFinalizer(FINALIZER, true);
 
         levvaVault.setMaxExternalPositionAdapters(type(uint8).max);
+        levvaVault.setMaxTrackedAssets(type(uint8).max);
     }
 
     function _createOracleMock() private {

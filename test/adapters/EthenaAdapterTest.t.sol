@@ -66,6 +66,7 @@ contract EthenaAdapterTest is Test {
 
         levvaVault = LevvaVault(deployedVault);
         levvaVault.setMaxExternalPositionAdapters(type(uint8).max);
+        levvaVault.setMaxTrackedAssets(type(uint8).max);
 
         adapter = new EthenaAdapter(address(levvaVault), address(S_USDE));
         levvaVault.addAdapter(address(adapter));
