@@ -16,8 +16,8 @@ contract EthenaAdapter is ERC4626AdapterBase, IExternalPositionAdapter {
 
     bytes4 public constant getAdapterId = bytes4(keccak256("EthenaAdapter"));
 
-    event EthenaCooldown(uint256 shares, uint256 assets, uint256 timestamp);
-    event EthenaUnstake();
+    event EthenaCooldown(address indexed vault, uint256 shares, uint256 assets, uint256 timestamp);
+    event EthenaUnstake(address indexed vault);
 
     error NoAccess();
 
@@ -50,7 +50,7 @@ contract EthenaAdapter is ERC4626AdapterBase, IExternalPositionAdapter {
         IStakedUSDe _stakedUSDe = stakedUSDe();
 
         _stakedUSDe.unstake(msg.sender);
-        emit EthenaUnstake();
+        emit EthenaUnstake(msg.sender);
     }
 
     function USDe() public view returns (address) {
@@ -85,7 +85,7 @@ contract EthenaAdapter is ERC4626AdapterBase, IExternalPositionAdapter {
     function _cooldownShares(IStakedUSDe _stakedUsde, uint256 shares) private returns (uint256 assets) {
         IAdapterCallback(msg.sender).adapterCallback(address(this), address(_stakedUsde), shares);
         assets = _stakedUsde.cooldownShares(shares);
-        emit EthenaCooldown(shares, assets, block.timestamp);
+        emit EthenaCooldown(msg.sender, shares, assets, block.timestamp);
     }
 
     function _getManagedAssets(address vault)
