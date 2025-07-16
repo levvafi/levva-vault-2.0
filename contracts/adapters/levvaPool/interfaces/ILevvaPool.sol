@@ -15,7 +15,8 @@ interface ILevvaPool {
         ClosePosition,
         Reinit,
         ReceivePosition,
-        EmergencyWithdraw
+        EmergencyWithdraw,
+        SellCollateral
     }
 
     enum PositionType {

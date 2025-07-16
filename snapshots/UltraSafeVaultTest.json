@@ -1,9 +1,9 @@
 {
-  "deposit": "644154",
+  "deposit": "644550",
   "rebalance: AaveAdapter.supply": "280865",
   "rebalance: PendleAdapter.addLiquiditySingleToken LP-sUSDE-25Sep2025": "1398251",
   "rebalance: PendleAdapter.addLiquiditySingleToken LP-wstUSR-25Sep2025": "1068406",
-  "rebalance: PendleAdapter.swapTokenToToken, LevvaVaultAdapter.depositAllExcept LevvaVault-sUSDE-1": "1074878",
-  "rebalance:PendleAdapter.swapTokenToToken, ResolvAdapter.depositAllExcept, LevvaVaultAdapter.depositAllExcept to LevvaVault-wstUSR-1": "1236821",
-  "requestRedeem": "316785"
+  "rebalance: PendleAdapter.swapTokenToToken, LevvaVaultAdapter.depositAllExcept LevvaVault-sUSDE-1": "1075010",
+  "rebalance:PendleAdapter.swapTokenToToken, ResolvAdapter.depositAllExcept, LevvaVaultAdapter.depositAllExcept to LevvaVault-wstUSR-1": "1237085",
+  "requestRedeem": "316917"
 }
