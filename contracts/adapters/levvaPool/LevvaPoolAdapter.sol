@@ -162,6 +162,8 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
         if (withdrawal) {
             uint256 amount = IERC20(asset).balanceOf(address(this));
             IERC20(asset).safeTransfer(msg.sender, amount);
+            _removePool(pool);
+
             emit LevvaPoolWithdraw(msg.sender, pool, asset, amount);
         }
 
@@ -192,6 +194,8 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
         if (withdrawal) {
             uint256 amount = IERC20(asset).balanceOf(address(this));
             IERC20(asset).safeTransfer(msg.sender, amount);
+            _removePool(pool);
+
             emit LevvaPoolWithdraw(msg.sender, pool, asset, amount);
         }
 

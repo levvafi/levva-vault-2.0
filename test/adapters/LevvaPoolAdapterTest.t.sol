@@ -604,9 +604,215 @@ contract LevvaPoolAdapterTest is Test {
         assertEq(debtAmounts.length, 1);
     }
 
+    function test_closeLongWithWithdrawal() public {
+        LevvaPoolMock pool = new LevvaPoolMock(address(weETH), address(WETH));
+        deal(address(weETH), address(pool), 10e18);
+        deal(address(WETH), address(pool), 10e18);
+
+        vm.startPrank(address(vault));
+        adapter.deposit(address(weETH), 10e18, 0, false, address(pool), 0, 0);
+
+        pool.setPosition(ILevvaPool.PositionType.Long, 10e18, 9e18);
+        pool.setBasePriceX96(1 << 96);
+        uint256 baseBalanceDelta = 1e18;
+
+        uint256 baseBalanceBefore = weETH.balanceOf(address(pool));
+        uint256 quoteBalanceBefore = WETH.balanceOf(address(pool));
+        uint256 vaultBaseBalanceBefore = weETH.balanceOf(address(vault));
+
+        adapter.closePosition(address(pool), true, pool.basePriceX96(), 0);
+
+        ILevvaPool.Position memory position = pool.positions(address(adapter));
+        assertEq(uint8(position._type), uint8(ILevvaPool.PositionType.Uninitialized));
+
+        (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets();
+        assertEq(assets.length, 0);
+        assertEq(amounts.length, 0);
+
+        (address[] memory debtAssets, uint256[] memory debtAmounts) = adapter.getDebtAssets();
+        assertEq(debtAssets.length, 0);
+        assertEq(debtAmounts.length, 0);
+
+        assertEq(weETH.balanceOf(address(pool)), baseBalanceBefore - baseBalanceDelta);
+        assertEq(WETH.balanceOf(address(pool)), quoteBalanceBefore);
+        assertEq(weETH.balanceOf(address(vault)), vaultBaseBalanceBefore + baseBalanceDelta);
+    }
+
+    function test_closeShortWithWithdrawal() public {
+        LevvaPoolMock pool = new LevvaPoolMock(address(weETH), address(WETH));
+        deal(address(weETH), address(pool), 10e18);
+        deal(address(WETH), address(pool), 10e18);
+
+        vm.startPrank(address(vault));
+        adapter.deposit(address(weETH), 10e18, 0, false, address(pool), 0, 0);
+
+        pool.setPosition(ILevvaPool.PositionType.Short, 9e18, 10e18);
+        pool.setBasePriceX96(1 << 96);
+        uint256 quoteBalanceDelta = 1e18;
+
+        uint256 baseBalanceBefore = weETH.balanceOf(address(pool));
+        uint256 quoteBalanceBefore = WETH.balanceOf(address(pool));
+        uint256 vaultQuoteBalanceBefore = WETH.balanceOf(address(vault));
+
+        adapter.closePosition(address(pool), true, pool.basePriceX96(), 0);
+
+        ILevvaPool.Position memory position = pool.positions(address(adapter));
+        assertEq(uint8(position._type), uint8(ILevvaPool.PositionType.Uninitialized));
+
+        (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets();
+        assertEq(assets.length, 0);
+        assertEq(amounts.length, 0);
+
+        (address[] memory debtAssets, uint256[] memory debtAmounts) = adapter.getDebtAssets();
+        assertEq(debtAssets.length, 0);
+        assertEq(debtAmounts.length, 0);
+
+        assertEq(weETH.balanceOf(address(pool)), baseBalanceBefore);
+        assertEq(WETH.balanceOf(address(pool)), quoteBalanceBefore - quoteBalanceDelta);
+        assertEq(WETH.balanceOf(address(vault)), vaultQuoteBalanceBefore + quoteBalanceDelta);
+    }
+
     function test_closePositionShouldFailWhenNotAuthorized() public {
         vm.expectRevert(LevvaPoolAdapter.LevvaPoolAdapter__NotAuthorized.selector);
         adapter.closePosition(address(weETH_WETH_POOL), false, 0, 0);
+    }
+
+    function test_sellCollateralLong() public {
+        LevvaPoolMock pool = new LevvaPoolMock(address(weETH), address(WETH));
+        deal(address(weETH), address(pool), 10e18);
+        deal(address(WETH), address(pool), 10e18);
+
+        vm.startPrank(address(vault));
+        adapter.deposit(address(weETH), 1e18, 0, false, address(pool), 0, 0);
+
+        pool.setPosition(ILevvaPool.PositionType.Long, 10e18, 9e18);
+        pool.setBasePriceX96(1 << 96);
+        uint256 expectedPositionQuoteAmount = 1e18;
+
+        uint256 baseBalanceBefore = weETH.balanceOf(address(pool));
+        uint256 quoteBalanceBefore = WETH.balanceOf(address(pool));
+        uint256 vaultQuoteBalanceBefore = WETH.balanceOf(address(vault));
+
+        adapter.sellCollateral(address(pool), false, pool.basePriceX96(), 0);
+
+        ILevvaPool.Position memory position = pool.positions(address(adapter));
+        assertEq(uint8(position._type), uint8(ILevvaPool.PositionType.Lend));
+        assertEq(position.discountedQuoteAmount, expectedPositionQuoteAmount);
+
+        (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets();
+        assertEq(assets.length, 1);
+        assertEq(amounts.length, 1);
+
+        (address[] memory debtAssets, uint256[] memory debtAmounts) = adapter.getDebtAssets();
+        assertEq(debtAssets.length, 1);
+        assertEq(debtAmounts.length, 1);
+
+        assertEq(weETH.balanceOf(address(pool)), baseBalanceBefore);
+        assertEq(WETH.balanceOf(address(pool)), quoteBalanceBefore);
+        assertEq(WETH.balanceOf(address(vault)), vaultQuoteBalanceBefore);
+    }
+
+    function test_sellCollateralLongWithWithdrawal() public {
+        LevvaPoolMock pool = new LevvaPoolMock(address(weETH), address(WETH));
+        deal(address(weETH), address(pool), 10e18);
+        deal(address(WETH), address(pool), 10e18);
+
+        vm.startPrank(address(vault));
+        adapter.deposit(address(weETH), 10e18, 0, false, address(pool), 0, 0);
+
+        pool.setPosition(ILevvaPool.PositionType.Long, 10e18, 9e18);
+        pool.setBasePriceX96(1 << 96);
+        uint256 quoteBalanceDelta = 1e18;
+
+        uint256 baseBalanceBefore = weETH.balanceOf(address(pool));
+        uint256 quoteBalanceBefore = WETH.balanceOf(address(pool));
+        uint256 vaultQuoteBalanceBefore = WETH.balanceOf(address(vault));
+
+        adapter.sellCollateral(address(pool), true, pool.basePriceX96(), 0);
+
+        ILevvaPool.Position memory position = pool.positions(address(adapter));
+        assertEq(uint8(position._type), uint8(ILevvaPool.PositionType.Uninitialized));
+
+        (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets();
+        assertEq(assets.length, 0);
+        assertEq(amounts.length, 0);
+
+        (address[] memory debtAssets, uint256[] memory debtAmounts) = adapter.getDebtAssets();
+        assertEq(debtAssets.length, 0);
+        assertEq(debtAmounts.length, 0);
+
+        assertEq(weETH.balanceOf(address(pool)), baseBalanceBefore);
+        assertEq(WETH.balanceOf(address(pool)), quoteBalanceBefore - quoteBalanceDelta);
+        assertEq(WETH.balanceOf(address(vault)), vaultQuoteBalanceBefore + quoteBalanceDelta);
+    }
+
+    function test_sellCollateralShort() public {
+        LevvaPoolMock pool = new LevvaPoolMock(address(weETH), address(WETH));
+        deal(address(weETH), address(pool), 10e18);
+        deal(address(WETH), address(pool), 10e18);
+
+        vm.startPrank(address(vault));
+        adapter.deposit(address(weETH), 1e18, 0, false, address(pool), 0, 0);
+
+        pool.setPosition(ILevvaPool.PositionType.Short, 9e18, 10e18);
+        pool.setBasePriceX96(1 << 96);
+        uint256 expectedPositionBaseAmount = 1e18;
+
+        uint256 baseBalanceBefore = weETH.balanceOf(address(pool));
+        uint256 quoteBalanceBefore = WETH.balanceOf(address(pool));
+        uint256 vaultBaseBalanceBefore = weETH.balanceOf(address(vault));
+
+        adapter.sellCollateral(address(pool), false, pool.basePriceX96(), 0);
+
+        ILevvaPool.Position memory position = pool.positions(address(adapter));
+        assertEq(uint8(position._type), uint8(ILevvaPool.PositionType.Lend));
+        assertEq(position.discountedBaseAmount, expectedPositionBaseAmount);
+
+        (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets();
+        assertEq(assets.length, 1);
+        assertEq(amounts.length, 1);
+
+        (address[] memory debtAssets, uint256[] memory debtAmounts) = adapter.getDebtAssets();
+        assertEq(debtAssets.length, 1);
+        assertEq(debtAmounts.length, 1);
+
+        assertEq(weETH.balanceOf(address(pool)), baseBalanceBefore);
+        assertEq(WETH.balanceOf(address(pool)), quoteBalanceBefore);
+        assertEq(weETH.balanceOf(address(vault)), vaultBaseBalanceBefore);
+    }
+
+    function test_sellCollateralShortWithWithdrawal() public {
+        LevvaPoolMock pool = new LevvaPoolMock(address(weETH), address(WETH));
+        deal(address(weETH), address(pool), 10e18);
+        deal(address(WETH), address(pool), 10e18);
+
+        vm.startPrank(address(vault));
+        adapter.deposit(address(weETH), 10e18, 0, false, address(pool), 0, 0);
+
+        pool.setPosition(ILevvaPool.PositionType.Short, 9e18, 10e18);
+        pool.setBasePriceX96(1 << 96);
+        uint256 baseBalanceDelta = 1e18;
+
+        uint256 baseBalanceBefore = weETH.balanceOf(address(pool));
+        uint256 quoteBalanceBefore = WETH.balanceOf(address(pool));
+        uint256 vaultBaseBalanceBefore = weETH.balanceOf(address(vault));
+
+        adapter.sellCollateral(address(pool), true, pool.basePriceX96(), 0);
+
+        ILevvaPool.Position memory position = pool.positions(address(adapter));
+        assertEq(uint8(position._type), uint8(ILevvaPool.PositionType.Uninitialized));
+
+        (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets();
+        assertEq(assets.length, 0);
+        assertEq(amounts.length, 0);
+
+        (address[] memory debtAssets, uint256[] memory debtAmounts) = adapter.getDebtAssets();
+        assertEq(debtAssets.length, 0);
+        assertEq(debtAmounts.length, 0);
+
+        assertEq(weETH.balanceOf(address(pool)), baseBalanceBefore - baseBalanceDelta);
+        assertEq(WETH.balanceOf(address(pool)), quoteBalanceBefore);
+        assertEq(weETH.balanceOf(address(vault)), vaultBaseBalanceBefore + baseBalanceDelta);
     }
 
     function test_long() public {
