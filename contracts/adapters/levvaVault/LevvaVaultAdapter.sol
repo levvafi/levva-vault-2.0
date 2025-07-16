@@ -34,8 +34,12 @@ contract LevvaVaultAdapter is AdapterBase, ERC721Holder, IExternalPositionAdapte
 
     mapping(address owner => PendingWithdrawals) private s_pendingWithdrawals;
 
-    event LevvaVaultRequestWithdrawal(address indexed vault, address indexed target, uint256 indexed requestId, uint256 shares);
-    event LevvaVaultClaimWithdrawal(address indexed vault, address indexed target, uint256 indexed requestId, uint256 assets);
+    event LevvaVaultRequestWithdrawal(
+        address indexed vault, address indexed target, uint256 indexed requestId, uint256 shares
+    );
+    event LevvaVaultClaimWithdrawal(
+        address indexed vault, address indexed target, uint256 indexed requestId, uint256 assets
+    );
 
     error LevvaVaultAdapter__Forbidden();
     error LevvaVaultAdapter__UnknownVault();

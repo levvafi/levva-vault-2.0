@@ -253,7 +253,9 @@ contract LidoAdapterTest is Test {
         uint256 balanceBefore = WETH.balanceOf(address(levvaVault));
 
         vm.expectEmit(true, true, false, false);
-        emit LidoAdapter.LidoWithdrawalClaimed(address(levvaVault), LidoWithdrawalQueue.getLastRequestId(), withdrawalAmount);
+        emit LidoAdapter.LidoWithdrawalClaimed(
+            address(levvaVault), LidoWithdrawalQueue.getLastRequestId(), withdrawalAmount
+        );
         vm.prank(address(levvaVault));
         adapter.claimWithdrawal();
 

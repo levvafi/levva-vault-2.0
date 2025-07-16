@@ -41,9 +41,11 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
 
     event PoolAdded(address indexed pool);
     event PoolRemoved(address indexed pool);
-    event LevvaPoolDeposit(address indexed vault, address indexed pool, address indexed token, uint256 amount, int256 positionAmount);
+    event LevvaPoolDeposit(
+        address indexed vault, address indexed pool, address indexed token, uint256 amount, int256 positionAmount
+    );
     event LevvaPoolLong(address indexed vault, address indexed pool, uint256 amount);
-    event LevvaPoolShort(address indexed vault,address indexed pool, uint256 amount);
+    event LevvaPoolShort(address indexed vault, address indexed pool, uint256 amount);
     event LevvaPoolClosePosition(address indexed vault, address indexed pool);
     event LevvaPoolWithdraw(address indexed vault, address indexed pool, address indexed asset, uint256 amount);
 

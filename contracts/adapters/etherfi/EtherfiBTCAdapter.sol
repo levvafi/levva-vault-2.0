@@ -18,7 +18,12 @@ contract EtherfiBTCAdapter is AdapterBase, IExternalPositionAdapter {
     bytes4 public constant getAdapterId = bytes4(keccak256("EtherfiBTCAdapter"));
 
     event EtherfiBTCRequestWithdraw(
-        address indexed vault, address indexed from, address indexed to, uint96 amount, uint88 atomicPrice, uint64 deadline
+        address indexed vault,
+        address indexed from,
+        address indexed to,
+        uint96 amount,
+        uint88 atomicPrice,
+        uint64 deadline
     );
     event EtherfiBTCRequestClaimed(address indexed vault, uint256 wbtcClaimed);
     event EtherfiBTCRequestCancel(address indexed vault, uint256 ebtcReturned);
