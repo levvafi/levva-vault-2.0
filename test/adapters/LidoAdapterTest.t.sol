@@ -62,6 +62,7 @@ contract LidoAdapterTest is Test {
         );
 
         levvaVault = LevvaVault(deployedVault);
+        levvaVault.setMaxExternalPositionAdapters(type(uint8).max);
 
         adapter = new LidoAdapter(address(WETH), address(WSTETH), address(LidoWithdrawalQueue));
         levvaVault.addAdapter(address(adapter));
