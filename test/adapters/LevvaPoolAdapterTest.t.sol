@@ -815,6 +815,11 @@ contract LevvaPoolAdapterTest is Test {
         assertEq(weETH.balanceOf(address(vault)), vaultBaseBalanceBefore + baseBalanceDelta);
     }
 
+    function test_sellCollateralShouldFailWhenNotAuthorized() public {
+        vm.expectRevert(LevvaPoolAdapter.LevvaPoolAdapter__NotAuthorized.selector);
+        adapter.sellCollateral(address(weETH_WETH_POOL), false, 0, 0);
+    }
+
     function test_long() public {
         ILevvaPool pool = ILevvaPool(PT_weETH_WETH_POOL);
         uint256 depositAmount = 1e18;
