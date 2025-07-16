@@ -28,8 +28,8 @@ contract EtherfiETHAdapter is AdapterBase, ERC721Holder, IExternalPositionAdapte
 
     bytes4 public constant getAdapterId = bytes4(keccak256("EtherfiETHAdapter"));
 
-    event EtherfiETHRequestWithdraw(uint256 indexed requestId, uint256 withdrawn);
-    event EtherfiETHClaimWithdraw(uint256 indexed requestId, uint256 withdrawn);
+    event EtherfiETHRequestWithdraw(address indexed vault, uint256 indexed requestId, uint256 withdrawn);
+    event EtherfiETHClaimWithdraw(address indexed vault, uint256 indexed requestId, uint256 withdrawn);
 
     error NoWithdrawRequestInQueue();
 
@@ -85,7 +85,7 @@ contract EtherfiETHAdapter is AdapterBase, ERC721Holder, IExternalPositionAdapte
         _weth.deposit{value: withdrawn}();
         _weth.safeTransfer(msg.sender, withdrawn);
 
-        emit EtherfiETHRequestWithdraw(requestId, withdrawn);
+        emit EtherfiETHRequestWithdraw(msg.sender, requestId, withdrawn);
     }
 
     function claimPossible(address vault) external view returns (bool) {
@@ -176,6 +176,8 @@ contract EtherfiETHAdapter is AdapterBase, ERC721Holder, IExternalPositionAdapte
         eETH.forceApprove(address(_weETH), wethAmount);
         weETHAmount = _weETH.wrap(wethAmount);
         _weETH.safeTransfer(msg.sender, weETHAmount);
+
+        emit Swap(msg.sender, address(_weth), wethAmount, address(_weETH), weETHAmount);
     }
 
     function _requestWithdraw(IweETH _weETH, uint256 weethAmount) private returns (uint256 requestId) {
@@ -190,6 +192,6 @@ contract EtherfiETHAdapter is AdapterBase, ERC721Holder, IExternalPositionAdapte
         requestId = _liquidityPool.requestWithdraw(address(this), eethAmount);
         _enqueueWithdrawalRequest(requestId);
 
-        emit EtherfiETHRequestWithdraw(requestId, weethAmount);
+        emit EtherfiETHRequestWithdraw(msg.sender, requestId, weethAmount);
     }
 }

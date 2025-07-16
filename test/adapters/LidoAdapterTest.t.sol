@@ -152,7 +152,7 @@ contract LidoAdapterTest is Test {
         uint256 withdrawalAmount = 2 ether;
         uint256 withdrawalStEthAmount = IWstETH(address(WSTETH)).getStETHByWstETH(withdrawalAmount);
         vm.expectEmit(true, true, false, false);
-        emit LidoAdapter.WithdrawalRequested(expectedRequestId, withdrawalAmount);
+        emit LidoAdapter.LidoWithdrawalRequested(address(levvaVault), expectedRequestId, withdrawalAmount);
         adapter.requestWithdrawal(withdrawalAmount);
 
         (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets();
@@ -184,7 +184,7 @@ contract LidoAdapterTest is Test {
 
         uint256 withdrawalStEthAmount = IWstETH(address(WSTETH)).getStETHByWstETH(withdrawalAmount);
         vm.expectEmit(true, true, false, false);
-        emit LidoAdapter.WithdrawalRequested(expectedRequestId, withdrawalAmount);
+        emit LidoAdapter.LidoWithdrawalRequested(address(levvaVault), expectedRequestId, withdrawalAmount);
         adapter.requestWithdrawalAllExcept(exceptAmount);
 
         (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets();
@@ -212,10 +212,10 @@ contract LidoAdapterTest is Test {
         uint256 withdrawalStEthAmount = IWstETH(address(WSTETH)).getStETHByWstETH(withdrawalAmount);
         uint256 lastRequestId = LidoWithdrawalQueue.getLastRequestId();
         vm.expectEmit(true, false, false, false);
-        emit LidoAdapter.WithdrawalRequested(lastRequestId + 1, withdrawalAmount);
+        emit LidoAdapter.LidoWithdrawalRequested(address(levvaVault), lastRequestId + 1, withdrawalAmount);
 
         vm.expectEmit(true, false, false, false);
-        emit LidoAdapter.WithdrawalRequested(lastRequestId + 2, withdrawalAmount);
+        emit LidoAdapter.LidoWithdrawalRequested(address(levvaVault), lastRequestId + 2, withdrawalAmount);
 
         adapter.requestWithdrawal(withdrawalAmount);
 
@@ -253,7 +253,9 @@ contract LidoAdapterTest is Test {
         uint256 balanceBefore = WETH.balanceOf(address(levvaVault));
 
         vm.expectEmit(true, true, false, false);
-        emit LidoAdapter.WithdrawalClaimed(LidoWithdrawalQueue.getLastRequestId(), withdrawalAmount);
+        emit LidoAdapter.LidoWithdrawalClaimed(
+            address(levvaVault), LidoWithdrawalQueue.getLastRequestId(), withdrawalAmount
+        );
         vm.prank(address(levvaVault));
         adapter.claimWithdrawal();
 

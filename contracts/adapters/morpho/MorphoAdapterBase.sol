@@ -17,6 +17,8 @@ abstract contract MorphoAdapterBase is AdapterBase {
 
     IMetaMorphoFactory internal immutable i_metaMorphoFactory;
 
+    event MorphoRewardsClaimed(address indexed vault, uint256 amount);
+
     error MorphoAdapterBase__InvalidMorphoVault();
 
     constructor(address metaMorphoFactory) {
@@ -45,6 +47,8 @@ abstract contract MorphoAdapterBase is AdapterBase {
 
         IAdapterCallback(msg.sender).adapterCallback(address(this), morphoVault, shares);
         assets = IERC4626(morphoVault).redeem(shares, msg.sender, address(this));
+
+        emit Swap(msg.sender, morphoVault, shares, IERC4626(morphoVault).asset(), assets);
     }
 
     /// @notice Withdraws assets from a Morpho vault, burns all shares except given amount
@@ -65,6 +69,7 @@ abstract contract MorphoAdapterBase is AdapterBase {
         returns (uint256 amount)
     {
         amount = IUniversalRewardsDistributorBase(rewardsDistributor).claim(msg.sender, reward, claimable, proof);
+        emit MorphoRewardsClaimed(msg.sender, amount);
     }
 
     function getMetaMorphoFactory() external view returns (address) {
@@ -84,5 +89,7 @@ abstract contract MorphoAdapterBase is AdapterBase {
         IERC20(asset).forceApprove(morphoVault, assets);
 
         shares = IERC4626(morphoVault).deposit(assets, msg.sender);
+
+        emit Swap(msg.sender, asset, assets, morphoVault, shares);
     }
 }

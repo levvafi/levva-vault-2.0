@@ -41,7 +41,9 @@ abstract contract AbstractUniswapV4Adapter is AdapterBase {
         _permit2Approve(inputToken, address(_universalRouter), params.amountIn, deadline);
 
         _universalRouter.execute(_getSwapCommandByteArray(), _getExecuteInputs(params), deadline);
-        return _sendTokenToVault(outputToken);
+        amountOut = _sendTokenToVault(outputToken);
+
+        emit Swap(msg.sender, inputToken, params.amountIn, outputToken, amountOut);
     }
 
     ///@dev Swap all tokenIn except params.amountIn
@@ -70,6 +72,7 @@ abstract contract AbstractUniswapV4Adapter is AdapterBase {
 
         amountIn = params.amountInMaximum - _sendTokenToVault(inputToken);
         _sendTokenToVault(outputToken);
+        emit Swap(msg.sender, inputToken, amountIn, outputToken, params.amountOut);
     }
 
     function _permit2Approve(address token, address spender, uint256 amount, uint256 deadline) private {

@@ -18,10 +18,15 @@ contract EtherfiBTCAdapter is AdapterBase, IExternalPositionAdapter {
     bytes4 public constant getAdapterId = bytes4(keccak256("EtherfiBTCAdapter"));
 
     event EtherfiBTCRequestWithdraw(
-        address indexed from, address indexed to, uint96 amount, uint88 atomicPrice, uint64 deadline
+        address indexed vault,
+        address indexed from,
+        address indexed to,
+        uint96 amount,
+        uint88 atomicPrice,
+        uint64 deadline
     );
-    event EtherfiBTCRequestClaimed(uint256 wbtcClaimed);
-    event EtherfiBTCRequestCancel(uint256 ebtcReturned);
+    event EtherfiBTCRequestClaimed(address indexed vault, uint256 wbtcClaimed);
+    event EtherfiBTCRequestCancel(address indexed vault, uint256 ebtcReturned);
 
     error NoAccess();
 
@@ -75,7 +80,7 @@ contract EtherfiBTCAdapter is AdapterBase, IExternalPositionAdapter {
         wbtcClaimed = _wBTC.balanceOf(address(this));
         _wBTC.safeTransfer(msg.sender, wbtcClaimed);
 
-        emit EtherfiBTCRequestClaimed(wbtcClaimed);
+        emit EtherfiBTCRequestClaimed(msg.sender, wbtcClaimed);
     }
 
     function cancelWithdrawRequest() external onlyVault returns (uint256 ebtcReturned) {
@@ -90,7 +95,7 @@ contract EtherfiBTCAdapter is AdapterBase, IExternalPositionAdapter {
         ebtcReturned = _eBTC.balanceOf(address(this));
         eBTC.safeTransfer(msg.sender, ebtcReturned);
 
-        emit EtherfiBTCRequestCancel(ebtcReturned);
+        emit EtherfiBTCRequestCancel(msg.sender, ebtcReturned);
     }
 
     function supportsInterface(bytes4 interfaceId) public pure override returns (bool) {
@@ -141,6 +146,8 @@ contract EtherfiBTCAdapter is AdapterBase, IExternalPositionAdapter {
 
         shares = teller.deposit(_wBTC, amount, minShare);
         _eBTC.safeTransfer(msg.sender, amount);
+
+        emit Swap(msg.sender, address(_wBTC), amount, address(_eBTC), amount);
     }
 
     function _requestWithdraw(IERC20 _eBTC, uint96 amount, uint88 atomicPrice, uint64 deadline) private onlyVault {
@@ -158,6 +165,6 @@ contract EtherfiBTCAdapter is AdapterBase, IExternalPositionAdapter {
         IAdapterCallback(msg.sender).adapterCallback(address(this), address(_eBTC), amount);
         _eBTC.forceApprove(address(_atomicQueue), amount);
 
-        emit EtherfiBTCRequestWithdraw(address(_eBTC), address(_wBTC), amount, atomicPrice, deadline);
+        emit EtherfiBTCRequestWithdraw(msg.sender, address(_eBTC), address(_wBTC), amount, atomicPrice, deadline);
     }
 }

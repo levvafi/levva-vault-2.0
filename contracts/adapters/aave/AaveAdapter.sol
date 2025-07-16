@@ -28,6 +28,8 @@ contract AaveAdapter is AdapterBase {
         IAdapterCallback(msg.sender).adapterCallback(address(this), asset, amount);
         IERC20(asset).forceApprove(address(aavePool), amount);
         aavePool.supply(asset, amount, msg.sender, 0);
+
+        emit Swap(msg.sender, asset, amount, _getAToken(aavePool, asset), amount);
     }
 
     ///@dev Use call supplyAllExcept(asset, 0) to supply all balance,
@@ -63,5 +65,7 @@ contract AaveAdapter is AdapterBase {
         IERC20(asset).forceApprove(aToken, toTransfer);
 
         withdrawnAmount = aavePool.withdraw(asset, amount, msg.sender);
+
+        emit Swap(msg.sender, aToken, toTransfer, asset, withdrawnAmount);
     }
 }

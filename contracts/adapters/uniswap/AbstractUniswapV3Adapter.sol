@@ -25,12 +25,14 @@ abstract contract AbstractUniswapV3Adapter is AdapterBase {
     function swapExactInputV3(ISwapRouter.ExactInputParams memory params) public returns (uint256 amountOut) {
         if (params.recipient != msg.sender) revert WrongRecipient(msg.sender, params.recipient);
 
-        (address inputToken,) = decodeTokens(params.path);
+        (address inputToken, address outputToken) = decodeTokens(params.path);
 
         IAdapterCallback(msg.sender).adapterCallback(address(this), inputToken, params.amountIn);
         ISwapRouter _uniswapV3Router = uniswapV3Router;
         IERC20(inputToken).forceApprove(address(_uniswapV3Router), params.amountIn);
         amountOut = _uniswapV3Router.exactInput(params);
+
+        emit Swap(msg.sender, inputToken, params.amountIn, outputToken, amountOut);
     }
 
     /// @dev Swap all tokenIn, except params.amountIn
@@ -46,7 +48,7 @@ abstract contract AbstractUniswapV3Adapter is AdapterBase {
     function swapExactOutputV3(ISwapRouter.ExactOutputParams calldata params) external returns (uint256 amountIn) {
         if (params.recipient != msg.sender) revert WrongRecipient(msg.sender, params.recipient);
 
-        (, address inputToken) = decodeTokens(params.path);
+        (address outputToken, address inputToken) = decodeTokens(params.path);
 
         IAdapterCallback(msg.sender).adapterCallback(address(this), inputToken, params.amountInMaximum);
 
@@ -59,6 +61,8 @@ abstract contract AbstractUniswapV3Adapter is AdapterBase {
             IERC20(inputToken).forceApprove(address(_uniswapV3Router), 0);
             IERC20(inputToken).safeTransfer(msg.sender, unused);
         }
+
+        emit Swap(msg.sender, inputToken, amountIn, outputToken, params.amountOut);
     }
 
     function decodeTokens(bytes memory path) private pure returns (address firstToken, address lastToken) {

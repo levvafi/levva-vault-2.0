@@ -69,6 +69,9 @@ contract PendleAdapter is AdapterBase {
         if (netPtOut < minPtOut) {
             revert PendleAdapter__SlippageProtection();
         }
+
+        (, IPPrincipalToken ptToken,) = IPMarket(market).readTokens();
+        emit Swap(msg.sender, tokenInput.tokenIn, tokenInput.netTokenIn, address(ptToken), netPtOut);
     }
 
     ///@dev Swap all token for PT except  tokenInput.netTokenIn
@@ -132,6 +135,8 @@ contract PendleAdapter is AdapterBase {
         if (netLpOut < minLpOut) {
             revert PendleAdapter__SlippageProtection();
         }
+
+        emit Swap(msg.sender, tokenInput.tokenIn, tokenInput.netTokenIn, market, netLpOut);
     }
 
     /// @notice Swap all liquidity for Pendle LP except tokenInput.netTokenIn amount
@@ -171,6 +176,8 @@ contract PendleAdapter is AdapterBase {
         if (netTokenOut < tokenOut.minTokenOut) {
             revert PendleAdapter__SlippageProtection();
         }
+
+        emit Swap(msg.sender, market, lpAmount, tokenOut.tokenOut, netTokenOut);
     }
 
     function removeLiquiditySingleTokenAllExcept(address market, uint256 except, TokenOutput calldata tokenOut)
@@ -302,6 +309,8 @@ contract PendleAdapter is AdapterBase {
         if (netTokenOut < tokenOut.minTokenOut) {
             revert PendleAdapter__SlippageProtection();
         }
+
+        emit Swap(msg.sender, address(ptToken), exactPtIn, tokenOut.tokenOut, netTokenOut);
     }
 
     function _redeemPt(
@@ -326,6 +335,8 @@ contract PendleAdapter is AdapterBase {
         if (netTokenOut < tokenOut.minTokenOut) {
             revert PendleAdapter__SlippageProtection();
         }
+
+        emit Swap(msg.sender, address(ptToken), ptIn, tokenOut.tokenOut, netTokenOut);
     }
 
     function _rollOverPt(
@@ -378,5 +389,8 @@ contract PendleAdapter is AdapterBase {
         if (netPtOut < minNewPtOut) {
             revert PendleAdapter__SlippageProtection();
         }
+
+        (, IPPrincipalToken newPtToken,) = IPMarket(newMarket).readTokens();
+        emit Swap(msg.sender, address(oldPtToken), ptAmount, address(newPtToken), netPtOut);
     }
 }

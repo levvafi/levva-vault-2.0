@@ -49,10 +49,14 @@ abstract contract ERC4626AdapterBase is AdapterBase {
         IERC20(asset).forceApprove(vault, assets);
 
         shares = IERC4626(vault).deposit(assets, msg.sender);
+
+        emit Swap(msg.sender, asset, assets, vault, shares);
     }
 
     function _redeem(address vault, uint256 shares) private returns (uint256 withdrawn) {
         IAdapterCallback(msg.sender).adapterCallback(address(this), address(vault), shares);
         withdrawn = IERC4626(vault).redeem(shares, msg.sender, address(this));
+
+        emit Swap(msg.sender, vault, shares, _asset, withdrawn);
     }
 }

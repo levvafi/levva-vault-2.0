@@ -85,6 +85,8 @@ contract CurveRouterAdapter is AdapterBase {
         if (amountOut < minDy) {
             revert CurveRouterAdapter__SlippageProtection();
         }
+
+        emit Swap(msg.sender, tokenIn, amount, tokenOut, amountOut);
     }
 
     function exchangeAllExcept(

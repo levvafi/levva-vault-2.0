@@ -28,8 +28,8 @@ contract LidoAdapter is AdapterBase, IExternalPositionAdapter {
     ILidoWithdrawalQueue private immutable i_lidoWithdrawalQueue;
     mapping(address vault => WithdrawalQueue) private s_queues;
 
-    event WithdrawalRequested(uint256 indexed requestId, uint256 wstEthAmount);
-    event WithdrawalClaimed(uint256 indexed requestId, uint256 wethAmount);
+    event LidoWithdrawalRequested(address indexed vault, uint256 indexed requestId, uint256 wstEthAmount);
+    event LidoWithdrawalClaimed(address indexed vault, uint256 indexed requestId, uint256 wethAmount);
 
     error LidoAdapter__StakeFailed();
     error LidoAdapter__NoWithdrawRequestInQueue();
@@ -93,7 +93,7 @@ contract LidoAdapter is AdapterBase, IExternalPositionAdapter {
         weth.deposit{value: wethAmount}();
         IERC20(weth).safeTransfer(msg.sender, wethAmount);
 
-        emit WithdrawalClaimed(requestId, wethAmount);
+        emit LidoWithdrawalClaimed(msg.sender, requestId, wethAmount);
     }
 
     /// @notice Check if there first withdrawal request is finalized and ready for claim
@@ -212,6 +212,8 @@ contract LidoAdapter is AdapterBase, IExternalPositionAdapter {
         }
         wstETHAmount = IERC20(wstETH).balanceOf(address(this));
         IERC20(wstETH).safeTransfer(msg.sender, wstETHAmount);
+
+        emit Swap(msg.sender, address(weth), amount, address(wstETH), wstETHAmount);
     }
 
     function _requestWithdrawal(IWstETH wstETH, uint256 wstETHAmount) private {
@@ -233,7 +235,7 @@ contract LidoAdapter is AdapterBase, IExternalPositionAdapter {
 
         uint256[] memory requestIds = withdrawalQueue.requestWithdrawalsWstETH(amounts, address(0));
         for (uint256 i = 0; i < length;) {
-            emit WithdrawalRequested(requestIds[i], amounts[i]);
+            emit LidoWithdrawalRequested(msg.sender, requestIds[i], amounts[i]);
             _enqueueWithdrawalRequest(requestIds[i]);
 
             unchecked {
