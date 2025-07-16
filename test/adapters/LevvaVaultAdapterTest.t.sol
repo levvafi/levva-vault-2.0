@@ -202,7 +202,7 @@ contract LevvaVaultAdapterTest is Test {
         uint256 expectedRequestId = IWithdrawalQueue(withdrawalQueue).lastRequestId() + 1;
 
         vm.expectEmit(true, true, true, false);
-        emit LevvaVaultAdapter.RequestWithdrawal(address(investVault1), expectedRequestId, redeemAmount);
+        emit LevvaVaultAdapter.LevvaVaultRequestWithdrawal(address(investVault1), expectedRequestId, redeemAmount);
         uint256 requestId = adapter.requestRedeem(address(investVault1), redeemAmount);
 
         assertEq(requestId, expectedRequestId);
@@ -306,7 +306,7 @@ contract LevvaVaultAdapterTest is Test {
         uint256 expectedRequestId = IWithdrawalQueue(withdrawalQueue).lastRequestId() + 1;
 
         vm.expectEmit(true, true, true, false);
-        emit LevvaVaultAdapter.RequestWithdrawal(address(investVault1), expectedRequestId, redeemAmount);
+        emit LevvaVaultAdapter.LevvaVaultRequestWithdrawal(address(investVault1), expectedRequestId, redeemAmount);
         vm.prank(address(vault));
         uint256 requestId = adapter.requestRedeemAllExcept(address(investVault1), except);
 
@@ -342,7 +342,7 @@ contract LevvaVaultAdapterTest is Test {
         // claim
         vm.prank(address(vault));
         vm.expectEmit(true, true, true, false);
-        emit LevvaVaultAdapter.ClaimWithdrawal(address(investVault1), requestId, redeemAmount);
+        emit LevvaVaultAdapter.LevvaVaultClaimWithdrawal(address(investVault1), requestId, redeemAmount);
         uint256 withdrawalAssets = adapter.claimWithdrawal(address(investVault1), requestId);
 
         assertEq(withdrawalAssets, redeemAmount);

@@ -34,8 +34,8 @@ contract LevvaVaultAdapter is AdapterBase, ERC721Holder, IExternalPositionAdapte
 
     mapping(address owner => PendingWithdrawals) private s_pendingWithdrawals;
 
-    event RequestWithdrawal(address indexed vault, uint256 indexed requestId, uint256 shares);
-    event ClaimWithdrawal(address indexed vault, uint256 indexed requestId, uint256 assets);
+    event LevvaVaultRequestWithdrawal(address indexed vault, uint256 indexed requestId, uint256 shares);
+    event LevvaVaultClaimWithdrawal(address indexed vault, uint256 indexed requestId, uint256 assets);
 
     error LevvaVaultAdapter__Forbidden();
     error LevvaVaultAdapter__UnknownVault();
@@ -100,7 +100,7 @@ contract LevvaVaultAdapter is AdapterBase, ERC721Holder, IExternalPositionAdapte
 
         assets = IWithdrawalQueue(withdrawalQueue).claimWithdrawal(requestId, msg.sender);
 
-        emit ClaimWithdrawal(vault, requestId, assets);
+        emit LevvaVaultClaimWithdrawal(vault, requestId, assets);
     }
 
     /// @notice Checks if claim is possible.
@@ -183,7 +183,7 @@ contract LevvaVaultAdapter is AdapterBase, ERC721Holder, IExternalPositionAdapte
         IAdapterCallback(msg.sender).adapterCallback(address(this), vault, shares);
         requestId = ILevvaVault(vault).requestRedeem(shares);
         _addWithdrawalRequest(msg.sender, vault, requestId, shares);
-        emit RequestWithdrawal(vault, requestId, shares);
+        emit LevvaVaultRequestWithdrawal(vault, requestId, shares);
     }
 
     function _addWithdrawalRequest(address owner, address vault, uint256 requestId, uint256 shares) internal {
