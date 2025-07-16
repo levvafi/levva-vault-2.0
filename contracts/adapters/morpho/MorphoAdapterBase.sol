@@ -17,7 +17,7 @@ abstract contract MorphoAdapterBase is AdapterBase {
 
     IMetaMorphoFactory internal immutable i_metaMorphoFactory;
 
-    event MorphoRewardsClaimed(address indexed vault, uint256 amount);
+    event MorphoRewardsClaimed(address indexed vault, address indexed asset, uint256 amount);
 
     error MorphoAdapterBase__InvalidMorphoVault();
 
@@ -69,7 +69,7 @@ abstract contract MorphoAdapterBase is AdapterBase {
         returns (uint256 amount)
     {
         amount = IUniversalRewardsDistributorBase(rewardsDistributor).claim(msg.sender, reward, claimable, proof);
-        emit MorphoRewardsClaimed(msg.sender, amount);
+        emit MorphoRewardsClaimed(msg.sender, reward, amount);
     }
 
     function getMetaMorphoFactory() external view returns (address) {
