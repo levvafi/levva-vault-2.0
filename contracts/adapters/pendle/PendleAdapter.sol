@@ -31,6 +31,8 @@ contract PendleAdapter is AdapterBase {
 
     address private immutable s_pendleRouter;
 
+    event PendleRewardsRedeemed(address indexed vault);
+
     error PendleAdapter__SlippageProtection();
     error PendleAdapter__MarketNotExpired();
 
@@ -280,6 +282,8 @@ contract PendleAdapter is AdapterBase {
     function redeemRewards(address pendleMarket) external returns (address[] memory assets, uint256[] memory rewards) {
         assets = IPMarket(pendleMarket).getRewardTokens();
         rewards = IPMarket(pendleMarket).redeemRewards(msg.sender);
+
+        emit PendleRewardsRedeemed(msg.sender);
     }
 
     /// @dev Creates default ApproxParams for on-chain approximation
