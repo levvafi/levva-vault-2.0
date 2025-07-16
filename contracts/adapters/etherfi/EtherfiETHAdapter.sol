@@ -176,6 +176,8 @@ contract EtherfiETHAdapter is AdapterBase, ERC721Holder, IExternalPositionAdapte
         eETH.forceApprove(address(_weETH), wethAmount);
         weETHAmount = _weETH.wrap(wethAmount);
         _weETH.safeTransfer(msg.sender, weETHAmount);
+
+        emit Swap(msg.sender, address(_weth), wethAmount, address(_weETH), weETHAmount);
     }
 
     function _requestWithdraw(IweETH _weETH, uint256 weethAmount) private returns (uint256 requestId) {

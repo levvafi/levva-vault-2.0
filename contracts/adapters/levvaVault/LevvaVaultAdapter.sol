@@ -169,6 +169,8 @@ contract LevvaVaultAdapter is AdapterBase, ERC721Holder, IExternalPositionAdapte
 
         IERC20(asset).forceApprove(vault, assets);
         shares = IERC4626(vault).deposit(assets, msg.sender);
+
+        emit Swap(msg.sender, asset, assets, address(vault), shares);
     }
 
     function _ensureIsLevvaVault(address vault) private view {

@@ -212,6 +212,8 @@ contract LidoAdapter is AdapterBase, IExternalPositionAdapter {
         }
         wstETHAmount = IERC20(wstETH).balanceOf(address(this));
         IERC20(wstETH).safeTransfer(msg.sender, wstETHAmount);
+
+        emit Swap(msg.sender, address(weth), amount, address(wstETH), wstETHAmount);
     }
 
     function _requestWithdrawal(IWstETH wstETH, uint256 wstETHAmount) private {

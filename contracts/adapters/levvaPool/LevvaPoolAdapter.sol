@@ -41,6 +41,11 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
 
     event PoolAdded(address indexed pool);
     event PoolRemoved(address indexed pool);
+    event Deposit(address indexed pool, address indexed token, uint256 amount, int256 positionAmount);
+    event Long(address indexed pool, uint256 amount);
+    event Short(address indexed pool, uint256 amount);
+    event ClosePosition(address indexed pool);
+    event Withdraw(address indexed pool, address indexed asset, uint256 amount);
 
     constructor(address vault) {
         vault.assertNotZeroAddress();
@@ -99,6 +104,8 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
 
         // long - quoteToken in debt, check oracle for quoteToken
         _assertOracleExists(ILevvaPool(pool).quoteToken(), ILevvaVault(msg.sender).asset());
+
+        emit Long(pool, amount);
     }
 
     ///@notice Opens a short position
@@ -113,6 +120,8 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
 
         // short - baseToken in debt, check oracle for baseToken
         _assertOracleExists(ILevvaPool(pool).baseToken(), ILevvaVault(msg.sender).asset());
+
+        emit Short(pool, amount);
     }
 
     ///@notice Closes a position
@@ -123,6 +132,8 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
         ILevvaPool(pool).execute(
             ILevvaPool.CallType.ClosePosition, 0, int256(0), limitPriceX96, false, address(0), swapCallData
         );
+
+        emit ClosePosition(pool);
     }
 
     /// @notice Withdraws an amount from pool
@@ -142,6 +153,8 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
         if (position._type == ILevvaPool.PositionType.Uninitialized) {
             _removePool(pool);
         }
+
+        emit Withdraw(pool, asset, amountOut);
     }
 
     /// @notice Withdraws an amount when pool in emergency mode
@@ -169,12 +182,15 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
 
         ILevvaPool(pool).execute(ILevvaPool.CallType.EmergencyWithdraw, 0, int256(0), 0, false, address(0), 0);
 
-        asset.safeTransfer(msg.sender, asset.balanceOf(address(this)));
+        uint256 amount = asset.balanceOf(address(this));
+        asset.safeTransfer(msg.sender, amount);
 
         position = ILevvaPool(pool).positions(address(this));
         if (position._type == ILevvaPool.PositionType.Uninitialized) {
             _removePool(pool);
         }
+
+        emit Withdraw(pool, address(asset), amount);
     }
 
     /// @notice Returns managed assets by the vault in adapter Protocol
@@ -440,5 +456,7 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
         ILevvaPool(pool).execute(callType, amount, positionAmount, limitPriceX96, false, address(0), swapCallData);
 
         _addPool(pool);
+
+        emit Deposit(pool, asset, amount, positionAmount);
     }
 }
