@@ -158,6 +158,7 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
         ILevvaPool(pool).execute(
             ILevvaPool.CallType.ClosePosition, 0, int256(0), limitPriceX96, withdrawal, address(0), swapCallData
         );
+        emit LevvaPoolClosePosition(msg.sender, pool);
 
         if (withdrawal) {
             uint256 amount = IERC20(asset).balanceOf(address(this));
@@ -166,8 +167,6 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
 
             emit LevvaPoolWithdraw(msg.sender, pool, asset, amount);
         }
-
-        emit LevvaPoolClosePosition(msg.sender, pool);
     }
 
     ///@notice Sell position collateral
@@ -190,6 +189,7 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
         ILevvaPool(pool).execute(
             ILevvaPool.CallType.SellCollateral, 0, int256(0), limitPriceX96, withdrawal, address(0), swapCallData
         );
+        emit LevvaPoolSellCollateral(msg.sender, pool);
 
         if (withdrawal) {
             uint256 amount = IERC20(asset).balanceOf(address(this));
@@ -198,8 +198,6 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
 
             emit LevvaPoolWithdraw(msg.sender, pool, asset, amount);
         }
-
-        emit LevvaPoolSellCollateral(msg.sender, pool);
     }
 
     /// @notice Withdraws an amount from pool
