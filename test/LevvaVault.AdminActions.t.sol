@@ -42,6 +42,13 @@ contract LevvaVaultAdminActionsTest is TestSetUp {
         levvaVault.addTrackedAsset(address(trackedAsset));
     }
 
+    function testAddNewAssetExceedsLimit() public {
+        levvaVault.setMaxTrackedAssets(0);
+
+        vm.expectRevert(abi.encodeWithSelector(MultiAssetVaultBase.ExceedsTrackedAssetsLimit.selector));
+        levvaVault.addTrackedAsset(address(trackedAsset));
+    }
+
     function testAddNewAssetZeroAddress() public {
         vm.expectRevert(abi.encodeWithSelector(Asserts.ZeroAddress.selector));
         levvaVault.addTrackedAsset(address(0));
@@ -132,6 +139,28 @@ contract LevvaVaultAdminActionsTest is TestSetUp {
 
         vm.expectRevert(abi.encodeWithSelector(Asserts.SameValue.selector));
         levvaVault.setMinimalDeposit(newMinDeposit);
+    }
+
+    function testSetMaxTrackedAssets() public {
+        uint8 newMaxTrackedAssets = 0;
+        vm.expectEmit(address(levvaVault));
+        emit MultiAssetVaultBase.MaxTrackedAssetsSet(newMaxTrackedAssets);
+        levvaVault.setMaxTrackedAssets(newMaxTrackedAssets);
+
+        assertEq(levvaVault.maxTrackedAssets(), newMaxTrackedAssets);
+    }
+
+    function testSetMaxTrackedAssetsOnlyOwner() public {
+        vm.prank(NO_ACCESS);
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, NO_ACCESS));
+        levvaVault.setMaxTrackedAssets(0);
+    }
+
+    function testSetMaxTrackedAssetsWrongValue() public {
+        levvaVault.addTrackedAsset(address(trackedAsset));
+
+        vm.expectRevert(abi.encodeWithSelector(AdapterActionExecutor.WrongValue.selector));
+        levvaVault.setMaxTrackedAssets(0);
     }
 
     function testSetOracle() public {

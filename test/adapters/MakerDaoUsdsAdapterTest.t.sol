@@ -57,6 +57,7 @@ contract MakerDaoUsdsAdapterTest is Test {
         );
 
         levvaVault = LevvaVault(deployedVault);
+        levvaVault.setMaxTrackedAssets(type(uint8).max);
 
         adapter = new MakerDaoUsdsAdapter(address(S_USDS));
         levvaVault.addAdapter(address(adapter));

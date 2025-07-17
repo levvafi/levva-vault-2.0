@@ -61,6 +61,12 @@ contract AdapterActionExecutorTest is TestSetUp {
         levvaVault.addAdapter(address(asset));
     }
 
+    function testAddExternalPositionAdapterExceedsLimit() public {
+        levvaVault.setMaxExternalPositionAdapters(0);
+        vm.expectRevert(abi.encodeWithSelector(AdapterActionExecutor.ExceedsAdapterLimit.selector));
+        levvaVault.addAdapter(address(externalPositionAdapter));
+    }
+
     function testRemoveAdapter() public {
         levvaVault.addAdapter(address(adapter));
 
@@ -267,6 +273,25 @@ contract AdapterActionExecutorTest is TestSetUp {
         expectedTotalAssets -=
             oracle.getQuote(externalPositionDebtAssetAmount, address(externalPositionDebtAsset), address(asset));
         assertEq(levvaVault.totalAssets(), expectedTotalAssets);
+    }
+
+    function testSetMaxExternalPositionAdapters() public {
+        uint8 maxExternalPositionAdapters = 10;
+        levvaVault.setMaxExternalPositionAdapters(maxExternalPositionAdapters);
+
+        assertEq(levvaVault.maxExternalPositionAdapters(), maxExternalPositionAdapters);
+    }
+
+    function testSetMaxExternalPositionAdaptersWrongValue() public {
+        levvaVault.addAdapter(address(externalPositionAdapter));
+        vm.expectRevert(abi.encodeWithSelector(AdapterActionExecutor.WrongValue.selector));
+        levvaVault.setMaxExternalPositionAdapters(0);
+    }
+
+    function testSetMaxExternalPositionAdaptersOnlyOwner() public {
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, NO_ACCESS));
+        vm.prank(NO_ACCESS);
+        levvaVault.setMaxExternalPositionAdapters(0);
     }
 
     function testSetMaxSlippage() public {

@@ -171,6 +171,8 @@ contract UltraSafeVaultTest is Test {
         levvaVault.setMaxSlippage(200_000); // 20%
         levvaVault.setManagementFeeIR(100_000); //10%
         levvaVault.setPerformanceFeeRatio(100_000); // 10%
+        levvaVault.setMaxExternalPositionAdapters(10);
+        levvaVault.setMaxTrackedAssets(10);
 
         console.log("LevvaVault", address(levvaVault));
     }
@@ -203,6 +205,7 @@ contract UltraSafeVaultTest is Test {
                 address(oracle)
             );
             levvaVault_sUSDE = LevvaVault(deployedVault);
+            levvaVault_sUSDE.setMaxExternalPositionAdapters(1);
 
             LevvaPoolAdapter levvaPoolAdapter = new LevvaPoolAdapter(address(levvaVault_sUSDE));
             levvaVault_sUSDE.addAdapter(address(levvaPoolAdapter));
@@ -222,6 +225,7 @@ contract UltraSafeVaultTest is Test {
                 address(oracle)
             );
             levvaVault_wstUSR = LevvaVault(deployedVault);
+            levvaVault_wstUSR.setMaxExternalPositionAdapters(1);
 
             LevvaPoolAdapter levvaPoolAdapter = new LevvaPoolAdapter(address(levvaVault_wstUSR));
             levvaVault_wstUSR.addAdapter(address(levvaPoolAdapter));

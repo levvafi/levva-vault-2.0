@@ -19,6 +19,7 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, FeeCollector, Adapt
     /// @custom:storage-location erc7201:levva.storage.MultiAssetVaultBase
     struct MultiAssetVaultBaseStorage {
         uint256 minDeposit;
+        uint8 maxTrackedAssets;
         IERC20[] trackedAssets;
         // if 0, then token is not tracked, otherwise 'trackedAssetsArrayIndex = trackedAssetPosition - 1'
         mapping(address asset => uint256) trackedAssetPosition;
@@ -39,11 +40,13 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, FeeCollector, Adapt
         address indexed trackedAssetRemoved, uint256 indexed position, address indexed replacement
     );
     event MinimalDepositSet(uint256 minDeposit);
+    event MaxTrackedAssetsSet(uint256 minDeposit);
 
     error AlreadyTracked(uint256 index);
     error NotTrackedAsset();
     error NotZeroBalance(uint256 balance);
     error LessThanMinDeposit(uint256 minDeposit);
+    error ExceedsTrackedAssetsLimit();
 
     function __MultiAssetVaultBase_init(
         IERC20 asset,
@@ -130,6 +133,8 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, FeeCollector, Adapt
 
         MultiAssetVaultBaseStorage storage $ = _getMultiAssetVaultBaseStorage();
 
+        if ($.trackedAssets.length == $.maxTrackedAssets) revert ExceedsTrackedAssetsLimit();
+
         if ($.trackedAssetPosition[newTrackedAsset] != 0) {
             revert AlreadyTracked($.trackedAssetPosition[newTrackedAsset]);
         }
@@ -175,6 +180,13 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, FeeCollector, Adapt
         emit MinimalDepositSet(minDeposit);
     }
 
+    function setMaxTrackedAssets(uint8 _maxTrackedAssets) external onlyOwner {
+        MultiAssetVaultBaseStorage storage $ = _getMultiAssetVaultBaseStorage();
+        if (_maxTrackedAssets < $.trackedAssets.length) revert WrongValue();
+        $.maxTrackedAssets = _maxTrackedAssets;
+        emit MaxTrackedAssetsSet(_maxTrackedAssets);
+    }
+
     /// @inheritdoc ERC4626Upgradeable
     function totalAssets() public view override(AdapterActionExecutor, ERC4626Upgradeable) returns (uint256) {
         unchecked {
@@ -209,6 +221,10 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, FeeCollector, Adapt
 
     function minimalDeposit() external view returns (uint256) {
         return _getMultiAssetVaultBaseStorage().minDeposit;
+    }
+
+    function maxTrackedAssets() external view returns (uint8) {
+        return _getMultiAssetVaultBaseStorage().maxTrackedAssets;
     }
 
     /// @inheritdoc ERC4626Upgradeable

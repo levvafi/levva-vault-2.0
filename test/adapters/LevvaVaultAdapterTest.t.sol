@@ -99,7 +99,12 @@ contract LevvaVaultAdapterTest is Test {
         );
 
         vault = LevvaVault(deployedVault);
+        vault.setMaxExternalPositionAdapters(type(uint8).max);
+        vault.setMaxTrackedAssets(type(uint8).max);
+
         vault2 = LevvaVault(deployedVault2);
+        vault2.setMaxExternalPositionAdapters(type(uint8).max);
+        vault2.setMaxTrackedAssets(type(uint8).max);
 
         adapter = new LevvaVaultAdapter(address(levvaVaultFactoryProxy));
         vault.addAdapter(address(adapter));
