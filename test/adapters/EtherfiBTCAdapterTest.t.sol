@@ -85,6 +85,7 @@ contract EtherfiBTCAdapterTest is Test {
 
         levvaVault = LevvaVault(deployedVault);
         levvaVault.setMaxExternalPositionAdapters(type(uint8).max);
+        levvaVault.setMaxTrackedAssets(type(uint8).max);
 
         adapter =
             new EtherfiBTCAdapter(address(levvaVault), address(WBTC), address(EBTC), LAYER_ZERO_TELLER, ATOMIC_QUEUE);

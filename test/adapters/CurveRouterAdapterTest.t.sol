@@ -66,6 +66,7 @@ contract CurveRouterAdapterTest is Test {
         );
 
         vault = LevvaVault(deployedVault);
+        vault.setMaxTrackedAssets(type(uint8).max);
         vault.addAdapter(address(curveRouterAdapter));
     }
 

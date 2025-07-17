@@ -57,6 +57,7 @@ contract ResolvAdapterTest is Test {
         );
 
         levvaVault = LevvaVault(deployedVault);
+        levvaVault.setMaxTrackedAssets(type(uint8).max);
 
         adapter = new ResolvAdapter(address(WSTUSR));
         levvaVault.addAdapter(address(adapter));

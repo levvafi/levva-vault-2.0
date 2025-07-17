@@ -64,6 +64,7 @@ contract UniswapAdapterTest is Test {
         );
 
         levvaVault = LevvaVault(deployedVault);
+        levvaVault.setMaxTrackedAssets(type(uint8).max);
 
         adapter = new UniswapAdapter(UNISWAP_V3_ROUTER, UNISWAP_UNIVERSAL_ROUTER, PERMIT2);
         levvaVault.addAdapter(address(adapter));

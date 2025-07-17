@@ -31,6 +31,7 @@ struct VaultConfig {
     address vaultManager;
     uint24 maxSlippage;
     uint8 maxExternalPositionAdapters;
+    uint8 maxTrackedAssets;
     uint256 initialDeposit;
     address withdrawQueueFinalizer;
 }
@@ -74,6 +75,7 @@ abstract contract LevvaVaultDeployer is DeployHelper, AdapterUtils {
         vault.addVaultManager(config.vaultManager, true);
         vault.setMaxSlippage(config.maxSlippage);
         vault.setMaxExternalPositionAdapters(config.maxExternalPositionAdapters);
+        vault.setMaxTrackedAssets(config.maxTrackedAssets);
         vault.setManagementFeeIR(config.managementFee);
         vault.setPerformanceFeeRatio(config.performanceFee);
 
