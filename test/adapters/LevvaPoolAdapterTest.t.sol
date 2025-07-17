@@ -84,6 +84,7 @@ contract LevvaPoolAdapterTest is Test {
         );
 
         vault = LevvaVault(deployedVault);
+        vault.setMaxExternalPositionAdapters(type(uint8).max);
 
         vault.addTrackedAsset(address(weETH));
         vault.addTrackedAsset(address(PT_weETH));

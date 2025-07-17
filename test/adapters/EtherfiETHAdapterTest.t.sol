@@ -85,6 +85,7 @@ contract EtherfiETHAdapterTest is Test {
         );
 
         levvaVault = LevvaVault(deployedVault);
+        levvaVault.setMaxExternalPositionAdapters(type(uint8).max);
 
         adapter = new EtherfiETHAdapter(address(WETH), address(WEETH), address(ETHERFI_LIQUIDITY_POOL));
         levvaVault.addAdapter(address(adapter));

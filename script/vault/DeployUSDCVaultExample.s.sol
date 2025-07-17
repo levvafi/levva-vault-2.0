@@ -57,6 +57,7 @@ contract DeployUSDCVaultExample is LevvaVaultDeployer {
                 adapters: adapters,
                 vaultManager: getAddress("VaultManager"),
                 maxSlippage: 0,
+                maxExternalPositionAdapters: 255,
                 initialDeposit: 0,
                 withdrawQueueFinalizer: getAddress("WithdrawalQueueFinalizer")
             });

@@ -22,6 +22,7 @@ abstract contract AdapterActionExecutor is IAdapterCallback, OraclePriceProvider
     /// @custom:storage-location erc7201:levva.storage.AdapterActionExecutor
     struct AdapterActionExecutorStorage {
         uint24 maxSlippage;
+        uint8 maxExternalPositionAdapters;
         mapping(bytes4 adapterId => IAdapter) adapters;
         IExternalPositionAdapter[] externalPositionAdapters;
         mapping(address adapter => uint256) externalPositionAdapterPosition;
@@ -51,6 +52,7 @@ abstract contract AdapterActionExecutor is IAdapterCallback, OraclePriceProvider
         address indexed adapter, uint256 indexed position, address indexed replacement
     );
     event MaxSlippageSet(uint24 maxSlippage);
+    event MaxExternalPositionAdapterSet(uint8 maxExternalPositionAdapters);
 
     error UnknownAdapter(bytes4 adapterId);
     error WrongAddress();
@@ -60,6 +62,7 @@ abstract contract AdapterActionExecutor is IAdapterCallback, OraclePriceProvider
     error TooMuchSlippage(uint256 totalAssetsBefore, uint256 totalAssetsAfter);
     error WrongSlippageValue(uint256 actionIndex);
     error WrongValue();
+    error ExceedsAdapterLimit();
 
     function adapterCallback(address receiver, address token, uint256 amount) external {
         if (msg.sender != _getAdapterSafe(IAdapter(msg.sender).getAdapterId())) revert Forbidden();
@@ -120,6 +123,13 @@ abstract contract AdapterActionExecutor is IAdapterCallback, OraclePriceProvider
         emit MaxSlippageSet(_maxSlippage);
     }
 
+    function setMaxExternalPositionAdapters(uint8 _maxExternalPositionAdapters) external onlyOwner {
+        AdapterActionExecutorStorage storage $ = _getAdapterActionExecutorStorage();
+        if (_maxExternalPositionAdapters < $.externalPositionAdapters.length) revert WrongValue();
+        $.maxExternalPositionAdapters = _maxExternalPositionAdapters;
+        emit MaxExternalPositionAdapterSet(_maxExternalPositionAdapters);
+    }
+
     function getAdapter(bytes4 adapterId) external view returns (IAdapter) {
         return _getAdapterActionExecutorStorage().adapters[adapterId];
     }
@@ -130,6 +140,10 @@ abstract contract AdapterActionExecutor is IAdapterCallback, OraclePriceProvider
 
     function maxSlippage() external view returns (uint24) {
         return _getAdapterActionExecutorStorage().maxSlippage;
+    }
+
+    function maxExternalPositionAdapters() external view returns (uint24) {
+        return _getAdapterActionExecutorStorage().maxExternalPositionAdapters;
     }
 
     function _addAdapter(IAdapter adapter) private {
@@ -152,6 +166,8 @@ abstract contract AdapterActionExecutor is IAdapterCallback, OraclePriceProvider
 
     function _addExternalPositionAdapter(IExternalPositionAdapter adapter) private {
         AdapterActionExecutorStorage storage $ = _getAdapterActionExecutorStorage();
+
+        if ($.externalPositionAdapters.length == $.maxExternalPositionAdapters) revert ExceedsAdapterLimit();
 
         $.externalPositionAdapters.push(adapter);
         uint256 position = $.externalPositionAdapters.length;
