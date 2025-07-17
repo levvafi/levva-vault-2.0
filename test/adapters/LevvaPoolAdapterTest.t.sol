@@ -129,7 +129,7 @@ contract LevvaPoolAdapterTest is Test {
         emit LevvaPoolAdapter.PoolAdded(PT_weETH_WETH_POOL);
 
         vm.prank(address(vault));
-        adapter.deposit(address(WETH), depositAmount, 0, address(pool), 0, 0);
+        adapter.deposit(address(WETH), depositAmount, 0, false, address(pool), 0, 0);
         skip(30 days);
 
         (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets();
@@ -161,7 +161,7 @@ contract LevvaPoolAdapterTest is Test {
         assertEq(pools.length, 0);
 
         vm.prank(address(vault));
-        adapter.depositAllExcept(address(WETH), exceptAmount, 0, address(pool), 0, 0);
+        adapter.depositAllExcept(address(WETH), exceptAmount, 0, false, address(pool), 0, 0);
         skip(30 days);
 
         (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets();
@@ -194,7 +194,7 @@ contract LevvaPoolAdapterTest is Test {
         uint256 limitPriceX96 = basePrice.inner.mulDiv(110, 100);
 
         vm.prank(address(vault));
-        adapter.deposit(address(WETH), depositAmount, longAmount, address(pool), limitPriceX96, swapCallData);
+        adapter.deposit(address(WETH), depositAmount, longAmount, false, address(pool), limitPriceX96, swapCallData);
 
         ILevvaPool.Position memory position = pool.positions(address(adapter));
         assertEq(uint8(position._type), uint8(ILevvaPool.PositionType.Long));
@@ -218,7 +218,7 @@ contract LevvaPoolAdapterTest is Test {
         ILevvaPool pool = ILevvaPool(PT_weETH_WETH_POOL);
         uint256 depositAmount = 10e18;
         vm.prank(address(vault));
-        adapter.deposit(address(PT_weETH), depositAmount, 0, address(pool), 0, 0);
+        adapter.deposit(address(PT_weETH), depositAmount, 0, false, address(pool), 0, 0);
         skip(30 days);
 
         (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets();
@@ -246,7 +246,7 @@ contract LevvaPoolAdapterTest is Test {
         uint256 limitPriceX96 = pool.getBasePrice().inner.mulDiv(90, 100);
 
         vm.prank(address(vault));
-        adapter.deposit(address(weETH), depositAmount, shortAmount, address(pool), limitPriceX96, swapCallData);
+        adapter.deposit(address(weETH), depositAmount, shortAmount, false, address(pool), limitPriceX96, swapCallData);
         skip(30 days);
 
         ILevvaPool.Position memory position = pool.positions(address(adapter));
@@ -278,7 +278,7 @@ contract LevvaPoolAdapterTest is Test {
         uint256 limitPriceX96 = pool.getBasePrice().inner.mulDiv(90, 100);
 
         vm.prank(address(vault));
-        adapter.deposit(address(WETH), depositAmount, shortAmount, address(pool), limitPriceX96, swapCallData);
+        adapter.deposit(address(WETH), depositAmount, shortAmount, false, address(pool), limitPriceX96, swapCallData);
         //check coeffs before reinit
         (, uint256[] memory amounts) = adapter.getManagedAssets();
         (, uint256[] memory debtAmounts) = adapter.getDebtAssets();
@@ -323,7 +323,7 @@ contract LevvaPoolAdapterTest is Test {
         uint256 limitPriceX96 = pool.getBasePrice().inner.mulDiv(110, 100);
 
         vm.prank(address(vault));
-        adapter.deposit(address(weETH), depositAmount, longAmount, address(pool), limitPriceX96, swapCallData);
+        adapter.deposit(address(weETH), depositAmount, longAmount, false, address(pool), limitPriceX96, swapCallData);
         //check coeffs before reinit
         (, uint256[] memory amounts) = adapter.getManagedAssets();
         (, uint256[] memory debtAmounts) = adapter.getDebtAssets();
@@ -363,7 +363,7 @@ contract LevvaPoolAdapterTest is Test {
         uint256 depositAmount = 1e18;
 
         vm.prank(address(vault));
-        adapter.deposit(address(weETH), depositAmount, 0, address(pool), 0, 0);
+        adapter.deposit(address(weETH), depositAmount, 0, false, address(pool), 0, 0);
         //check coeffs before reinit
         (, uint256[] memory amounts) = adapter.getManagedAssets();
         uint256 baseCollateral = amounts[0];
@@ -398,7 +398,7 @@ contract LevvaPoolAdapterTest is Test {
         uint256 depositAmount = 1e18;
 
         vm.prank(address(vault));
-        adapter.deposit(address(WETH), depositAmount, 0, address(pool), 0, 0);
+        adapter.deposit(address(WETH), depositAmount, 0, false, address(pool), 0, 0);
         //check coeffs before reinit
         (, uint256[] memory amounts) = adapter.getManagedAssets();
         uint256 quoteCollateral = amounts[0];
@@ -443,7 +443,9 @@ contract LevvaPoolAdapterTest is Test {
                 LevvaPoolAdapter.LevvaPoolAdapter__OracleNotExists.selector, address(WETH), address(WETH)
             )
         );
-        adapter.deposit(address(WETH), depositAmount, longAmount, PT_weETH_WETH_POOL, limitPriceX96, swapCallData);
+        adapter.deposit(
+            address(WETH), depositAmount, longAmount, false, PT_weETH_WETH_POOL, limitPriceX96, swapCallData
+        );
     }
 
     function test_depositBaseAndShortShouldFailWhenOracleNotExists() public {
@@ -461,12 +463,12 @@ contract LevvaPoolAdapterTest is Test {
                 LevvaPoolAdapter.LevvaPoolAdapter__OracleNotExists.selector, address(weETH), address(WETH)
             )
         );
-        adapter.deposit(address(weETH), depositAmount, shortAmount, weETH_WETH_POOL, limitPriceX96, swapCallData);
+        adapter.deposit(address(weETH), depositAmount, shortAmount, false, weETH_WETH_POOL, limitPriceX96, swapCallData);
     }
 
     function test_depositShouldFailWhenNotAuthorized() public {
         vm.expectRevert(LevvaPoolAdapter.LevvaPoolAdapter__NotAuthorized.selector);
-        adapter.deposit(address(0), 0, 0, address(0), 0, 0);
+        adapter.deposit(address(0), 0, 0, false, address(0), 0, 0);
     }
 
     function test_depositBaseQuoteShouldFailWhenNotSupported() public {
@@ -474,10 +476,10 @@ contract LevvaPoolAdapterTest is Test {
         uint256 depositAmount = 1e18;
 
         vm.startPrank(address(vault));
-        adapter.deposit(address(weETH), depositAmount, 0, address(pool), 0, 0);
+        adapter.deposit(address(weETH), depositAmount, 0, false, address(pool), 0, 0);
 
         vm.expectRevert(LevvaPoolAdapter.LevvaPoolAdapter__NotSupported.selector);
-        adapter.deposit(address(WETH), depositAmount, 0, address(pool), 0, 0);
+        adapter.deposit(address(WETH), depositAmount, 0, false, address(pool), 0, 0);
     }
 
     function test_depositQuoteBaseShouldFailWhenNotSupported() public {
@@ -485,10 +487,10 @@ contract LevvaPoolAdapterTest is Test {
         uint256 depositAmount = 1e18;
 
         vm.startPrank(address(vault));
-        adapter.deposit(address(WETH), depositAmount, 0, address(pool), 0, 0);
+        adapter.deposit(address(WETH), depositAmount, 0, false, address(pool), 0, 0);
 
         vm.expectRevert(LevvaPoolAdapter.LevvaPoolAdapter__NotSupported.selector);
-        adapter.deposit(address(weETH), depositAmount, 0, address(pool), 0, 0);
+        adapter.deposit(address(weETH), depositAmount, 0, false, address(pool), 0, 0);
     }
 
     function test_partialWithdraw() public {
@@ -496,7 +498,7 @@ contract LevvaPoolAdapterTest is Test {
         ILevvaPool pool = ILevvaPool(PT_weETH_WETH_POOL);
         uint256 depositAmount = 5e18;
         vm.startPrank(address(vault));
-        adapter.deposit(address(PT_weETH), depositAmount, 0, address(pool), 0, 0);
+        adapter.deposit(address(PT_weETH), depositAmount, 0, false, address(pool), 0, 0);
 
         //withdraw
         uint256 withdrawAmount = 4e18;
@@ -524,7 +526,7 @@ contract LevvaPoolAdapterTest is Test {
         ILevvaPool pool = ILevvaPool(PT_weETH_WETH_POOL);
         uint256 depositAmount = 1e18;
         vm.startPrank(address(vault));
-        adapter.deposit(address(PT_weETH), depositAmount, 0, address(pool), 0, 0);
+        adapter.deposit(address(PT_weETH), depositAmount, 0, false, address(pool), 0, 0);
         ILevvaPool.Position memory position = pool.positions(address(adapter));
         assertEq(uint8(position._type), uint8(ILevvaPool.PositionType.Lend));
 
@@ -549,7 +551,7 @@ contract LevvaPoolAdapterTest is Test {
         ILevvaPool pool = ILevvaPool(PT_weETH_WETH_POOL);
         uint256 depositAmount = 1e18;
         vm.startPrank(address(vault));
-        adapter.deposit(address(WETH), depositAmount, 0, address(pool), 0, 0);
+        adapter.deposit(address(WETH), depositAmount, 0, false, address(pool), 0, 0);
         ILevvaPool.Position memory position = pool.positions(address(adapter));
         assertEq(uint8(position._type), uint8(ILevvaPool.PositionType.Lend));
 
@@ -584,14 +586,14 @@ contract LevvaPoolAdapterTest is Test {
         uint256 limitPriceX96 = basePrice.inner.mulDiv(90, 100);
 
         vm.startPrank(address(vault));
-        adapter.deposit(address(weETH), depositAmount, shortAmount, address(pool), limitPriceX96, swapCallData);
+        adapter.deposit(address(weETH), depositAmount, shortAmount, false, address(pool), limitPriceX96, swapCallData);
 
         ILevvaPool.Position memory position = pool.positions(address(adapter));
         assertEq(uint8(position._type), uint8(ILevvaPool.PositionType.Short));
 
         //close position
         limitPriceX96 = basePrice.inner.mulDiv(110, 100);
-        adapter.closePosition(address(pool), limitPriceX96, swapCallData);
+        adapter.closePosition(address(pool), false, limitPriceX96, swapCallData);
         position = pool.positions(address(adapter));
         assertEq(uint8(position._type), uint8(ILevvaPool.PositionType.Lend));
 
@@ -604,9 +606,220 @@ contract LevvaPoolAdapterTest is Test {
         assertEq(debtAmounts.length, 1);
     }
 
+    function test_closeLongWithWithdrawal() public {
+        LevvaPoolMock pool = new LevvaPoolMock(address(weETH), address(WETH));
+        deal(address(weETH), address(pool), 10e18);
+        deal(address(WETH), address(pool), 10e18);
+
+        vm.startPrank(address(vault));
+        adapter.deposit(address(weETH), 10e18, 0, false, address(pool), 0, 0);
+
+        pool.setPosition(ILevvaPool.PositionType.Long, 10e18, 9e18);
+        pool.setBasePriceX96(1 << 96);
+        uint256 baseBalanceDelta = 1e18;
+
+        uint256 baseBalanceBefore = weETH.balanceOf(address(pool));
+        uint256 quoteBalanceBefore = WETH.balanceOf(address(pool));
+        uint256 vaultBaseBalanceBefore = weETH.balanceOf(address(vault));
+
+        adapter.closePosition(address(pool), true, pool.basePriceX96(), 0);
+
+        ILevvaPool.Position memory position = pool.positions(address(adapter));
+        assertEq(uint8(position._type), uint8(ILevvaPool.PositionType.Uninitialized));
+
+        (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets();
+        assertEq(assets.length, 0);
+        assertEq(amounts.length, 0);
+
+        (address[] memory debtAssets, uint256[] memory debtAmounts) = adapter.getDebtAssets();
+        assertEq(debtAssets.length, 0);
+        assertEq(debtAmounts.length, 0);
+
+        assertEq(weETH.balanceOf(address(pool)), baseBalanceBefore - baseBalanceDelta);
+        assertEq(WETH.balanceOf(address(pool)), quoteBalanceBefore);
+        assertEq(weETH.balanceOf(address(vault)), vaultBaseBalanceBefore + baseBalanceDelta);
+    }
+
+    function test_closeShortWithWithdrawal() public {
+        LevvaPoolMock pool = new LevvaPoolMock(address(weETH), address(WETH));
+        deal(address(weETH), address(pool), 10e18);
+        deal(address(WETH), address(pool), 10e18);
+
+        vm.startPrank(address(vault));
+        adapter.deposit(address(weETH), 10e18, 0, false, address(pool), 0, 0);
+
+        pool.setPosition(ILevvaPool.PositionType.Short, 9e18, 10e18);
+        pool.setBasePriceX96(1 << 96);
+        uint256 quoteBalanceDelta = 1e18;
+
+        uint256 baseBalanceBefore = weETH.balanceOf(address(pool));
+        uint256 quoteBalanceBefore = WETH.balanceOf(address(pool));
+        uint256 vaultQuoteBalanceBefore = WETH.balanceOf(address(vault));
+
+        adapter.closePosition(address(pool), true, pool.basePriceX96(), 0);
+
+        ILevvaPool.Position memory position = pool.positions(address(adapter));
+        assertEq(uint8(position._type), uint8(ILevvaPool.PositionType.Uninitialized));
+
+        (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets();
+        assertEq(assets.length, 0);
+        assertEq(amounts.length, 0);
+
+        (address[] memory debtAssets, uint256[] memory debtAmounts) = adapter.getDebtAssets();
+        assertEq(debtAssets.length, 0);
+        assertEq(debtAmounts.length, 0);
+
+        assertEq(weETH.balanceOf(address(pool)), baseBalanceBefore);
+        assertEq(WETH.balanceOf(address(pool)), quoteBalanceBefore - quoteBalanceDelta);
+        assertEq(WETH.balanceOf(address(vault)), vaultQuoteBalanceBefore + quoteBalanceDelta);
+    }
+
     function test_closePositionShouldFailWhenNotAuthorized() public {
         vm.expectRevert(LevvaPoolAdapter.LevvaPoolAdapter__NotAuthorized.selector);
-        adapter.closePosition(address(weETH_WETH_POOL), 0, 0);
+        adapter.closePosition(address(weETH_WETH_POOL), false, 0, 0);
+    }
+
+    function test_sellCollateralLong() public {
+        LevvaPoolMock pool = new LevvaPoolMock(address(weETH), address(WETH));
+        deal(address(weETH), address(pool), 10e18);
+        deal(address(WETH), address(pool), 10e18);
+
+        vm.startPrank(address(vault));
+        adapter.deposit(address(weETH), 1e18, 0, false, address(pool), 0, 0);
+
+        pool.setPosition(ILevvaPool.PositionType.Long, 10e18, 9e18);
+        pool.setBasePriceX96(1 << 96);
+        uint256 expectedPositionQuoteAmount = 1e18;
+
+        uint256 baseBalanceBefore = weETH.balanceOf(address(pool));
+        uint256 quoteBalanceBefore = WETH.balanceOf(address(pool));
+        uint256 vaultQuoteBalanceBefore = WETH.balanceOf(address(vault));
+
+        adapter.sellCollateral(address(pool), false, pool.basePriceX96(), 0);
+
+        ILevvaPool.Position memory position = pool.positions(address(adapter));
+        assertEq(uint8(position._type), uint8(ILevvaPool.PositionType.Lend));
+        assertEq(position.discountedQuoteAmount, expectedPositionQuoteAmount);
+
+        (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets();
+        assertEq(assets.length, 1);
+        assertEq(amounts.length, 1);
+
+        (address[] memory debtAssets, uint256[] memory debtAmounts) = adapter.getDebtAssets();
+        assertEq(debtAssets.length, 1);
+        assertEq(debtAmounts.length, 1);
+
+        assertEq(weETH.balanceOf(address(pool)), baseBalanceBefore);
+        assertEq(WETH.balanceOf(address(pool)), quoteBalanceBefore);
+        assertEq(WETH.balanceOf(address(vault)), vaultQuoteBalanceBefore);
+    }
+
+    function test_sellCollateralLongWithWithdrawal() public {
+        LevvaPoolMock pool = new LevvaPoolMock(address(weETH), address(WETH));
+        deal(address(weETH), address(pool), 10e18);
+        deal(address(WETH), address(pool), 10e18);
+
+        vm.startPrank(address(vault));
+        adapter.deposit(address(weETH), 10e18, 0, false, address(pool), 0, 0);
+
+        pool.setPosition(ILevvaPool.PositionType.Long, 10e18, 9e18);
+        pool.setBasePriceX96(1 << 96);
+        uint256 quoteBalanceDelta = 1e18;
+
+        uint256 baseBalanceBefore = weETH.balanceOf(address(pool));
+        uint256 quoteBalanceBefore = WETH.balanceOf(address(pool));
+        uint256 vaultQuoteBalanceBefore = WETH.balanceOf(address(vault));
+
+        adapter.sellCollateral(address(pool), true, pool.basePriceX96(), 0);
+
+        ILevvaPool.Position memory position = pool.positions(address(adapter));
+        assertEq(uint8(position._type), uint8(ILevvaPool.PositionType.Uninitialized));
+
+        (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets();
+        assertEq(assets.length, 0);
+        assertEq(amounts.length, 0);
+
+        (address[] memory debtAssets, uint256[] memory debtAmounts) = adapter.getDebtAssets();
+        assertEq(debtAssets.length, 0);
+        assertEq(debtAmounts.length, 0);
+
+        assertEq(weETH.balanceOf(address(pool)), baseBalanceBefore);
+        assertEq(WETH.balanceOf(address(pool)), quoteBalanceBefore - quoteBalanceDelta);
+        assertEq(WETH.balanceOf(address(vault)), vaultQuoteBalanceBefore + quoteBalanceDelta);
+    }
+
+    function test_sellCollateralShort() public {
+        LevvaPoolMock pool = new LevvaPoolMock(address(weETH), address(WETH));
+        deal(address(weETH), address(pool), 10e18);
+        deal(address(WETH), address(pool), 10e18);
+
+        vm.startPrank(address(vault));
+        adapter.deposit(address(weETH), 1e18, 0, false, address(pool), 0, 0);
+
+        pool.setPosition(ILevvaPool.PositionType.Short, 9e18, 10e18);
+        pool.setBasePriceX96(1 << 96);
+        uint256 expectedPositionBaseAmount = 1e18;
+
+        uint256 baseBalanceBefore = weETH.balanceOf(address(pool));
+        uint256 quoteBalanceBefore = WETH.balanceOf(address(pool));
+        uint256 vaultBaseBalanceBefore = weETH.balanceOf(address(vault));
+
+        adapter.sellCollateral(address(pool), false, pool.basePriceX96(), 0);
+
+        ILevvaPool.Position memory position = pool.positions(address(adapter));
+        assertEq(uint8(position._type), uint8(ILevvaPool.PositionType.Lend));
+        assertEq(position.discountedBaseAmount, expectedPositionBaseAmount);
+
+        (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets();
+        assertEq(assets.length, 1);
+        assertEq(amounts.length, 1);
+
+        (address[] memory debtAssets, uint256[] memory debtAmounts) = adapter.getDebtAssets();
+        assertEq(debtAssets.length, 1);
+        assertEq(debtAmounts.length, 1);
+
+        assertEq(weETH.balanceOf(address(pool)), baseBalanceBefore);
+        assertEq(WETH.balanceOf(address(pool)), quoteBalanceBefore);
+        assertEq(weETH.balanceOf(address(vault)), vaultBaseBalanceBefore);
+    }
+
+    function test_sellCollateralShortWithWithdrawal() public {
+        LevvaPoolMock pool = new LevvaPoolMock(address(weETH), address(WETH));
+        deal(address(weETH), address(pool), 10e18);
+        deal(address(WETH), address(pool), 10e18);
+
+        vm.startPrank(address(vault));
+        adapter.deposit(address(weETH), 10e18, 0, false, address(pool), 0, 0);
+
+        pool.setPosition(ILevvaPool.PositionType.Short, 9e18, 10e18);
+        pool.setBasePriceX96(1 << 96);
+        uint256 baseBalanceDelta = 1e18;
+
+        uint256 baseBalanceBefore = weETH.balanceOf(address(pool));
+        uint256 quoteBalanceBefore = WETH.balanceOf(address(pool));
+        uint256 vaultBaseBalanceBefore = weETH.balanceOf(address(vault));
+
+        adapter.sellCollateral(address(pool), true, pool.basePriceX96(), 0);
+
+        ILevvaPool.Position memory position = pool.positions(address(adapter));
+        assertEq(uint8(position._type), uint8(ILevvaPool.PositionType.Uninitialized));
+
+        (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets();
+        assertEq(assets.length, 0);
+        assertEq(amounts.length, 0);
+
+        (address[] memory debtAssets, uint256[] memory debtAmounts) = adapter.getDebtAssets();
+        assertEq(debtAssets.length, 0);
+        assertEq(debtAmounts.length, 0);
+
+        assertEq(weETH.balanceOf(address(pool)), baseBalanceBefore - baseBalanceDelta);
+        assertEq(WETH.balanceOf(address(pool)), quoteBalanceBefore);
+        assertEq(weETH.balanceOf(address(vault)), vaultBaseBalanceBefore + baseBalanceDelta);
+    }
+
+    function test_sellCollateralShouldFailWhenNotAuthorized() public {
+        vm.expectRevert(LevvaPoolAdapter.LevvaPoolAdapter__NotAuthorized.selector);
+        adapter.sellCollateral(address(weETH_WETH_POOL), false, 0, 0);
     }
 
     function test_long() public {
@@ -618,8 +831,8 @@ contract LevvaPoolAdapterTest is Test {
         uint256 limitPriceX96 = pool.getBasePrice().inner.mulDiv(110, 100);
 
         vm.startPrank(address(vault));
-        adapter.deposit(address(PT_weETH), depositAmount, 0, address(pool), 0, 0);
-        adapter.long(longAmount, address(pool), limitPriceX96, swapCallData);
+        adapter.deposit(address(PT_weETH), depositAmount, 0, false, address(pool), 0, 0);
+        adapter.long(longAmount, false, address(pool), limitPriceX96, swapCallData);
         skip(30 days);
 
         ILevvaPool.Position memory position = pool.positions(address(adapter));
@@ -646,7 +859,7 @@ contract LevvaPoolAdapterTest is Test {
 
     function test_longShouldFailWhenNotAuthorized() public {
         vm.expectRevert(LevvaPoolAdapter.LevvaPoolAdapter__NotAuthorized.selector);
-        adapter.long(0, address(weETH_WETH_POOL), 0, 0);
+        adapter.long(0, false, address(weETH_WETH_POOL), 0, 0);
     }
 
     function test_short() public {
@@ -658,8 +871,8 @@ contract LevvaPoolAdapterTest is Test {
         uint256 limitPriceX96 = pool.getBasePrice().inner.mulDiv(90, 100);
 
         vm.startPrank(address(vault));
-        adapter.deposit(address(weETH), depositAmount, 0, address(pool), 0, 0);
-        adapter.short(shortAmount, address(pool), limitPriceX96, swapCallData);
+        adapter.deposit(address(weETH), depositAmount, 0, false, address(pool), 0, 0);
+        adapter.short(shortAmount, false, address(pool), limitPriceX96, swapCallData);
         skip(30 days);
 
         ILevvaPool.Position memory position = pool.positions(address(adapter));
@@ -686,7 +899,7 @@ contract LevvaPoolAdapterTest is Test {
 
     function test_shortShouldFailWhenNoAuthorized() public {
         vm.expectRevert(LevvaPoolAdapter.LevvaPoolAdapter__NotAuthorized.selector);
-        adapter.short(0, address(weETH_WETH_POOL), 0, 0);
+        adapter.short(0, false, address(weETH_WETH_POOL), 0, 0);
     }
 
     function test_depositQuoteLong() public {
@@ -698,7 +911,7 @@ contract LevvaPoolAdapterTest is Test {
         uint256 limitPriceX96 = pool.getBasePrice().inner.mulDiv(110, 100);
 
         vm.prank(address(vault));
-        adapter.deposit(address(WETH), depositAmount, longAmount, address(pool), limitPriceX96, swapCallData);
+        adapter.deposit(address(WETH), depositAmount, longAmount, false, address(pool), limitPriceX96, swapCallData);
 
         assertEq(WETH.balanceOf(address(adapter)), 0);
         assertEq(PT_weETH.balanceOf(address(adapter)), 0);
@@ -732,7 +945,7 @@ contract LevvaPoolAdapterTest is Test {
         uint256 limitPriceX96 = pool.getBasePrice().inner.mulDiv(110, 100);
 
         vm.prank(address(vault));
-        adapter.deposit(address(PT_weETH), depositAmount, longAmount, address(pool), limitPriceX96, swapCallData);
+        adapter.deposit(address(PT_weETH), depositAmount, longAmount, false, address(pool), limitPriceX96, swapCallData);
 
         assertEq(WETH.balanceOf(address(adapter)), 0);
         assertEq(PT_weETH.balanceOf(address(adapter)), 0);
@@ -748,8 +961,8 @@ contract LevvaPoolAdapterTest is Test {
         deal(address(WETH), address(vault), depositAmount * 2);
 
         vm.startPrank(address(vault));
-        adapter.deposit(address(WETH), depositAmount, 0, PT_weETH_WETH_POOL, 0, 0);
-        adapter.deposit(address(WETH), depositAmount, 0, PT_weETH_WETH_POOL, 0, 0);
+        adapter.deposit(address(WETH), depositAmount, 0, false, PT_weETH_WETH_POOL, 0, 0);
+        adapter.deposit(address(WETH), depositAmount, 0, false, PT_weETH_WETH_POOL, 0, 0);
 
         assertEq(WETH.balanceOf(address(adapter)), 0);
         assertEq(PT_weETH.balanceOf(address(adapter)), 0);
@@ -764,8 +977,8 @@ contract LevvaPoolAdapterTest is Test {
         deal(address(WETH), address(vault), depositAmount * 2);
 
         vm.startPrank(address(vault));
-        adapter.deposit(address(WETH), depositAmount, 0, PT_weETH_WETH_POOL, 0, 0);
-        adapter.deposit(address(WETH), depositAmount, 0, weETH_WETH_POOL, 0, 0);
+        adapter.deposit(address(WETH), depositAmount, 0, false, PT_weETH_WETH_POOL, 0, 0);
+        adapter.deposit(address(WETH), depositAmount, 0, false, weETH_WETH_POOL, 0, 0);
 
         adapter.withdraw(address(WETH), type(uint256).max, PT_weETH_WETH_POOL);
         address[] memory pools = adapter.getPools();
@@ -782,7 +995,7 @@ contract LevvaPoolAdapterTest is Test {
         uint256 depositAmount = 1e18;
         deal(address(WETH), address(vault), depositAmount * 2);
         vm.startPrank(address(vault));
-        adapter.deposit(address(WETH), depositAmount, 0, address(pool), 0, 0);
+        adapter.deposit(address(WETH), depositAmount, 0, false, address(pool), 0, 0);
 
         pool.setPosition(ILevvaPool.PositionType.Lend, depositAmount, 0);
         pool.setMode(ILevvaPool.Mode.LongEmergency);
@@ -809,7 +1022,7 @@ contract LevvaPoolAdapterTest is Test {
         uint256 depositAmount = 1e18;
         deal(address(weETH), address(vault), depositAmount * 2);
         vm.startPrank(address(vault));
-        adapter.deposit(address(weETH), depositAmount, 0, address(pool), 0, 0);
+        adapter.deposit(address(weETH), depositAmount, 0, false, address(pool), 0, 0);
 
         pool.setPosition(ILevvaPool.PositionType.Lend, depositAmount, 0);
         pool.setMode(ILevvaPool.Mode.ShortEmergency);
@@ -836,7 +1049,7 @@ contract LevvaPoolAdapterTest is Test {
         uint256 shortAmount = 2e18;
         deal(address(WETH), address(vault), depositAmount);
         vm.startPrank(address(vault));
-        adapter.deposit(address(WETH), depositAmount, 0, address(pool), 0, 0);
+        adapter.deposit(address(WETH), depositAmount, 0, false, address(pool), 0, 0);
 
         pool.setPosition(ILevvaPool.PositionType.Short, depositAmount, shortAmount);
         pool.setMode(ILevvaPool.Mode.ShortEmergency);
@@ -864,7 +1077,7 @@ contract LevvaPoolAdapterTest is Test {
         uint256 longAmount = 3e18;
         deal(address(weETH), address(vault), depositAmount * 2);
         vm.startPrank(address(vault));
-        adapter.deposit(address(weETH), depositAmount, 0, address(pool), 0, 0);
+        adapter.deposit(address(weETH), depositAmount, 0, false, address(pool), 0, 0);
 
         pool.setPosition(ILevvaPool.PositionType.Long, depositAmount, longAmount);
         pool.setMode(ILevvaPool.Mode.LongEmergency);
@@ -891,7 +1104,7 @@ contract LevvaPoolAdapterTest is Test {
         uint256 longAmount = 3e18;
         deal(address(weETH), address(vault), depositAmount * 2);
         vm.startPrank(address(vault));
-        adapter.deposit(address(weETH), depositAmount, 0, address(pool), 0, 0);
+        adapter.deposit(address(weETH), depositAmount, 0, false, address(pool), 0, 0);
 
         pool.setPosition(ILevvaPool.PositionType.Long, depositAmount, longAmount);
         pool.setMode(ILevvaPool.Mode.ShortEmergency);
@@ -918,7 +1131,7 @@ contract LevvaPoolAdapterTest is Test {
         uint256 shortAmount = 2e18;
         deal(address(WETH), address(vault), depositAmount);
         vm.startPrank(address(vault));
-        adapter.deposit(address(WETH), depositAmount, 0, address(pool), 0, 0);
+        adapter.deposit(address(WETH), depositAmount, 0, false, address(pool), 0, 0);
 
         pool.setPosition(ILevvaPool.PositionType.Short, depositAmount, shortAmount);
         pool.setMode(ILevvaPool.Mode.LongEmergency);
@@ -941,7 +1154,7 @@ contract LevvaPoolAdapterTest is Test {
         deal(address(WETH), address(vault), depositAmount * 2);
 
         vm.startPrank(address(vault));
-        adapter.deposit(address(WETH), depositAmount, 0, PT_weETH_WETH_POOL, 0, 0);
+        adapter.deposit(address(WETH), depositAmount, 0, false, PT_weETH_WETH_POOL, 0, 0);
 
         vm.expectRevert(LevvaPoolAdapter.LevvaPoolAdapter__WrongLevvaPoolMode.selector);
         adapter.emergencyWithdraw(PT_weETH_WETH_POOL);

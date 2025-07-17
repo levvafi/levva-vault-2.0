@@ -47,6 +47,7 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
     event LevvaPoolLong(address indexed vault, address indexed pool, uint256 amount);
     event LevvaPoolShort(address indexed vault, address indexed pool, uint256 amount);
     event LevvaPoolClosePosition(address indexed vault, address indexed pool);
+    event LevvaPoolSellCollateral(address indexed vault, address indexed pool);
     event LevvaPoolWithdraw(address indexed vault, address indexed pool, address indexed asset, uint256 amount);
 
     constructor(address vault) {
@@ -67,6 +68,7 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
     /// @param asset The asset to deposit
     /// @param amount The amount to deposit
     /// @param positionAmount Position amount
+    /// @param amountInQuote If 'positionAmount' in in quote token
     /// @param pool The pool to deposit into
     /// @param limitPriceX96 The limit price for the position
     /// @param swapCallData The swap call data
@@ -74,11 +76,12 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
         address asset,
         uint256 amount,
         int256 positionAmount,
+        bool amountInQuote,
         address pool,
         uint256 limitPriceX96,
         uint256 swapCallData
     ) external onlyVault {
-        _deposit(asset, amount, positionAmount, pool, limitPriceX96, swapCallData);
+        _deposit(asset, amount, positionAmount, amountInQuote, pool, limitPriceX96, swapCallData);
     }
 
     /// @notice Deposits all amount except given amount into a Marginly pool
@@ -86,22 +89,27 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
         address asset,
         uint256 except,
         int256 positionAmount,
+        bool amountInQuote,
         address pool,
         uint256 limitPriceX96,
         uint256 swapCallData
     ) external onlyVault {
         uint256 amount = IERC20(asset).balanceOf(msg.sender) - except;
-        _deposit(asset, amount, positionAmount, pool, limitPriceX96, swapCallData);
+        _deposit(asset, amount, positionAmount, amountInQuote, pool, limitPriceX96, swapCallData);
     }
 
     ///@notice Opens a long position
     ///@param amount The amount to open a long position
+    /// @param amountInQuote If 'amount' in in quote token
     ///@param pool The pool to open a long position in
     ///@param limitPriceX96 The limit price for the position
     ///@param swapCallData The swap call data
-    function long(uint256 amount, address pool, uint256 limitPriceX96, uint256 swapCallData) external onlyVault {
+    function long(uint256 amount, bool amountInQuote, address pool, uint256 limitPriceX96, uint256 swapCallData)
+        external
+        onlyVault
+    {
         ILevvaPool(pool).execute(
-            ILevvaPool.CallType.Long, amount, int256(0), limitPriceX96, false, address(0), swapCallData
+            ILevvaPool.CallType.Long, amount, int256(0), limitPriceX96, amountInQuote, address(0), swapCallData
         );
 
         // long - quoteToken in debt, check oracle for quoteToken
@@ -112,12 +120,16 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
 
     ///@notice Opens a short position
     ///@param amount The amount to open a short position
+    /// @param amountInQuote If 'amount' in in quote token
     ///@param pool The pool to open a short position in
     ///@param limitPriceX96 The limit price for the position
     ///@param swapCallData The swap call data
-    function short(uint256 amount, address pool, uint256 limitPriceX96, uint256 swapCallData) external onlyVault {
+    function short(uint256 amount, bool amountInQuote, address pool, uint256 limitPriceX96, uint256 swapCallData)
+        external
+        onlyVault
+    {
         ILevvaPool(pool).execute(
-            ILevvaPool.CallType.Short, amount, int256(0), limitPriceX96, false, address(0), swapCallData
+            ILevvaPool.CallType.Short, amount, int256(0), limitPriceX96, amountInQuote, address(0), swapCallData
         );
 
         // short - baseToken in debt, check oracle for baseToken
@@ -128,14 +140,64 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
 
     ///@notice Closes a position
     ///@param pool The pool to close a position in
+    ///@param withdrawal If withdrawal of remaining collateral is required
     ///@param limitPriceX96 The limit price for the position
     ///@param swapCallData The swap call data
-    function closePosition(address pool, uint256 limitPriceX96, uint256 swapCallData) external onlyVault {
-        ILevvaPool(pool).execute(
-            ILevvaPool.CallType.ClosePosition, 0, int256(0), limitPriceX96, false, address(0), swapCallData
-        );
+    function closePosition(address pool, bool withdrawal, uint256 limitPriceX96, uint256 swapCallData)
+        external
+        onlyVault
+    {
+        address asset;
+        if (withdrawal) {
+            ILevvaPool.Position memory position = ILevvaPool(pool).positions(address(this));
+            asset = position._type == ILevvaPool.PositionType.Long
+                ? ILevvaPool(pool).baseToken()
+                : ILevvaPool(pool).quoteToken();
+        }
 
+        ILevvaPool(pool).execute(
+            ILevvaPool.CallType.ClosePosition, 0, int256(0), limitPriceX96, withdrawal, address(0), swapCallData
+        );
         emit LevvaPoolClosePosition(msg.sender, pool);
+
+        if (withdrawal) {
+            uint256 amount = IERC20(asset).balanceOf(address(this));
+            IERC20(asset).safeTransfer(msg.sender, amount);
+            _removePool(pool);
+
+            emit LevvaPoolWithdraw(msg.sender, pool, asset, amount);
+        }
+    }
+
+    ///@notice Sell position collateral
+    ///@param pool The pool to sell collateral in
+    ///@param withdrawal If withdrawal of remaining collateral is required
+    ///@param limitPriceX96 The limit price for collateral sale
+    ///@param swapCallData The swap call data
+    function sellCollateral(address pool, bool withdrawal, uint256 limitPriceX96, uint256 swapCallData)
+        external
+        onlyVault
+    {
+        address asset;
+        if (withdrawal) {
+            ILevvaPool.Position memory position = ILevvaPool(pool).positions(address(this));
+            asset = position._type == ILevvaPool.PositionType.Long
+                ? ILevvaPool(pool).quoteToken()
+                : ILevvaPool(pool).baseToken();
+        }
+
+        ILevvaPool(pool).execute(
+            ILevvaPool.CallType.SellCollateral, 0, int256(0), limitPriceX96, withdrawal, address(0), swapCallData
+        );
+        emit LevvaPoolSellCollateral(msg.sender, pool);
+
+        if (withdrawal) {
+            uint256 amount = IERC20(asset).balanceOf(address(this));
+            IERC20(asset).safeTransfer(msg.sender, amount);
+            _removePool(pool);
+
+            emit LevvaPoolWithdraw(msg.sender, pool, asset, amount);
+        }
     }
 
     /// @notice Withdraws an amount from pool
@@ -426,6 +488,7 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
         address asset,
         uint256 amount,
         int256 positionAmount,
+        bool amountInQuote,
         address pool,
         uint256 limitPriceX96,
         uint256 swapCallData
@@ -455,7 +518,9 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
         IAdapterCallback(msg.sender).adapterCallback(address(this), asset, amount);
 
         IERC20(asset).forceApprove(address(pool), amount);
-        ILevvaPool(pool).execute(callType, amount, positionAmount, limitPriceX96, false, address(0), swapCallData);
+        ILevvaPool(pool).execute(
+            callType, amount, positionAmount, limitPriceX96, amountInQuote, address(0), swapCallData
+        );
 
         _addPool(pool);
 
