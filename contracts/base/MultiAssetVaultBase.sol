@@ -40,7 +40,7 @@ abstract contract MultiAssetVaultBase is ERC4626Upgradeable, FeeCollector, Adapt
         address indexed trackedAssetRemoved, uint256 indexed position, address indexed replacement
     );
     event MinimalDepositSet(uint256 minDeposit);
-    event MaxTrackedAssetsSet(uint256 minDeposit);
+    event MaxTrackedAssetsSet(uint8 maxTrackedAssets);
 
     error AlreadyTracked(uint256 index);
     error NotTrackedAsset();
