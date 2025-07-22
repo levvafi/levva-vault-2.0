@@ -15,7 +15,9 @@ import {Adapter} from "../../helper/AdapterUtils.sol";
 import {VaultConfig, LevvaVaultDeployer} from "../../vault/LevvaVaultDeployer.sol";
 import {DeployHelper} from "../../helper/DeployHelper.sol";
 
-///@dev forge script script/release/arbitrum-test/01.DeployUltraSafeUSDCVault.s.sol:DeployUltraSafeUSDCVault -vvvv --account testDeployer --rpc-url $ARB_RPC_URL --verify --etherscan-api-key  $ETHERSCAN_KEY --broadcast
+//@dev factory deploy script
+//@dev forge script script/DeployLevvaVaultFactory.s.sol:DeployLevvaVaultFactory -vvvv --account testDeployer --rpc-url $ARB_RPC_URL --verify --etherscan-api-key  $ETHERSCAN_KEY --broadcast
+///@dev forge script script/release/arbitrum/01.DeployUltraSafeUSDCVault.s.sol:DeployUltraSafeUSDCVault -vvvv --account testDeployer --rpc-url $ARB_RPC_URL --verify --etherscan-api-key  $ETHERSCAN_KEY --broadcast
 contract DeployUltraSafeUSDCVault is LevvaVaultDeployer {
     using stdJson for string;
     using Strings for address;

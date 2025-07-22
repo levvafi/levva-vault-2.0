@@ -180,7 +180,7 @@ contract ChainValues {
     }
 
     function _addArbitrum() private {
-        s_values["arbitrum"]["LevvaVaultFactory"] = 0x5e932e3F07f8122d0681CC42aA2a1a7e11341942.toBytes32();
+        s_values["arbitrum"]["LevvaVaultFactory"] = 0x8506934ed8c1154Da93610012524b07A972BAcca.toBytes32();
         s_values["arbitrum"]["EulerOracle"] = 0x9931D4850a10Cc9BcCF44A16CFdaF657CCBbc5a1.toBytes32();
         s_values["arbitrum"]["FeeCollector"] = 0xAD70a0ab951780fF3397882fc5372db83dEb0606.toBytes32();
         s_values["arbitrum"]["VaultManager"] = 0xAD70a0ab951780fF3397882fc5372db83dEb0606.toBytes32();

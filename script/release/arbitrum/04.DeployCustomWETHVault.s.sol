@@ -15,15 +15,14 @@ import {Adapter} from "../../helper/AdapterUtils.sol";
 import {VaultConfig, LevvaVaultDeployer} from "../../vault/LevvaVaultDeployer.sol";
 import {DeployHelper} from "../../helper/DeployHelper.sol";
 
-///@dev forge script script/release/arbitrum-test/04.DeployCustomWETHVault.s.sol:DeployCustomWETHVault -vvvv --account testDeployer --rpc-url $ARB_RPC_URL --verify --etherscan-api-key  $ETHERSCAN_KEY --broadcast
+///@dev forge script script/release/arbitrum/04.DeployCustomWETHVault.s.sol:DeployCustomWETHVault -vvvv --account testDeployer --rpc-url $ARB_RPC_URL --verify --etherscan-api-key  $ETHERSCAN_KEY --broadcast
 contract DeployCustomWETHVault is LevvaVaultDeployer {
     using stdJson for string;
     using Strings for address;
 
     function _getDeployConfig() internal view override returns (VaultConfig memory) {
         if (block.chainid == 42161) {
-            address[] memory trackedAssets = new address[](1);
-            trackedAssets[1] = getAddress("WBTC");
+            address[] memory trackedAssets = new address[](0);
 
             Adapter[] memory adapters = new Adapter[](5);
             adapters[0] = Adapter.AaveAdapter;
