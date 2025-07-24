@@ -20,7 +20,7 @@ contract DeployCustomWETHVault is LevvaVaultDeployer {
     using stdJson for string;
     using Strings for address;
 
-    function _getDeployConfig() internal view override returns (VaultConfig memory) {
+    function _getDeployConfig() internal view override returns (VaultConfig[] memory configs) {
         if (block.chainid == 42161) {
             address[] memory trackedAssets = new address[](0);
 
@@ -52,7 +52,9 @@ contract DeployCustomWETHVault is LevvaVaultDeployer {
                 withdrawQueueFinalizer: getAddress("WithdrawalQueueFinalizer")
             });
 
-            return config;
+            configs = new VaultConfig[](1);
+            configs[0] = config;
+            return configs;
         }
 
         revert("Config not found for chainId");

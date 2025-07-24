@@ -99,7 +99,7 @@ contract ChainValues {
         /* ============ LEVVA VAULTS ========== */
         s_values["ethereum"]["LevvaVaultFactory"] = address(0).toBytes32();
         s_values["ethereum"]["EulerOracle"] = address(0).toBytes32();
-        s_values["ethereum"]["FeeCollector"] = address(0).toBytes32();
+        s_values["ethereum"]["FeeCollector"] = 0xD20092A19e0488E1283E488e11583B43ba7EA849.toBytes32();
         s_values["ethereum"]["VaultManager"] = address(0).toBytes32();
         s_values["ethereum"]["WithdrawalQueueFinalizer"] = address(0).toBytes32();
 

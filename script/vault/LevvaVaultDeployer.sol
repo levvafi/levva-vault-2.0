@@ -35,6 +35,7 @@ struct VaultConfig {
     uint8 maxTrackedAssets;
     uint256 initialDeposit;
     address withdrawQueueFinalizer;
+    uint256 minDepositAmount;
 }
 
 abstract contract LevvaVaultDeployer is DeployHelper, AdapterUtils {
@@ -43,11 +44,15 @@ abstract contract LevvaVaultDeployer is DeployHelper, AdapterUtils {
     string public constant DEPLOYMENT_FILE = "vaults.json";
 
     function run() external virtual {
-        VaultConfig memory deployConfig = _getDeployConfig();
+        VaultConfig[] memory deployConfigs = _getDeployConfig();
 
-        LevvaVault vault = _deployVault(deployConfig);
-        _deployAdapters(deployConfig, vault);
-        _saveDeploymentState(deployConfig, address(vault));
+        for (uint256 i = 0; i < deployConfigs.length; i++) {
+            VaultConfig memory deployConfig = deployConfigs[i];
+
+            LevvaVault vault = _deployVault(deployConfig);
+            _deployAdapters(deployConfig, vault);
+            _saveDeploymentState(deployConfig, address(vault));
+        }
     }
 
     ///@dev Deploy and configure vault
@@ -127,5 +132,5 @@ abstract contract LevvaVaultDeployer is DeployHelper, AdapterUtils {
         _saveInDeploymentFile(path, config.deploymentId, vault);
     }
 
-    function _getDeployConfig() internal view virtual returns (VaultConfig memory);
+    function _getDeployConfig() internal view virtual returns (VaultConfig[] memory);
 }
