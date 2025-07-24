@@ -8,12 +8,10 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {LevvaVaultFactory} from "contracts/LevvaVaultFactory.sol";
 import {LevvaVault} from "contracts/LevvaVault.sol";
-import {WithdrawalQueue} from "contracts/WithdrawalQueue.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {ChainValues} from "../../helper/ChainValues.sol";
 import {Adapter} from "../../helper/AdapterUtils.sol";
 import {VaultConfig, LevvaVaultDeployer} from "../../vault/LevvaVaultDeployer.sol";
-import {DeployHelper} from "../../helper/DeployHelper.sol";
 
 //@dev factory deploy script
 //@dev forge script script/DeployLevvaVaultFactory.s.sol:DeployLevvaVaultFactory -vvvv --account testDeployer --rpc-url $ARB_RPC_URL --verify --etherscan-api-key  $ETHERSCAN_KEY --broadcast
@@ -36,6 +34,7 @@ contract DeployUltraSafeUSDCVault is LevvaVaultDeployer {
             adapters[4] = Adapter.UniswapAdapter;
 
             VaultConfig memory config = VaultConfig({
+                deploymentId: "LEVVA-ARB-USDC-ULTRA-SAFE",
                 asset: getAddress("USDC"),
                 feeCollector: getAddress("FeeCollector"),
                 eulerOracle: getAddress("EulerOracle"),

@@ -32,6 +32,7 @@ contract DeployCustomWETHVault is LevvaVaultDeployer {
             adapters[4] = Adapter.UniswapAdapter;
 
             VaultConfig memory config = VaultConfig({
+                deploymentId: "LEVVA-ARB-WETH-CUSTOM",
                 asset: getAddress("WETH"),
                 feeCollector: getAddress("FeeCollector"),
                 eulerOracle: getAddress("EulerOracle"),

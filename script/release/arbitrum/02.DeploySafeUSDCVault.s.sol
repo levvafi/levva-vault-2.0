@@ -34,6 +34,7 @@ contract DeploySafeUSDCVault is LevvaVaultDeployer {
             adapters[4] = Adapter.UniswapAdapter;
 
             VaultConfig memory config = VaultConfig({
+                deploymentId: "LEVVA-ARB-USDC-SAFE",
                 asset: getAddress("USDC"),
                 feeCollector: getAddress("FeeCollector"),
                 eulerOracle: getAddress("EulerOracle"),

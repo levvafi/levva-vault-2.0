@@ -36,6 +36,7 @@ contract DeployUSDCVault is LevvaVaultDeployer {
             adapters[6] = Adapter.UniswapAdapter;
 
             VaultConfig memory config = VaultConfig({
+                deploymentId: "LEVVA-USDC-TEST",
                 asset: getAddress("USDC"),
                 feeCollector: getAddress("FeeCollector"),
                 eulerOracle: getAddress("EulerOracle"),

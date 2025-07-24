@@ -17,6 +17,7 @@ import {DeployLevvaVaultFactory} from "../DeployLevvaVaultFactory.s.sol";
 import {Adapter, DeployAdapter} from "../DeployAdapter.s.sol";
 
 struct VaultConfig {
+    string deploymentId;
     address asset;
     address feeCollector;
     address eulerOracle;
@@ -46,13 +47,13 @@ abstract contract LevvaVaultDeployer is DeployHelper, AdapterUtils {
 
         LevvaVault vault = _deployVault(deployConfig);
         _deployAdapters(deployConfig, vault);
-        _saveDeploymentState(vault);
+        _saveDeploymentState(deployConfig, address(vault));
     }
 
     ///@dev Deploy and configure vault
     function _deployVault(VaultConfig memory config) internal returns (LevvaVault vault) {
         //skip deployment if already deployed
-        address deployedVault = _getDeployedAddress(config.lpSymbol);
+        address deployedVault = _getDeployedAddress(config.deploymentId);
         if (deployedVault != address(0)) {
             return LevvaVault(deployedVault);
         }
@@ -117,17 +118,13 @@ abstract contract LevvaVaultDeployer is DeployHelper, AdapterUtils {
         }
     }
 
-    function _getDeployedAddress(string memory vaultSymbol) internal view returns (address) {
-        return _readAddressFromDeployment(DEPLOYMENT_FILE, vaultSymbol);
+    function _getDeployedAddress(string memory deploymentId) internal view returns (address) {
+        return _readAddressFromDeployment(DEPLOYMENT_FILE, deploymentId);
     }
 
-    function _saveDeploymentState(LevvaVault vault) internal {
-        _saveDeploymentState(vault.symbol(), address(vault));
-    }
-
-    function _saveDeploymentState(string memory vaultKey, address vault) internal {
+    function _saveDeploymentState(VaultConfig memory config, address vault) internal {
         string memory path = _getDeploymentPath(DEPLOYMENT_FILE);
-        _saveInDeploymentFile(path, vaultKey, vault);
+        _saveInDeploymentFile(path, config.deploymentId, vault);
     }
 
     function _getDeployConfig() internal view virtual returns (VaultConfig memory);
