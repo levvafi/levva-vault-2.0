@@ -49,7 +49,8 @@ contract DeployCustomWETHVault is LevvaVaultDeployer {
                 maxExternalPositionAdapters: 15,
                 maxTrackedAssets: 15,
                 initialDeposit: 0,
-                withdrawQueueFinalizer: getAddress("WithdrawalQueueFinalizer")
+                withdrawQueueFinalizer: getAddress("WithdrawalQueueFinalizer"),
+                minDepositAmount: 0
             });
 
             configs = new VaultConfig[](1);

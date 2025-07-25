@@ -93,6 +93,10 @@ abstract contract LevvaVaultDeployer is DeployHelper, AdapterUtils {
             IERC20(config.asset).approve(address(vault), config.initialDeposit);
             vault.deposit(config.initialDeposit, msg.sender);
         }
+        
+        if (config.minDepositAmount != 0) {
+            vault.setMinimalDeposit(config.minDepositAmount);
+        }
         vm.stopBroadcast();
 
         //configure tracked assets

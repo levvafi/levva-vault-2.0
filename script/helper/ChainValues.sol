@@ -97,11 +97,11 @@ contract ChainValues {
 
     function _addEthMainnetValues() private {
         /* ============ LEVVA VAULTS ========== */
-        s_values["ethereum"]["LevvaVaultFactory"] = address(0).toBytes32();
+        s_values["ethereum"]["LevvaVaultFactory"] = 0xB97b6282633491c9AB3f144796dB6EaA33b610f4.toBytes32();
         s_values["ethereum"]["EulerOracle"] = address(0).toBytes32();
         s_values["ethereum"]["FeeCollector"] = 0xD20092A19e0488E1283E488e11583B43ba7EA849.toBytes32();
-        s_values["ethereum"]["VaultManager"] = address(0).toBytes32();
-        s_values["ethereum"]["WithdrawalQueueFinalizer"] = address(0).toBytes32();
+        s_values["ethereum"]["VaultManager"] = 0x3a57D60a6866c41365E91b9cAbFA66F8Dd17F210.toBytes32();
+        s_values["ethereum"]["WithdrawalQueueFinalizer"] = 0x3a57D60a6866c41365E91b9cAbFA66F8Dd17F210.toBytes32();
 
         /* =========== TOKENS ================ */
         s_values["ethereum"]["aUSDC"] = 0x98C23E9d8f34FEFb1B7BD6a91B7FF122F4e16F5c.toBytes32();
@@ -116,9 +116,9 @@ contract ChainValues {
         s_values["ethereum"]["USDE"] = 0x4c9EDD5852cd905f086C759E8383e09bff1E68B3.toBytes32();
         s_values["ethereum"]["USR"] = 0x66a1E37c9b0eAddca17d3662D6c05F4DECf3e110.toBytes32();
         s_values["ethereum"]["WETH"] = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2.toBytes32();
-        s_values["ethereum"]["WSTUSR"] = 0x1202F5C7b4B9E47a1A484E8B270be34dbbC75055.toBytes32();
-        s_values["ethereum"]["WSTETH"] = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0.toBytes32();
-        s_values["ethereum"]["WEETH"] = 0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee.toBytes32();
+        s_values["ethereum"]["wstUSR"] = 0x1202F5C7b4B9E47a1A484E8B270be34dbbC75055.toBytes32();
+        s_values["ethereum"]["wstETH"] = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0.toBytes32();
+        s_values["ethereum"]["weETH"] = 0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee.toBytes32();
         s_values["ethereum"]["WBTC"] = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599.toBytes32();
 
         /* ============== AAVE ================ */
@@ -148,7 +148,7 @@ contract ChainValues {
         s_values["ethereum"]["UniswapPermit2"] = 0x000000000022D473030F116dDEE9F6B43aC78BA3.toBytes32();
 
         /* ============= PRICE ORACLES ============ */
-        s_values["ethereum"]["EulerOracleGovernor"] = address(0).toBytes32();
+        s_values["ethereum"]["EulerOracleGovernor"] = 0x0562F16415fCf6fb5ACAF433e4796f8f328b7C7d.toBytes32();
         s_values["ethereum"]["EulerOracleFactory"] = 0x70B3f6F61b7Bf237DF04589DdAA842121072326A.toBytes32();
         s_values["ethereum"]["PendleOracle"] = 0x9a9Fa8338dd5E5B2188006f1Cd2Ef26d921650C2.toBytes32();
 
@@ -156,13 +156,19 @@ contract ChainValues {
         s_values["ethereum"]["PendleMarket_wstUSR_25sep2025"] = 0x09fA04Aac9c6d1c6131352EE950CD67ecC6d4fB9.toBytes32();
         s_values["ethereum"]["CurvePool_USR_USDC"] = 0x3eE841F47947FEFbE510366E4bbb49e145484195.toBytes32();
 
-        /* ============= DEPLOYED CHAINLINK EULER ADAPTERS ========== */
+        /* ============= DEPLOYED EULER ORACLES ========== */
         s_values["ethereum"]["Chainlink_USDE_USD_oracle"] = 0x8211B9ae40b06d3Db0215E520F232184Af355378.toBytes32();
         s_values["ethereum"]["Chainlink_USDC_USD_oracle"] = 0x6213f24332D35519039f2afa7e3BffE105a37d3F.toBytes32();
         s_values["ethereum"]["Chainlink_sUSDE_USD_oracle"] = 0xD4fF9D4e0A3E5995A0E040632F34271b2e9c8a42.toBytes32();
+        s_values["ethereum"]["Chainlink_USDC_WETH_oracle"] = 0x2eA2b307cD934a6e705eAcFCb6B806d018Cd62CF.toBytes32();
+        s_values["ethereum"]["LidoFundamentalOracle"] = 0x7c37aB8Cd76Ee8888ad7F19C1F8a3A6D1622e9B8.toBytes32();
 
         /* ============= CHAINLINK DATA FEEDS =======================*/
+        s_values["ethereum"]["ChainlinkFeed_sUSDE_USD"] = 0xFF3BC18cCBd5999CE63E788A1c250a88626aD099.toBytes32();
         s_values["ethereum"]["ChainlinkFeed_USR_USD"] = 0x34ad75691e25A8E9b681AAA85dbeB7ef6561B42c.toBytes32();
+        s_values["ethereum"]["ChainlinkFeed_USDC_USD"] = 0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6.toBytes32();
+        s_values["ethereum"]["ChainlinkFeed_USDC_ETH"] = 0x986b5E1e1755e3C2440e960477f25201B0a8bbD4.toBytes32();
+        s_values["ethereum"]["ChainlinkFeed_weETH_ETH"] = 0x5c9C449BbC9a6075A2c061dF312a35fd1E05fF22.toBytes32();
     }
 
     function _addLocalhost() private {}

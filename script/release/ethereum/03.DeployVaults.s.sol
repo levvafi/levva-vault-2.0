@@ -13,9 +13,7 @@ import {ChainValues} from "../../helper/ChainValues.sol";
 import {Adapter} from "../../helper/AdapterUtils.sol";
 import {VaultConfig, LevvaVaultDeployer} from "../../vault/LevvaVaultDeployer.sol";
 
-//@dev factory deploy script
-//@dev forge script script/DeployLevvaVaultFactory.s.sol:DeployLevvaVaultFactory -vvvv --account testDeployer --rpc-url $ETH_RPC_URL --verify --etherscan-api-key  $ETHERSCAN_KEY --broadcast
-///@dev forge script script/release/ethereum/02.DeployVaults.s.sol:DeployVaults -vvvv --account testDeployer --rpc-url $ETH_RPC_URL --verify --etherscan-api-key  $ETHERSCAN_KEY --broadcast
+///@dev forge script script/release/ethereum/02.DeployVaults.s.sol:DeployVaults -vvvv --account levvaDeployer --rpc-url $ETH_RPC_URL --verify --etherscan-api-key  $ETHERSCAN_KEY --broadcast
 contract DeployVaults is LevvaVaultDeployer {
     using stdJson for string;
     using Strings for address;
@@ -35,14 +33,27 @@ contract DeployVaults is LevvaVaultDeployer {
     }
 
     function getUltraSafeUSDCVaultConfig() internal view returns (VaultConfig memory) {
-        address[] memory trackedAssets = new address[](0);
+        address[] memory trackedAssets = new address[](3);
+        trackedAssets[0] = getAddress("aUSDC");
+        trackedAssets[1] = getAddress("sUSDe");
+        trackedAssets[2] = getAddress("WSTUSR");
 
-        Adapter[] memory adapters = new Adapter[](5);
+        Adapter[] memory adapters = new Adapter[](15);
         adapters[0] = Adapter.AaveAdapter;
         adapters[1] = Adapter.CurveRouterAdapter;
-        adapters[2] = Adapter.PendleAdapter;
-        adapters[3] = Adapter.UniswapAdapter;
-        adapters[4] = Adapter.LevvaVaultAdapter;
+        adapters[2] = Adapter.EthenaAdapter;
+        adapters[3] = Adapter.EtherfiBTC;
+        adapters[4] = Adapter.EtherfiETH;
+        adapters[5] = Adapter.LevvaPoolAdapter;
+        adapters[6] = Adapter.LevvaVaultAdapter;
+        adapters[7] = Adapter.Lido;
+        adapters[8] = Adapter.MakerDaoDAI;
+        adapters[9] = Adapter.MakerDaoUSDS;
+        adapters[10] = Adapter.Morpho;
+        adapters[11] = Adapter.MorphoV1_1;
+        adapters[12] = Adapter.PendleAdapter;
+        adapters[13] = Adapter.ResolvAdapter;
+        adapters[14] = Adapter.UniswapAdapter;
 
         VaultConfig memory config = VaultConfig({
             deploymentId: "LevvaUltraSafeUSDC",
@@ -61,22 +72,37 @@ contract DeployVaults is LevvaVaultDeployer {
             vaultManager: getAddress("VaultManager"),
             maxExternalPositionAdapters: 15,
             maxTrackedAssets: 15,
-            initialDeposit: 0,
-            withdrawQueueFinalizer: getAddress("WithdrawalQueueFinalizer")
+            initialDeposit: 1 * 10 ** 6, // 1 USDC minimum deposit
+            withdrawQueueFinalizer: getAddress("WithdrawalQueueFinalizer"),
+            minDepositAmount: 1 * 10 ** 6 // 1 USDC minimum deposit
         });
 
         return config;
     }
 
     function getSafeUSDCVaultConfig() internal view returns (VaultConfig memory) {
-        address[] memory trackedAssets = new address[](0);
+        address[] memory trackedAssets = new address[](4);
+        trackedAssets[0] = getAddress("aUSDC");
+        trackedAssets[1] = getAddress("sUSDe");
+        trackedAssets[2] = getAddress("wstUSR");
+        trackedAssets[3] = getAddress("wstETH");
 
-        Adapter[] memory adapters = new Adapter[](5);
+        Adapter[] memory adapters = new Adapter[](15);
         adapters[0] = Adapter.AaveAdapter;
         adapters[1] = Adapter.CurveRouterAdapter;
-        adapters[2] = Adapter.PendleAdapter;
-        adapters[3] = Adapter.UniswapAdapter;
-        adapters[4] = Adapter.LevvaVaultAdapter;
+        adapters[2] = Adapter.EthenaAdapter;
+        adapters[3] = Adapter.EtherfiBTC;
+        adapters[4] = Adapter.EtherfiETH;
+        adapters[5] = Adapter.LevvaPoolAdapter;
+        adapters[6] = Adapter.LevvaVaultAdapter;
+        adapters[7] = Adapter.Lido;
+        adapters[8] = Adapter.MakerDaoDAI;
+        adapters[9] = Adapter.MakerDaoUSDS;
+        adapters[10] = Adapter.Morpho;
+        adapters[11] = Adapter.MorphoV1_1;
+        adapters[12] = Adapter.PendleAdapter;
+        adapters[13] = Adapter.ResolvAdapter;
+        adapters[14] = Adapter.UniswapAdapter;
 
         VaultConfig memory config = VaultConfig({
             deploymentId: "LevvaSafeUSDC",
@@ -95,22 +121,37 @@ contract DeployVaults is LevvaVaultDeployer {
             vaultManager: getAddress("VaultManager"),
             maxExternalPositionAdapters: 15,
             maxTrackedAssets: 15,
-            initialDeposit: 0,
-            withdrawQueueFinalizer: getAddress("WithdrawalQueueFinalizer")
+            initialDeposit: 1 * 10 ** 6, // 1 USDC minimum deposit
+            withdrawQueueFinalizer: getAddress("WithdrawalQueueFinalizer"),
+            minDepositAmount: 1 * 10 ** 6 // 1 USDC minimum deposit
         });
 
         return config;
     }
 
     function getBraveUSDCVaultConfig() internal view returns (VaultConfig memory) {
-        address[] memory trackedAssets = new address[](0);
+        address[] memory trackedAssets = new address[](4);
+        trackedAssets[0] = getAddress("aUSDC");
+        trackedAssets[1] = getAddress("sUSDe");
+        trackedAssets[2] = getAddress("wstUSR");
+        trackedAssets[3] = getAddress("wstETH");
 
-        Adapter[] memory adapters = new Adapter[](5);
+        Adapter[] memory adapters = new Adapter[](15);
         adapters[0] = Adapter.AaveAdapter;
         adapters[1] = Adapter.CurveRouterAdapter;
-        adapters[2] = Adapter.PendleAdapter;
-        adapters[3] = Adapter.UniswapAdapter;
-        adapters[4] = Adapter.LevvaVaultAdapter;
+        adapters[2] = Adapter.EthenaAdapter;
+        adapters[3] = Adapter.EtherfiBTC;
+        adapters[4] = Adapter.EtherfiETH;
+        adapters[5] = Adapter.LevvaPoolAdapter;
+        adapters[6] = Adapter.LevvaVaultAdapter;
+        adapters[7] = Adapter.Lido;
+        adapters[8] = Adapter.MakerDaoDAI;
+        adapters[9] = Adapter.MakerDaoUSDS;
+        adapters[10] = Adapter.Morpho;
+        adapters[11] = Adapter.MorphoV1_1;
+        adapters[12] = Adapter.PendleAdapter;
+        adapters[13] = Adapter.ResolvAdapter;
+        adapters[14] = Adapter.UniswapAdapter;
 
         VaultConfig memory config = VaultConfig({
             deploymentId: "LevvaBraveUSDC",
@@ -129,22 +170,35 @@ contract DeployVaults is LevvaVaultDeployer {
             vaultManager: getAddress("VaultManager"),
             maxExternalPositionAdapters: 15,
             maxTrackedAssets: 15,
-            initialDeposit: 0,
-            withdrawQueueFinalizer: getAddress("WithdrawalQueueFinalizer")
+            initialDeposit: 1 * 10 ** 6, // 1 USDC minimum deposit
+            withdrawQueueFinalizer: getAddress("WithdrawalQueueFinalizer"),
+            minDepositAmount: 1 * 10 ** 6 // 1 USDC minimum deposit
         });
 
         return config;
     }
 
     function getCustomWETHVaultConfig() internal view returns (VaultConfig memory) {
-        address[] memory trackedAssets = new address[](0);
+        address[] memory trackedAssets = new address[](2);
+        trackedAssets[0] = getAddress("weETH");
+        trackedAssets[1] = getAddress("wstETH");
 
-        Adapter[] memory adapters = new Adapter[](5);
+        Adapter[] memory adapters = new Adapter[](15);
         adapters[0] = Adapter.AaveAdapter;
         adapters[1] = Adapter.CurveRouterAdapter;
-        adapters[2] = Adapter.PendleAdapter;
-        adapters[3] = Adapter.UniswapAdapter;
-        adapters[4] = Adapter.LevvaVaultAdapter;
+        adapters[2] = Adapter.EthenaAdapter;
+        adapters[3] = Adapter.EtherfiBTC;
+        adapters[4] = Adapter.EtherfiETH;
+        adapters[5] = Adapter.LevvaPoolAdapter;
+        adapters[6] = Adapter.LevvaVaultAdapter;
+        adapters[7] = Adapter.Lido;
+        adapters[8] = Adapter.MakerDaoDAI;
+        adapters[9] = Adapter.MakerDaoUSDS;
+        adapters[10] = Adapter.Morpho;
+        adapters[11] = Adapter.MorphoV1_1;
+        adapters[12] = Adapter.PendleAdapter;
+        adapters[13] = Adapter.ResolvAdapter;
+        adapters[14] = Adapter.UniswapAdapter;
 
         VaultConfig memory config = VaultConfig({
             deploymentId: "LevvaCustomWETH",
@@ -163,8 +217,9 @@ contract DeployVaults is LevvaVaultDeployer {
             vaultManager: getAddress("VaultManager"),
             maxExternalPositionAdapters: 15,
             maxTrackedAssets: 15,
-            initialDeposit: 0,
-            withdrawQueueFinalizer: getAddress("WithdrawalQueueFinalizer")
+            initialDeposit: 1 * 10 ** 15, // 0.001 WETH initial deposit
+            withdrawQueueFinalizer: getAddress("WithdrawalQueueFinalizer"),
+            minDepositAmount: 1 * 10 ** 16 // 0.01 WETH minimum deposit
         });
 
         return config;
