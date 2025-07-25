@@ -10,8 +10,7 @@ interface IEulerRouterFactory {
     function deploy(address governor) external returns (address);
 }
 
-///@dev forge script script/DeployEulerOracle.s.sol:DeployEulerOracle -vvvv --account testDeployer --rpc-url $ETH_RPC_URL \
-///        --broadcast --verify --delay 7 --retries 15 --verifier etherscan --etherscan-api-key $ETHERSCAN_KEY --verifier-url https://api.etherscan.io/api
+///@dev forge script script/DeployEulerOracle.s.sol:DeployEulerOracle -vvvv --account levvaDeployer --rpc-url $ETH_RPC_URL --broadcast --verify --delay 7 --retries 15 --verifier etherscan --etherscan-api-key $ETHERSCAN_KEY --verifier-url https://api.etherscan.io/api
 contract DeployEulerOracle is Script, DeployHelper {
     string public constant DEPLOYMENT_FILE = "price-oracle.json";
 

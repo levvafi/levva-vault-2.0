@@ -98,7 +98,7 @@ contract ChainValues {
     function _addEthMainnetValues() private {
         /* ============ LEVVA VAULTS ========== */
         s_values["ethereum"]["LevvaVaultFactory"] = 0xB97b6282633491c9AB3f144796dB6EaA33b610f4.toBytes32();
-        s_values["ethereum"]["EulerOracle"] = address(0).toBytes32();
+        s_values["ethereum"]["EulerOracle"] = 0x41761684ACf90bbF7e58e3A7A14d48f778CBB9D5.toBytes32();
         s_values["ethereum"]["FeeCollector"] = 0xD20092A19e0488E1283E488e11583B43ba7EA849.toBytes32();
         s_values["ethereum"]["VaultManager"] = 0x3a57D60a6866c41365E91b9cAbFA66F8Dd17F210.toBytes32();
         s_values["ethereum"]["WithdrawalQueueFinalizer"] = 0x3a57D60a6866c41365E91b9cAbFA66F8Dd17F210.toBytes32();
