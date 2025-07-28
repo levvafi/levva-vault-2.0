@@ -60,6 +60,9 @@ abstract contract OraclePriceProvider is Initializable, VaultAccessControl {
         view
         returns (uint256)
     {
+        if (baseAmount == 0) {
+            return 0;
+        }
         return eulerOracle.getQuote(baseAmount, baseToken, quoteToken);
     }
 

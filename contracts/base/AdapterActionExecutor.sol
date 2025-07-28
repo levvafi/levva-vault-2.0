@@ -222,13 +222,13 @@ abstract contract AdapterActionExecutor is IAdapterCallback, OraclePriceProvider
                 (address[] memory managedAssets, uint256[] memory managedAmounts) = adapter.getManagedAssets();
                 uint256 assetsLength = managedAssets.length;
                 for (uint256 j; j < assetsLength; ++j) {
-                    assets += _callOracle(eulerOracle, managedAmounts[i], managedAssets[i], asset);
+                    assets += _callOracle(eulerOracle, managedAmounts[j], managedAssets[j], asset);
                 }
 
                 (address[] memory debtAssets, uint256[] memory debtAmounts) = adapter.getDebtAssets();
                 assetsLength = debtAssets.length;
                 for (uint256 j; j < assetsLength; ++j) {
-                    assets -= _callOracle(eulerOracle, debtAmounts[i], debtAssets[i], asset);
+                    assets -= _callOracle(eulerOracle, debtAmounts[j], debtAssets[j], asset);
                 }
             }
         }
