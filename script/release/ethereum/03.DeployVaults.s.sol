@@ -13,7 +13,7 @@ import {ChainValues} from "../../helper/ChainValues.sol";
 import {Adapter} from "../../helper/AdapterUtils.sol";
 import {VaultConfig, LevvaVaultDeployer} from "../../vault/LevvaVaultDeployer.sol";
 
-///@dev forge script script/release/ethereum/02.DeployVaults.s.sol:DeployVaults -vvvv --account levvaDeployer --rpc-url $ETH_RPC_URL --verify --etherscan-api-key  $ETHERSCAN_KEY --broadcast
+///@dev forge script script/release/ethereum/03.DeployVaults.s.sol:DeployVaults -vvvv --account levvaDeployer --rpc-url $ETH_RPC_URL --verify --etherscan-api-key  $ETHERSCAN_KEY --broadcast
 contract DeployVaults is LevvaVaultDeployer {
     using stdJson for string;
     using Strings for address;
@@ -35,14 +35,14 @@ contract DeployVaults is LevvaVaultDeployer {
     function getUltraSafeUSDCVaultConfig() internal view returns (VaultConfig memory) {
         address[] memory trackedAssets = new address[](3);
         trackedAssets[0] = getAddress("aUSDC");
-        trackedAssets[1] = getAddress("sUSDe");
-        trackedAssets[2] = getAddress("WSTUSR");
+        trackedAssets[1] = getAddress("sUSDE");
+        trackedAssets[2] = getAddress("wstUSR");
 
-        Adapter[] memory adapters = new Adapter[](15);
+        Adapter[] memory adapters = new Adapter[](14);
         adapters[0] = Adapter.AaveAdapter;
         adapters[1] = Adapter.CurveRouterAdapter;
         adapters[2] = Adapter.EthenaAdapter;
-        adapters[3] = Adapter.EtherfiBTC;
+        adapters[3] = Adapter.UniswapAdapter;
         adapters[4] = Adapter.EtherfiETH;
         adapters[5] = Adapter.LevvaPoolAdapter;
         adapters[6] = Adapter.LevvaVaultAdapter;
@@ -53,7 +53,6 @@ contract DeployVaults is LevvaVaultDeployer {
         adapters[11] = Adapter.MorphoV1_1;
         adapters[12] = Adapter.PendleAdapter;
         adapters[13] = Adapter.ResolvAdapter;
-        adapters[14] = Adapter.UniswapAdapter;
 
         VaultConfig memory config = VaultConfig({
             deploymentId: "LevvaUltraSafeUSDC",
@@ -83,15 +82,15 @@ contract DeployVaults is LevvaVaultDeployer {
     function getSafeUSDCVaultConfig() internal view returns (VaultConfig memory) {
         address[] memory trackedAssets = new address[](4);
         trackedAssets[0] = getAddress("aUSDC");
-        trackedAssets[1] = getAddress("sUSDe");
+        trackedAssets[1] = getAddress("sUSDE");
         trackedAssets[2] = getAddress("wstUSR");
         trackedAssets[3] = getAddress("wstETH");
 
-        Adapter[] memory adapters = new Adapter[](15);
+        Adapter[] memory adapters = new Adapter[](14);
         adapters[0] = Adapter.AaveAdapter;
         adapters[1] = Adapter.CurveRouterAdapter;
         adapters[2] = Adapter.EthenaAdapter;
-        adapters[3] = Adapter.EtherfiBTC;
+        adapters[3] = Adapter.UniswapAdapter;
         adapters[4] = Adapter.EtherfiETH;
         adapters[5] = Adapter.LevvaPoolAdapter;
         adapters[6] = Adapter.LevvaVaultAdapter;
@@ -102,7 +101,6 @@ contract DeployVaults is LevvaVaultDeployer {
         adapters[11] = Adapter.MorphoV1_1;
         adapters[12] = Adapter.PendleAdapter;
         adapters[13] = Adapter.ResolvAdapter;
-        adapters[14] = Adapter.UniswapAdapter;
 
         VaultConfig memory config = VaultConfig({
             deploymentId: "LevvaSafeUSDC",
@@ -130,11 +128,12 @@ contract DeployVaults is LevvaVaultDeployer {
     }
 
     function getBraveUSDCVaultConfig() internal view returns (VaultConfig memory) {
-        address[] memory trackedAssets = new address[](4);
+        address[] memory trackedAssets = new address[](5);
         trackedAssets[0] = getAddress("aUSDC");
-        trackedAssets[1] = getAddress("sUSDe");
+        trackedAssets[1] = getAddress("sUSDE");
         trackedAssets[2] = getAddress("wstUSR");
         trackedAssets[3] = getAddress("wstETH");
+        trackedAssets[4] = getAddress("eBTC");
 
         Adapter[] memory adapters = new Adapter[](15);
         adapters[0] = Adapter.AaveAdapter;
@@ -187,7 +186,7 @@ contract DeployVaults is LevvaVaultDeployer {
         adapters[0] = Adapter.AaveAdapter;
         adapters[1] = Adapter.CurveRouterAdapter;
         adapters[2] = Adapter.EthenaAdapter;
-        adapters[3] = Adapter.EtherfiBTC;
+        adapters[3] = Adapter.UniswapAdapter;
         adapters[4] = Adapter.EtherfiETH;
         adapters[5] = Adapter.LevvaPoolAdapter;
         adapters[6] = Adapter.LevvaVaultAdapter;
@@ -198,7 +197,6 @@ contract DeployVaults is LevvaVaultDeployer {
         adapters[11] = Adapter.MorphoV1_1;
         adapters[12] = Adapter.PendleAdapter;
         adapters[13] = Adapter.ResolvAdapter;
-        adapters[14] = Adapter.UniswapAdapter;
 
         VaultConfig memory config = VaultConfig({
             deploymentId: "LevvaCustomWETH",

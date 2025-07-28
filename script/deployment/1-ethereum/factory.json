@@ -1,6 +1,6 @@
 {
-  "FactoryImplementation": "0x10F9Cf840b359AD8B4cF0a52aD337fBcF478C180",
-  "FactoryProxy": "0xB97b6282633491c9AB3f144796dB6EaA33b610f4",
-  "LevvaVaultImplementation": "0xf0F560A94d1B1e18FB45996E76254701D468F182",
-  "WithdrawalQueueImplementation": "0xCb3b0337de55e0B9Bbd977680735C41605976168"
+  "FactoryImplementation": "0xE73B540035107C5812790f24Ec7a45dBC8D38FD0",
+  "FactoryProxy": "0xB540E30c08f3b8FAf4b9d9545313bA4d2e619B00",
+  "LevvaVaultImplementation": "0x9b36e02B13c9D53bF3CB371A5b0Ce789243E55E2",
+  "WithdrawalQueueImplementation": "0xB886d4ED71C5677347aD891A6A71DFe4fA45464b"
 }

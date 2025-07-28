@@ -26,6 +26,11 @@ contract SetupEthereumOracles is SetupEulerOracleBase {
         _setupPrice_sUSDe_USDC();
         _setupPrice_wstUSR_USDC();
         _setupPrice_wstETH_USDC();
+        _setupPrice_eBTC_USDC();
+        _setupPrice_weETH_WETH();
+        _setupPrice_wstETH_WETH();
+        _setupPrice_WBTC_USDC();
+        _setupPrice_WETH_USDC();
     }
 
     function _setupPrice_sUSDe_USDC() private {
@@ -53,7 +58,7 @@ contract SetupEthereumOracles is SetupEulerOracleBase {
     }
 
     function _setupPrice_wstETH_USDC() private {
-        address wstETH = getAddress("WSTETH");
+        address wstETH = getAddress("wstETH");
         address USDC = getAddress("USDC");
         address WETH = getAddress("WETH");
 
@@ -64,7 +69,7 @@ contract SetupEthereumOracles is SetupEulerOracleBase {
     }
 
     function _setupPrice_wstETH_WETH() private {
-        address wstETH = getAddress("WSTETH");
+        address wstETH = getAddress("wstETH");
         address WETH = getAddress("WETH");
         address lidoFundamentalOracle = getAddress("LidoFundamentalOracle");
 
@@ -86,6 +91,37 @@ contract SetupEthereumOracles is SetupEulerOracleBase {
         _checkOraclePrice(aUSDC, USDC);
     }
 
+    function _setupPrice_eBTC_USDC() private {
+        address eBTC = getAddress("eBTC");
+        address USDC = getAddress("USDC");
+
+        address eBTC_USD_oracle = getAddress("CrossChainOracle_eBTC_BTC_USD");
+        address USDC_USD_oracle = getAddress("Chainlink_USDC_USD_oracle");
+
+        _deployCrossOracle(eBTC, USD, USDC, eBTC_USD_oracle, USDC_USD_oracle);
+    }
+
+    function _setupPrice_WBTC_USDC() private {
+        address WBTC = getAddress("WBTC");
+        address USDC = getAddress("USDC");
+
+        address WBTC_BTC_oracle = getAddress("Chainlink_WBTC_BTC_oracle");
+        address BTC_USD_oracle = getAddress("Chainlink_BTC_USD_oracle");
+        address WBTC_USD_oracle = _deployCrossOracle(WBTC, BTC, USD, WBTC_BTC_oracle, BTC_USD_oracle);
+
+        address USDC_USD_oracle = getAddress("Chainlink_USDC_USD_oracle");
+        _deployCrossOracle(WBTC, USD, USDC, WBTC_USD_oracle, USDC_USD_oracle);
+    }
+
+    function _setupPrice_WETH_USDC() private {
+        address WETH = getAddress("WETH");
+        address USDC = getAddress("USDC");
+
+        address WETH_USD_oracle = getAddress("Chainlink_WETH_USD_oracle");
+        address USDC_USD_oracle = getAddress("Chainlink_USDC_USD_oracle");
+        _deployCrossOracle(WETH, USD, USDC, WETH_USD_oracle, USDC_USD_oracle);
+    }
+
     function _addAave_aUsdc_USDC_price() private returns (address) {
         address aUSDC = getAddress("aUSDC");
         address USDC = getAddress("USDC");
@@ -104,7 +140,7 @@ contract SetupEthereumOracles is SetupEulerOracleBase {
     }
 
     function _addChainlink_weETH_ETH() private returns (address) {
-        address weETH = getAddress("WEETH");
+        address weETH = getAddress("weETH");
         address WETH = getAddress("WETH");
         address chainlinkFeed = getAddress("ChainlinkFeed_weETH_ETH");
         uint256 maxStaleness = 1.5 days;

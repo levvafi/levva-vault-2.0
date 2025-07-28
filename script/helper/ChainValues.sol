@@ -15,6 +15,7 @@ contract ChainValues {
     uint256 public constant ETH_HOODIE = 560048;
 
     address public constant USD = 0x0000000000000000000000000000000000000348;
+    address public constant BTC = 0xbBbBBBBbbBBBbbbBbbBbbbbBBbBbbbbBbBbbBBbB;
 
     mapping(string chainName => mapping(string valueName => bytes32 value)) private s_values;
 
@@ -97,7 +98,7 @@ contract ChainValues {
 
     function _addEthMainnetValues() private {
         /* ============ LEVVA VAULTS ========== */
-        s_values["ethereum"]["LevvaVaultFactory"] = 0xB97b6282633491c9AB3f144796dB6EaA33b610f4.toBytes32();
+        s_values["ethereum"]["LevvaVaultFactory"] = 0xB540E30c08f3b8FAf4b9d9545313bA4d2e619B00.toBytes32();
         s_values["ethereum"]["EulerOracle"] = 0x41761684ACf90bbF7e58e3A7A14d48f778CBB9D5.toBytes32();
         s_values["ethereum"]["FeeCollector"] = 0xD20092A19e0488E1283E488e11583B43ba7EA849.toBytes32();
         s_values["ethereum"]["VaultManager"] = 0x3a57D60a6866c41365E91b9cAbFA66F8Dd17F210.toBytes32();
@@ -157,11 +158,15 @@ contract ChainValues {
         s_values["ethereum"]["CurvePool_USR_USDC"] = 0x3eE841F47947FEFbE510366E4bbb49e145484195.toBytes32();
 
         /* ============= DEPLOYED EULER ORACLES ========== */
+        s_values["ethereum"]["Chainlink_WETH_USD_oracle"] = 0x10674C8C1aE2072d4a75FE83f1E159425fd84E1D.toBytes32();
+        s_values["ethereum"]["Chainlink_WBTC_BTC_oracle"] = 0xc38B1ae5f9bDd68D44b354fD06b16488Be4Bc0d4.toBytes32();
+        s_values["ethereum"]["Chainlink_BTC_USD_oracle"] = 0x0484Df76f561443d93548D86740b5C4A826e5A33.toBytes32();
         s_values["ethereum"]["Chainlink_USDE_USD_oracle"] = 0x8211B9ae40b06d3Db0215E520F232184Af355378.toBytes32();
         s_values["ethereum"]["Chainlink_USDC_USD_oracle"] = 0x6213f24332D35519039f2afa7e3BffE105a37d3F.toBytes32();
         s_values["ethereum"]["Chainlink_sUSDE_USD_oracle"] = 0xD4fF9D4e0A3E5995A0E040632F34271b2e9c8a42.toBytes32();
         s_values["ethereum"]["Chainlink_USDC_WETH_oracle"] = 0x2eA2b307cD934a6e705eAcFCb6B806d018Cd62CF.toBytes32();
         s_values["ethereum"]["LidoFundamentalOracle"] = 0x7c37aB8Cd76Ee8888ad7F19C1F8a3A6D1622e9B8.toBytes32();
+        s_values["ethereum"]["CrossChainOracle_eBTC_BTC_USD"] = 0x26bDa7a7A660a5e9Ac70f64b69f56EF1e2275a07.toBytes32();
 
         /* ============= CHAINLINK DATA FEEDS =======================*/
         s_values["ethereum"]["ChainlinkFeed_sUSDE_USD"] = 0xFF3BC18cCBd5999CE63E788A1c250a88626aD099.toBytes32();

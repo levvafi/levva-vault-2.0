@@ -51,6 +51,15 @@ abstract contract LevvaVaultDeployer is DeployHelper, AdapterUtils {
 
             LevvaVault vault = _deployVault(deployConfig);
             _deployAdapters(deployConfig, vault);
+
+            // check
+            uint256 totalAssets = vault.totalAssets();
+            uint256 totalSupply = vault.totalSupply();
+            if (deployConfig.initialDeposit != 0) {
+                assert(totalAssets == deployConfig.initialDeposit);
+                assert(totalSupply == deployConfig.initialDeposit);
+            }
+
             _saveDeploymentState(deployConfig, address(vault));
         }
     }
@@ -82,8 +91,13 @@ abstract contract LevvaVaultDeployer is DeployHelper, AdapterUtils {
         vault.setMaxSlippage(config.maxSlippage);
         vault.setMaxExternalPositionAdapters(config.maxExternalPositionAdapters);
         vault.setMaxTrackedAssets(config.maxTrackedAssets);
-        vault.setManagementFeeIR(config.managementFee);
-        vault.setPerformanceFeeRatio(config.performanceFee);
+        if (config.managementFee != 0) {
+            vault.setManagementFeeIR(config.managementFee);
+        }
+
+        if (config.performanceFee != 0) {
+            vault.setPerformanceFeeRatio(config.performanceFee);
+        }
 
         WithdrawalQueue withdrawalQueue = WithdrawalQueue(vault.withdrawalQueue());
         withdrawalQueue.addFinalizer(config.withdrawQueueFinalizer, true);
@@ -93,7 +107,7 @@ abstract contract LevvaVaultDeployer is DeployHelper, AdapterUtils {
             IERC20(config.asset).approve(address(vault), config.initialDeposit);
             vault.deposit(config.initialDeposit, msg.sender);
         }
-        
+
         if (config.minDepositAmount != 0) {
             vault.setMinimalDeposit(config.minDepositAmount);
         }
