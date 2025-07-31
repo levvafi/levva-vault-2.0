@@ -17,6 +17,7 @@ import {DeployLevvaVaultFactory} from "../DeployLevvaVaultFactory.s.sol";
 import {Adapter, DeployAdapter} from "../DeployAdapter.s.sol";
 
 struct VaultConfig {
+    string deploymentId;
     address asset;
     address feeCollector;
     address eulerOracle;
@@ -34,6 +35,7 @@ struct VaultConfig {
     uint8 maxTrackedAssets;
     uint256 initialDeposit;
     address withdrawQueueFinalizer;
+    uint256 minDepositAmount;
 }
 
 abstract contract LevvaVaultDeployer is DeployHelper, AdapterUtils {
@@ -42,17 +44,30 @@ abstract contract LevvaVaultDeployer is DeployHelper, AdapterUtils {
     string public constant DEPLOYMENT_FILE = "vaults.json";
 
     function run() external virtual {
-        VaultConfig memory deployConfig = _getDeployConfig();
+        VaultConfig[] memory deployConfigs = _getDeployConfig();
 
-        LevvaVault vault = _deployVault(deployConfig);
-        _deployAdapters(deployConfig, vault);
-        _saveDeploymentState(vault);
+        for (uint256 i = 0; i < deployConfigs.length; i++) {
+            VaultConfig memory deployConfig = deployConfigs[i];
+
+            LevvaVault vault = _deployVault(deployConfig);
+            _deployAdapters(deployConfig, vault);
+
+            // check
+            uint256 totalAssets = vault.totalAssets();
+            uint256 totalSupply = vault.totalSupply();
+            if (deployConfig.initialDeposit != 0) {
+                assert(totalAssets == deployConfig.initialDeposit);
+                assert(totalSupply == deployConfig.initialDeposit);
+            }
+
+            _saveDeploymentState(deployConfig, address(vault));
+        }
     }
 
     ///@dev Deploy and configure vault
     function _deployVault(VaultConfig memory config) internal returns (LevvaVault vault) {
         //skip deployment if already deployed
-        address deployedVault = _getDeployedAddress(config.lpSymbol);
+        address deployedVault = _getDeployedAddress(config.deploymentId);
         if (deployedVault != address(0)) {
             return LevvaVault(deployedVault);
         }
@@ -76,8 +91,13 @@ abstract contract LevvaVaultDeployer is DeployHelper, AdapterUtils {
         vault.setMaxSlippage(config.maxSlippage);
         vault.setMaxExternalPositionAdapters(config.maxExternalPositionAdapters);
         vault.setMaxTrackedAssets(config.maxTrackedAssets);
-        vault.setManagementFeeIR(config.managementFee);
-        vault.setPerformanceFeeRatio(config.performanceFee);
+        if (config.managementFee != 0) {
+            vault.setManagementFeeIR(config.managementFee);
+        }
+
+        if (config.performanceFee != 0) {
+            vault.setPerformanceFeeRatio(config.performanceFee);
+        }
 
         WithdrawalQueue withdrawalQueue = WithdrawalQueue(vault.withdrawalQueue());
         withdrawalQueue.addFinalizer(config.withdrawQueueFinalizer, true);
@@ -86,6 +106,10 @@ abstract contract LevvaVaultDeployer is DeployHelper, AdapterUtils {
         if (config.initialDeposit != 0) {
             IERC20(config.asset).approve(address(vault), config.initialDeposit);
             vault.deposit(config.initialDeposit, msg.sender);
+        }
+
+        if (config.minDepositAmount != 0) {
+            vault.setMinimalDeposit(config.minDepositAmount);
         }
         vm.stopBroadcast();
 
@@ -117,18 +141,14 @@ abstract contract LevvaVaultDeployer is DeployHelper, AdapterUtils {
         }
     }
 
-    function _getDeployedAddress(string memory vaultSymbol) internal view returns (address) {
-        return _readAddressFromDeployment(DEPLOYMENT_FILE, vaultSymbol);
+    function _getDeployedAddress(string memory deploymentId) internal view returns (address) {
+        return _readAddressFromDeployment(DEPLOYMENT_FILE, deploymentId);
     }
 
-    function _saveDeploymentState(LevvaVault vault) internal {
-        _saveDeploymentState(vault.symbol(), address(vault));
-    }
-
-    function _saveDeploymentState(string memory vaultKey, address vault) internal {
+    function _saveDeploymentState(VaultConfig memory config, address vault) internal {
         string memory path = _getDeploymentPath(DEPLOYMENT_FILE);
-        _saveInDeploymentFile(path, vaultKey, vault);
+        _saveInDeploymentFile(path, config.deploymentId, vault);
     }
 
-    function _getDeployConfig() internal view virtual returns (VaultConfig memory);
+    function _getDeployConfig() internal view virtual returns (VaultConfig[] memory);
 }

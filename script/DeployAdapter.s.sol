@@ -132,7 +132,7 @@ contract DeployAdapter is DeployHelper, AdapterUtils {
     }
 
     function _deployResolv() internal returns (address) {
-        address wstUSR = getAddress("WSTUSR");
+        address wstUSR = getAddress("wstUSR");
 
         vm.broadcast();
         ResolvAdapter resolvAdapter = new ResolvAdapter(wstUSR);
@@ -157,7 +157,7 @@ contract DeployAdapter is DeployHelper, AdapterUtils {
 
     function _deployEtherfiETH() internal returns (address) {
         address weth = getAddress("WETH");
-        address weeth = getAddress("WEETH");
+        address weeth = getAddress("weETH");
         address etherfiLiquidityPool = getAddress("EtherFiLiquidityPool");
 
         vm.broadcast();
@@ -192,7 +192,7 @@ contract DeployAdapter is DeployHelper, AdapterUtils {
 
     function _deployLido() internal returns (address) {
         address weth = getAddress("WETH");
-        address wsteth = getAddress("WSTETH");
+        address wsteth = getAddress("wstETH");
         address lidoWithdrawalQueue = getAddress("LidoWithdrawalQueue");
 
         vm.broadcast();

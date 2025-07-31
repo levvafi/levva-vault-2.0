@@ -34,7 +34,7 @@ abstract contract AdapterUtils {
         } else if (adapter == Adapter.EtherfiETH) {
             return "EtherfiETHAdapter";
         } else if (adapter == Adapter.EtherfiBTC) {
-            return "EtherfiETHAdapter";
+            return "EtherfiBTCAdapter";
         } else if (adapter == Adapter.LevvaPoolAdapter) {
             return "LevvaPoolAdapter";
         } else if (adapter == Adapter.LevvaVaultAdapter) {

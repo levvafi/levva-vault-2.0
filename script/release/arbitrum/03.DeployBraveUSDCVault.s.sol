@@ -10,48 +10,38 @@ import {LevvaVaultFactory} from "contracts/LevvaVaultFactory.sol";
 import {LevvaVault} from "contracts/LevvaVault.sol";
 import {WithdrawalQueue} from "contracts/WithdrawalQueue.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {ChainValues} from "../helper/ChainValues.sol";
-import {Adapter} from "../helper/AdapterUtils.sol";
-import {VaultConfig, LevvaVaultDeployer} from "./LevvaVaultDeployer.sol";
-import {DeployHelper} from "../helper/DeployHelper.sol";
-import {DeployLevvaVaultFactory} from "../DeployLevvaVaultFactory.s.sol";
-import {Adapter, DeployAdapter} from "../DeployAdapter.s.sol";
+import {ChainValues} from "../../helper/ChainValues.sol";
+import {Adapter} from "../../helper/AdapterUtils.sol";
+import {VaultConfig, LevvaVaultDeployer} from "../../vault/LevvaVaultDeployer.sol";
+import {DeployHelper} from "../../helper/DeployHelper.sol";
 
-///@dev forge script script/vault/DeployUSDCVaultExample.s.sol:DeployUSDCVaultExample -vvvv --account testDeployer --rpc-url $ETH_RPC_URL
-contract DeployUSDCVaultExample is LevvaVaultDeployer {
+///@dev forge script script/release/arbitrum/03.DeployBraveUSDCVault.s.sol:DeployBraveUSDCVault -vvvv --account testDeployer --rpc-url $ARB_RPC_URL --verify --etherscan-api-key  $ETHERSCAN_KEY --broadcast
+contract DeployBraveUSDCVault is LevvaVaultDeployer {
     using stdJson for string;
     using Strings for address;
 
     function _getDeployConfig() internal view override returns (VaultConfig[] memory configs) {
-        if (block.chainid == 1) {
-            address[] memory trackedAssets = new address[](0);
+        if (block.chainid == 42161) {
+            address[] memory trackedAssets = new address[](2);
+            trackedAssets[0] = getAddress("WETH");
+            trackedAssets[1] = getAddress("WBTC");
 
-            Adapter[] memory adapters = new Adapter[](15);
+            Adapter[] memory adapters = new Adapter[](5);
             adapters[0] = Adapter.AaveAdapter;
             adapters[1] = Adapter.CurveRouterAdapter;
-            adapters[2] = Adapter.EthenaAdapter;
-            adapters[3] = Adapter.EtherfiBTC;
-            adapters[4] = Adapter.EtherfiETH;
-            adapters[5] = Adapter.LevvaPoolAdapter;
-            adapters[6] = Adapter.LevvaVaultAdapter;
-            adapters[7] = Adapter.Lido;
-            adapters[8] = Adapter.MakerDaoDAI;
-            adapters[9] = Adapter.MakerDaoUSDS;
-            adapters[10] = Adapter.Morpho;
-            adapters[11] = Adapter.MorphoV1_1;
-            adapters[12] = Adapter.PendleAdapter;
-            adapters[13] = Adapter.ResolvAdapter;
-            adapters[14] = Adapter.UniswapAdapter;
+            adapters[2] = Adapter.MorphoV1_1;
+            adapters[3] = Adapter.PendleAdapter;
+            adapters[4] = Adapter.UniswapAdapter;
 
             VaultConfig memory config = VaultConfig({
-                deploymentId: "USDC-Vault-Example",
+                deploymentId: "LEVVA-ARB-USDC-BRAVE",
                 asset: getAddress("USDC"),
                 feeCollector: getAddress("FeeCollector"),
                 eulerOracle: getAddress("EulerOracle"),
-                lpName: "Ultra Safe Levva Vault USDC",
-                lpSymbol: "LEVVA-USDC-EXAMPLE",
-                withdrawalQueueName: "Ultra Safe Levva Vault USDC Withdrawal Queue",
-                withdrawalQueueSymbol: "LEVVA-USDC-EXAMPLE-WITHDRAWAL-QUEUE",
+                lpName: "Brave Levva Vault USDC",
+                lpSymbol: "LEVVA-ARB-USDC",
+                withdrawalQueueName: "Brave Levva Vault Arb USDC Withdrawal Queue",
+                withdrawalQueueSymbol: "LEVVA-ARB-USDC-WITHDRAWAL-QUEUE",
                 trackedAssets: trackedAssets,
                 performanceFee: 10_000, // 1%
                 managementFee: 10_000, // 1%
@@ -67,7 +57,7 @@ contract DeployUSDCVaultExample is LevvaVaultDeployer {
 
             configs = new VaultConfig[](1);
             configs[0] = config;
-            return configs;
+             return configs;
         }
 
         revert("Config not found for chainId");

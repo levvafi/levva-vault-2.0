@@ -1,0 +1,69 @@
+{
+  "transactions": [
+    {
+      "hash": "0x67f76440d4eb8d78da9e998cf7d8026fb38b93888591f9b5d61db3ab1724bef1",
+      "transactionType": "CALL",
+      "contractName": "EulerRouter",
+      "contractAddress": "0x41761684acf90bbf7e58e3a7a14d48f778cbb9d5",
+      "function": "govSetConfig(address,address,address)",
+      "arguments": [
+        "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
+        "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+        "0x7c37aB8Cd76Ee8888ad7F19C1F8a3A6D1622e9B8"
+      ],
+      "transaction": {
+        "from": "0x0562f16415fcf6fb5acaf433e4796f8f328b7c7d",
+        "to": "0x41761684acf90bbf7e58e3a7a14d48f778cbb9d5",
+        "gas": "0x109cb",
+        "value": "0x0",
+        "input": "0x06c570c10000000000000000000000007f39c581f595b53c5cb19bd0b3f8da6c935e2ca0000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc20000000000000000000000007c37ab8cd76ee8888ad7f19c1f8a3a6d1622e9b8",
+        "nonce": "0x162",
+        "chainId": "0x1"
+      },
+      "additionalContracts": [],
+      "isFixedGasLimit": false
+    }
+  ],
+  "receipts": [
+    {
+      "status": "0x1",
+      "cumulativeGasUsed": "0x149141c",
+      "logs": [
+        {
+          "address": "0x41761684acf90bbf7e58e3a7a14d48f778cbb9d5",
+          "topics": [
+            "0x4ac83f39568b63f952374c82351889b07aff4f7e261232a20ba5a2a6d82b9ce0",
+            "0x0000000000000000000000007f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+            "0x000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+            "0x0000000000000000000000007c37ab8cd76ee8888ad7f19c1f8a3a6d1622e9b8"
+          ],
+          "data": "0x",
+          "blockHash": "0x8c2c0d1bb26538e71070897078677a444d319180563265399b633a48520b7c3d",
+          "blockNumber": "0x15f358d",
+          "blockTimestamp": "0x6887471f",
+          "transactionHash": "0x67f76440d4eb8d78da9e998cf7d8026fb38b93888591f9b5d61db3ab1724bef1",
+          "transactionIndex": "0xbe",
+          "logIndex": "0x294",
+          "removed": false
+        }
+      ],
+      "logsBloom": "0x00000000000020000000000000002400000000000008000000000000000000000000000000000000000000000000000000008000000000000000000000000000000010000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000400000000000004000000000000000000000002000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080080400000000000000000000000000000000000000000000000000000000000000000000000004002000000000000000000",
+      "type": "0x2",
+      "transactionHash": "0x67f76440d4eb8d78da9e998cf7d8026fb38b93888591f9b5d61db3ab1724bef1",
+      "transactionIndex": "0xbe",
+      "blockHash": "0x8c2c0d1bb26538e71070897078677a444d319180563265399b633a48520b7c3d",
+      "blockNumber": "0x15f358d",
+      "gasUsed": "0xc06f",
+      "effectiveGasPrice": "0x133578fc",
+      "from": "0x0562f16415fcf6fb5acaf433e4796f8f328b7c7d",
+      "to": "0x41761684acf90bbf7e58e3a7a14d48f778cbb9d5",
+      "contractAddress": null
+    }
+  ],
+  "libraries": [],
+  "pending": [],
+  "returns": {},
+  "timestamp": 1753696034,
+  "chain": 1,
+  "commit": "d89ad61"
+}
