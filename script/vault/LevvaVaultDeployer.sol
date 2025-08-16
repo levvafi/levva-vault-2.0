@@ -66,57 +66,81 @@ abstract contract LevvaVaultDeployer is DeployHelper, AdapterUtils {
 
     ///@dev Deploy and configure vault
     function _deployVault(VaultConfig memory config) internal returns (LevvaVault vault) {
-        //skip deployment if already deployed
-        address deployedVault = _getDeployedAddress(config.deploymentId);
-        if (deployedVault != address(0)) {
-            return LevvaVault(deployedVault);
-        }
-
         //LevvaVault factory should be deployed first
         LevvaVaultFactory factory = LevvaVaultFactory(getAddress("LevvaVaultFactory"));
 
-        vm.startBroadcast();
-        (deployedVault,) = factory.deployVault(
-            config.asset,
-            config.lpName,
-            config.lpSymbol,
-            config.withdrawalQueueName,
-            config.withdrawalQueueSymbol,
-            config.feeCollector,
-            config.eulerOracle
-        );
+        //skip deployment if already deployed
+        address deployedVault = _getDeployedAddress(config.deploymentId);
+        if (deployedVault == address(0)) {
+            vm.broadcast();
+            (deployedVault,) = factory.deployVault(
+                config.asset,
+                config.lpName,
+                config.lpSymbol,
+                config.withdrawalQueueName,
+                config.withdrawalQueueSymbol,
+                config.feeCollector,
+                config.eulerOracle
+            );
+        }
+
         vault = LevvaVault(deployedVault);
 
-        vault.addVaultManager(config.vaultManager, true);
-        vault.setMaxSlippage(config.maxSlippage);
-        vault.setMaxExternalPositionAdapters(config.maxExternalPositionAdapters);
-        vault.setMaxTrackedAssets(config.maxTrackedAssets);
-        if (config.managementFee != 0) {
-            vault.setManagementFeeIR(config.managementFee);
+        if (!vault.isVaultManager(config.vaultManager)) {
+            vm.broadcast();
+            vault.addVaultManager(config.vaultManager, true);
         }
 
-        if (config.performanceFee != 0) {
-            vault.setPerformanceFeeRatio(config.performanceFee);
+        if (vault.maxSlippage() != config.maxSlippage) {
+            vm.broadcast();
+            vault.setMaxSlippage(config.maxSlippage);
         }
+
+        if (vault.maxExternalPositionAdapters() != config.maxExternalPositionAdapters) {
+            vm.broadcast();
+            vault.setMaxExternalPositionAdapters(config.maxExternalPositionAdapters);
+        }
+
+        if (vault.maxTrackedAssets() != config.maxTrackedAssets) {
+            vm.broadcast();
+            vault.setMaxTrackedAssets(config.maxTrackedAssets);
+        }
+
+        // if (config.managementFee != 0) {
+        //     vm.broadcast();
+        //     vault.setManagementFeeIR(config.managementFee);
+        // }
+
+        // if (config.performanceFee != 0) {
+        //     vm.broadcast();
+        //     vault.setPerformanceFeeRatio(config.performanceFee);
+        // }
 
         WithdrawalQueue withdrawalQueue = WithdrawalQueue(vault.withdrawalQueue());
-        withdrawalQueue.addFinalizer(config.withdrawQueueFinalizer, true);
+        if (!withdrawalQueue.isFinalizer(config.withdrawQueueFinalizer)) {
+            vm.broadcast();
+            withdrawalQueue.addFinalizer(config.withdrawQueueFinalizer, true);
+        }
 
         //initial deposit
-        if (config.initialDeposit != 0) {
+        if (config.initialDeposit != 0 && vault.totalAssets() == 0) {
+            vm.broadcast();
             IERC20(config.asset).approve(address(vault), config.initialDeposit);
+            vm.broadcast();
             vault.deposit(config.initialDeposit, msg.sender);
         }
 
-        if (config.minDepositAmount != 0) {
+        if (vault.minimalDeposit() != config.minDepositAmount) {
+            vm.broadcast();
             vault.setMinimalDeposit(config.minDepositAmount);
         }
-        vm.stopBroadcast();
 
         //configure tracked assets
         for (uint256 i = 0; i < config.trackedAssets.length; ++i) {
-            vm.broadcast();
-            vault.addTrackedAsset(config.trackedAssets[i]);
+            if (vault.trackedAssetPosition(config.trackedAssets[i]) == 0) {
+                vm.broadcast();
+                vault.addTrackedAsset(config.trackedAssets[i]);
+            }
         }
 
         return vault;

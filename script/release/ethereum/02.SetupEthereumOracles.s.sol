@@ -22,15 +22,47 @@ contract SetupEthereumOracles is SetupEulerOracleBase {
     function run() external {
         eulerRouter = EulerRouter(getAddress("EulerOracle"));
 
-        _setupPrice_aUSDC__USDC();
-        _setupPrice_sUSDe_USDC();
-        _setupPrice_wstUSR_USDC();
-        _setupPrice_wstETH_USDC();
-        _setupPrice_eBTC_USDC();
-        _setupPrice_weETH_WETH();
-        _setupPrice_wstETH_WETH();
-        _setupPrice_WBTC_USDC();
-        _setupPrice_WETH_USDC();
+        // _setupPrice_aUSDC__USDC();
+        // _setupPrice_sUSDe_USDC();
+        // _setupPrice_wstUSR_USDC();
+        // _setupPrice_wstETH_USDC();
+        // _setupPrice_eBTC_USDC();
+        // _setupPrice_weETH_WETH();
+        // _setupPrice_wstETH_WETH();
+        // _setupPrice_WBTC_USDC();
+        // _setupPrice_WETH_USDC();
+        _setupPrice_OETH_WETH();
+        _setupPrice_PendleLPwOETH_WETH();
+    }
+
+    function _setupPrice_OETH_WETH() private {
+        address OETH = getAddress("OETH");
+        address WETH = getAddress("WETH");
+        address CurvePoolOETH_WETH = getAddress("CurvePool_OETH_WETH");
+
+        /**
+         *  oracle WETH/OETH
+         */
+        _deployCurveEmaOracle(CurvePoolOETH_WETH, WETH, OETH, 0);
+    }
+
+    function _setupPrice_PendleLPwOETH_WETH() private {
+        address PendleLPwOETH25Dec2025 = getAddress("PendleLPwOETH25Dec2025");
+        address wOETH = getAddress("wOETH");
+        address OETH = getAddress("OETH");
+        address WETH = getAddress("WETH");
+        address CurvePoolOETH_WETH = getAddress("CurvePool_OETH_WETH");
+        uint32 twapWindow = 900; // 15 minutes
+
+        address PendleLPwOETH_wOETH_oracle =
+            _deployPendleUniversalOracle(PendleLPwOETH25Dec2025, PendleLPwOETH25Dec2025, wOETH, twapWindow);
+        address wOETH_OETH_oracle = _addResolvedVault(wOETH);
+
+        address PendleLPwOETH_OETH_oracle =
+            _deployCrossOracle(PendleLPwOETH25Dec2025, wOETH, OETH, PendleLPwOETH_wOETH_oracle, wOETH_OETH_oracle);
+        address OETH_WETH_oracle = _deployCurveEmaOracle(CurvePoolOETH_WETH, WETH, OETH, 0);
+
+        _deployCrossOracle(PendleLPwOETH25Dec2025, OETH, WETH, PendleLPwOETH_OETH_oracle, OETH_WETH_oracle);
     }
 
     function _setupPrice_sUSDe_USDC() private {

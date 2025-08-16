@@ -121,12 +121,15 @@ contract ChainValues {
         s_values["ethereum"]["wstETH"] = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0.toBytes32();
         s_values["ethereum"]["weETH"] = 0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee.toBytes32();
         s_values["ethereum"]["WBTC"] = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599.toBytes32();
+        s_values["ethereum"]["OETH"] = 0x856c4Efb76C1D1AE02e20CEB03A2A6a08b0b8dC3.toBytes32();
+        s_values["ethereum"]["wOETH"] = 0xDcEe70654261AF21C44c093C300eD3Bb97b78192.toBytes32();
 
         /* ============== AAVE ================ */
         s_values["ethereum"]["AavePoolAddressProvider"] = 0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e.toBytes32();
 
         /* ============== CURVE ================ */
         s_values["ethereum"]["CurveRouterV1_2"] = 0x45312ea0eFf7E09C83CBE249fa1d7598c4C8cd4e.toBytes32();
+        s_values["ethereum"]["CurvePool_OETH_WETH"] = 0xcc7d5785AD5755B6164e21495E07aDb0Ff11C2A8.toBytes32();
 
         /* ============== EtherFi ================ */
         s_values["ethereum"]["EtherFiLiquidityPool"] = 0x308861A430be4cce5502d0A12724771Fc6DaF216.toBytes32();
@@ -142,6 +145,7 @@ contract ChainValues {
 
         /* ============== PENDLE =============== */
         s_values["ethereum"]["PendleRouter"] = 0x888888888889758F76e7103c6CbF23ABbF58F946.toBytes32();
+        s_values["ethereum"]["PendleLPwOETH25Dec2025"] = 0x15E434C42AB4c9a62Ed7db53baaF9d255ea51E0E.toBytes32();
 
         /* ============== UNISWAP =============== */
         s_values["ethereum"]["UniswapV3Router"] = 0xE592427A0AEce92De3Edee1F18E0157C05861564.toBytes32();
@@ -202,6 +206,8 @@ contract ChainValues {
         s_values["arbitrum"]["WBTC"] = 0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f.toBytes32();
         s_values["arbitrum"]["WETH"] = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1.toBytes32();
         s_values["arbitrum"]["aUSDC"] = 0x724dc807b04555b71ed48a6896b6F41593b8C637.toBytes32();
+        s_values["arbitrum"]["gUSDC"] = 0xd3443ee1e91aF28e5FB858Fbd0D72A63bA8046E0.toBytes32();
+        s_values["arbitrum"]["PendleLpGUSDC18Dec2025"] = 0x18ffB61c6d223bd91ec15acC248bb7e670aBcc48.toBytes32();
 
         /* ============== AAVE ================ */
         s_values["arbitrum"]["AavePoolAddressProvider"] = 0xa97684ead0e402dC232d5A977953DF7ECBaB3CDb.toBytes32();
@@ -222,6 +228,7 @@ contract ChainValues {
 
         /* ============= PRICE ORACLES ============ */
         s_values["arbitrum"]["EulerOracleGovernor"] = 0xAD70a0ab951780fF3397882fc5372db83dEb0606.toBytes32();
+        s_values["arbitrum"]["PendleOracle"] = 0x9a9Fa8338dd5E5B2188006f1Cd2Ef26d921650C2.toBytes32();
 
         /* ============= CHAINLINK DATA FEEDS =======================*/
         s_values["arbitrum"]["ChainlinkFeed_WETH_USD"] = 0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612.toBytes32();
