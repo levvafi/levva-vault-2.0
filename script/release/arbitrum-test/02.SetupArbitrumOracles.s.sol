@@ -21,9 +21,23 @@ contract SetupArbitrumOracles is SetupEulerOracleBase {
 
     function run() external {
         eulerRouter = EulerRouter(getAddress("EulerOracle"));
-        _setupPrice_aUSDC__USDC();
-        _setup_WETH_USDC();
-        _setup_WBTC_USDC();
+        //_setupPrice_aUSDC__USDC();
+        //_setup_WETH_USDC();
+        //_setup_WBTC_USDC();
+        _setupPrice_PendleLpGUSDC25Dec2025_USDC();
+    }
+
+    function _setupPrice_PendleLpGUSDC25Dec2025_USDC() private {
+        address PendleLpGUSDC25Dec2025 = getAddress("PendleLpGUSDC18Dec2025");
+        address USDC = getAddress("USDC");
+        address gUSDC = getAddress("gUSDC");
+        uint32 twapWindow = 900; // 15 minutes
+
+        address PendleLpGUSDC25Dec2025_gUSDC_oracle =
+            _deployPendleUniversalOracle(PendleLpGUSDC25Dec2025, PendleLpGUSDC25Dec2025, gUSDC, twapWindow);
+        address gUSDC_USDC_oracle = _addResolvedVault(gUSDC);
+
+        _deployCrossOracle(PendleLpGUSDC25Dec2025, gUSDC, USDC, PendleLpGUSDC25Dec2025_gUSDC_oracle, gUSDC_USDC_oracle);
     }
 
     function _setupPrice_aUSDC__USDC() private {

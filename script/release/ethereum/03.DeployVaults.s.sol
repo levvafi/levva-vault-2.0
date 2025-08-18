@@ -20,16 +20,65 @@ contract DeployVaults is LevvaVaultDeployer {
 
     function _getDeployConfig() internal view override returns (VaultConfig[] memory configs) {
         if (block.chainid == 1) {
-            configs = new VaultConfig[](4);
+            configs = new VaultConfig[](1);
 
-            configs[0] = getUltraSafeUSDCVaultConfig();
-            configs[1] = getSafeUSDCVaultConfig();
-            configs[2] = getBraveUSDCVaultConfig();
-            configs[3] = getCustomWETHVaultConfig();
+            configs[0] = getTestUSDCVaultConfig();
+            //configs[1] = getSafeUSDCVaultConfig();
+            //configs[2] = getBraveUSDCVaultConfig();
+            //configs[3] = getCustomWETHVaultConfig();
             return configs;
         }
 
         revert("Config not found for chainId");
+    }
+
+    function getTestUSDCVaultConfig() internal view returns (VaultConfig memory) {
+        address[] memory trackedAssets = new address[](5);
+        trackedAssets[0] = getAddress("aUSDC");
+        trackedAssets[1] = getAddress("sUSDE");
+        trackedAssets[2] = getAddress("wstUSR");
+        trackedAssets[3] = getAddress("wstETH");
+        trackedAssets[4] = getAddress("eBTC");
+
+        Adapter[] memory adapters = new Adapter[](14);
+        adapters[0] = Adapter.AaveAdapter;
+        adapters[1] = Adapter.CurveRouterAdapter;
+        adapters[2] = Adapter.EthenaAdapter;
+        adapters[3] = Adapter.UniswapAdapter;
+        adapters[4] = Adapter.EtherfiETH;
+        adapters[5] = Adapter.LevvaPoolAdapter;
+        adapters[6] = Adapter.LevvaVaultAdapter;
+        adapters[7] = Adapter.Lido;
+        adapters[8] = Adapter.MakerDaoDAI;
+        adapters[9] = Adapter.MakerDaoUSDS;
+        adapters[10] = Adapter.Morpho;
+        adapters[11] = Adapter.MorphoV1_1;
+        adapters[12] = Adapter.PendleAdapter;
+        adapters[13] = Adapter.ResolvAdapter;
+
+        VaultConfig memory config = VaultConfig({
+            deploymentId: "LevvaTestUSDC",
+            asset: getAddress("USDC"),
+            feeCollector: getAddress("FeeCollector"),
+            eulerOracle: getAddress("EulerOracle"),
+            lpName: "LevvaTestUSDC",
+            lpSymbol: "LT-USDC",
+            withdrawalQueueName: "Withdrawal Voucher LT-USDC",
+            withdrawalQueueSymbol: "WVLUSDC",
+            trackedAssets: trackedAssets,
+            performanceFee: 100_000, // 10%
+            managementFee: 0, // 0%
+            maxSlippage: 1_000, // 0.1%
+            adapters: adapters,
+            vaultManager: getAddress("VaultManager"),
+            maxExternalPositionAdapters: 15,
+            maxTrackedAssets: 15,
+            initialDeposit: 1 * 10 ** 6, // 1 USDC minimum deposit
+            withdrawQueueFinalizer: getAddress("WithdrawalQueueFinalizer"),
+            minDepositAmount: 1 * 10 ** 6 // 1 USDC minimum deposit
+        });
+
+        return config;
     }
 
     function getUltraSafeUSDCVaultConfig() internal view returns (VaultConfig memory) {
@@ -207,6 +256,54 @@ contract DeployVaults is LevvaVaultDeployer {
             lpSymbol: "LWETHc",
             withdrawalQueueName: "Withdrawal Voucher for LWETHc",
             withdrawalQueueSymbol: "WVLWETHc",
+            trackedAssets: trackedAssets,
+            performanceFee: 100_000, // 10%
+            managementFee: 0, // 0%
+            maxSlippage: 1_000, // 0.1%
+            adapters: adapters,
+            vaultManager: getAddress("VaultManager"),
+            maxExternalPositionAdapters: 15,
+            maxTrackedAssets: 15,
+            initialDeposit: 1 * 10 ** 15, // 0.001 WETH initial deposit
+            withdrawQueueFinalizer: getAddress("WithdrawalQueueFinalizer"),
+            minDepositAmount: 1 * 10 ** 16 // 0.01 WETH minimum deposit
+        });
+
+        return config;
+    }
+
+    function getCustomOriginWETHVaultConfig() internal view returns (VaultConfig memory) {
+        address[] memory trackedAssets = new address[](4);
+        trackedAssets[0] = getAddress("weETH");
+        trackedAssets[1] = getAddress("wstETH");
+        trackedAssets[2] = getAddress("OETH");
+        trackedAssets[3] = getAddress("PendleLPwOETH25Dec2025");
+
+        Adapter[] memory adapters = new Adapter[](14);
+        adapters[0] = Adapter.AaveAdapter;
+        adapters[1] = Adapter.CurveRouterAdapter;
+        adapters[2] = Adapter.EthenaAdapter;
+        adapters[3] = Adapter.UniswapAdapter;
+        adapters[4] = Adapter.EtherfiETH;
+        adapters[5] = Adapter.LevvaPoolAdapter;
+        adapters[6] = Adapter.LevvaVaultAdapter;
+        adapters[7] = Adapter.Lido;
+        adapters[8] = Adapter.MakerDaoDAI;
+        adapters[9] = Adapter.MakerDaoUSDS;
+        adapters[10] = Adapter.Morpho;
+        adapters[11] = Adapter.MorphoV1_1;
+        adapters[12] = Adapter.PendleAdapter;
+        adapters[13] = Adapter.ResolvAdapter;
+
+        VaultConfig memory config = VaultConfig({
+            deploymentId: "LevvaOriginWETH",
+            asset: getAddress("WETH"),
+            feeCollector: getAddress("FeeCollector"),
+            eulerOracle: getAddress("EulerOracle"),
+            lpName: "LevvaOriginWETH",
+            lpSymbol: "LWETHo",
+            withdrawalQueueName: "Withdrawal Voucher for LWETHo",
+            withdrawalQueueSymbol: "WVLWETHo",
             trackedAssets: trackedAssets,
             performanceFee: 100_000, // 10%
             managementFee: 0, // 0%
