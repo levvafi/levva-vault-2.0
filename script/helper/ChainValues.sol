@@ -158,6 +158,7 @@ contract ChainValues {
         s_values["ethereum"]["PendleOracle"] = 0x9a9Fa8338dd5E5B2188006f1Cd2Ef26d921650C2.toBytes32();
 
         s_values["ethereum"]["PendleMarket_sUSDE_25sep2025"] = 0xA36b60A14A1A5247912584768C6e53E1a269a9F7.toBytes32();
+        s_values["ethereum"]["PendleMarket_sUSDE_27nov2025"] = 0xb6aC3d5da138918aC4E84441e924a20daA60dBdd.toBytes32();
         s_values["ethereum"]["PendleMarket_wstUSR_25sep2025"] = 0x09fA04Aac9c6d1c6131352EE950CD67ecC6d4fB9.toBytes32();
         s_values["ethereum"]["CurvePool_USR_USDC"] = 0x3eE841F47947FEFbE510366E4bbb49e145484195.toBytes32();
 
