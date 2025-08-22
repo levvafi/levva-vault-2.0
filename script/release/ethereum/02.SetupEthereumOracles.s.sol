@@ -31,8 +31,9 @@ contract SetupEthereumOracles is SetupEulerOracleBase {
         // _setupPrice_wstETH_WETH();
         // _setupPrice_WBTC_USDC();
         // _setupPrice_WETH_USDC();
-        _setupPrice_OETH_WETH();
-        _setupPrice_PendleLPwOETH_WETH();
+        //_setupPrice_OETH_WETH();
+        //_setupPrice_PendleLPwOETH_WETH();
+        _setupPrice_USDe_USDC();
     }
 
     function _setupPrice_OETH_WETH() private {
@@ -73,6 +74,15 @@ contract SetupEthereumOracles is SetupEulerOracleBase {
         address sUSDE_USD_oracle = getAddress("Chainlink_sUSDE_USD_oracle");
         address USDC_USD_oracle = getAddress("Chainlink_USDC_USD_oracle");
         _deployCrossOracle(sUSDE, USD, USDC, sUSDE_USD_oracle, USDC_USD_oracle);
+    }
+
+    function _setupPrice_USDe_USDC() private {
+        address USDE = getAddress("USDE");
+        address USDC = getAddress("USDC");
+
+        address USDE_USD_oracle = getAddress("Chainlink_USDE_USD_oracle");
+        address USDC_USD_oracle = getAddress("Chainlink_USDC_USD_oracle");
+        _deployCrossOracle(USDE, USD, USDC, USDE_USD_oracle, USDC_USD_oracle);
     }
 
     function _setupPrice_wstUSR_USDC() private {

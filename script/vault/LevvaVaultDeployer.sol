@@ -72,7 +72,7 @@ abstract contract LevvaVaultDeployer is DeployHelper, AdapterUtils {
         //skip deployment if already deployed
         address deployedVault = _getDeployedAddress(config.deploymentId);
         if (deployedVault == address(0)) {
-            vm.broadcast();
+            vm.startBroadcast();
             (deployedVault,) = factory.deployVault(
                 config.asset,
                 config.lpName,
@@ -82,28 +82,33 @@ abstract contract LevvaVaultDeployer is DeployHelper, AdapterUtils {
                 config.feeCollector,
                 config.eulerOracle
             );
+            vm.stopBroadcast();
         }
 
         vault = LevvaVault(deployedVault);
 
         if (!vault.isVaultManager(config.vaultManager)) {
-            vm.broadcast();
+            vm.startBroadcast();
             vault.addVaultManager(config.vaultManager, true);
+            vm.stopBroadcast();
         }
 
         if (vault.maxSlippage() != config.maxSlippage) {
-            vm.broadcast();
+            vm.startBroadcast();
             vault.setMaxSlippage(config.maxSlippage);
+            vm.stopBroadcast();
         }
 
         if (vault.maxExternalPositionAdapters() != config.maxExternalPositionAdapters) {
-            vm.broadcast();
+            vm.startBroadcast();
             vault.setMaxExternalPositionAdapters(config.maxExternalPositionAdapters);
+            vm.stopBroadcast();
         }
 
         if (vault.maxTrackedAssets() != config.maxTrackedAssets) {
-            vm.broadcast();
+            vm.startBroadcast();
             vault.setMaxTrackedAssets(config.maxTrackedAssets);
+            vm.stopBroadcast();
         }
 
         // if (config.managementFee != 0) {
@@ -118,28 +123,31 @@ abstract contract LevvaVaultDeployer is DeployHelper, AdapterUtils {
 
         WithdrawalQueue withdrawalQueue = WithdrawalQueue(vault.withdrawalQueue());
         if (!withdrawalQueue.isFinalizer(config.withdrawQueueFinalizer)) {
-            vm.broadcast();
+            vm.startBroadcast();
             withdrawalQueue.addFinalizer(config.withdrawQueueFinalizer, true);
+            vm.stopBroadcast();
         }
 
         //initial deposit
         if (config.initialDeposit != 0 && vault.totalAssets() == 0) {
-            vm.broadcast();
+            vm.startBroadcast();
             IERC20(config.asset).approve(address(vault), config.initialDeposit);
-            vm.broadcast();
             vault.deposit(config.initialDeposit, msg.sender);
+            vm.stopBroadcast();
         }
 
         if (vault.minimalDeposit() != config.minDepositAmount) {
-            vm.broadcast();
+            vm.startBroadcast();
             vault.setMinimalDeposit(config.minDepositAmount);
+            vm.stopBroadcast();
         }
 
         //configure tracked assets
         for (uint256 i = 0; i < config.trackedAssets.length; ++i) {
             if (vault.trackedAssetPosition(config.trackedAssets[i]) == 0) {
-                vm.broadcast();
+                vm.startBroadcast();
                 vault.addTrackedAsset(config.trackedAssets[i]);
+                vm.stopBroadcast();
             }
         }
 
