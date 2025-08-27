@@ -5,8 +5,11 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {AdapterBase} from "../AdapterBase.sol";
 import {Asserts} from "../../libraries/Asserts.sol";
+import {ICurveNgPoolFactory} from "./interfaces/ICurveNgPoolFactory.sol";
 import {ICurveNgPool} from "./interfaces/ICurveNgPool.sol";
+import {ITriCryptoPoolFactory} from "./interfaces/ITriCryptoPoolFactory.sol";
 import {ITriCryptoPool} from "./interfaces/ITriCryptoPool.sol";
+import {ITwoCryptoPoolFactory} from "./interfaces/ITwoCryptoPoolFactory.sol";
 import {ITwoCryptoPool} from "./interfaces/ITwoCryptoPool.sol";
 import {IAdapterCallback} from "../../interfaces/IAdapterCallback.sol";
 
@@ -17,6 +20,10 @@ contract CurvePoolAdapter is AdapterBase {
     bytes4 public constant getAdapterId = bytes4(keccak256("CurvePoolAdapter"));
     uint256 private constant TWO_CRYPTO_COINS_COUNT = 2;
     uint256 private constant TRI_CRYPTO_COINS_COUNT = 3;
+
+    ICurveNgPoolFactory public immutable curveNgPoolFactory;
+    ITwoCryptoPoolFactory public immutable twoCryptoFactory;
+    ITriCryptoPoolFactory public immutable triCryptoFactory;
 
     event NgLiquidityAdded(
         address indexed vault, address indexed curvePool, address[] coins, uint256[] amounts, uint256 lpAmount
@@ -49,17 +56,29 @@ contract CurvePoolAdapter is AdapterBase {
     );
 
     error WrongInput();
+    error UnknownCurvePool(address);
 
-    function addLiquidityNg(
-        address curvePool,
-        address[] calldata coins,
-        uint256[] calldata amounts,
-        uint256 minMintAmount
-    ) external returns (uint256) {
-        uint256 amountsLength = amounts.length;
-        if (amountsLength != coins.length) revert WrongInput();
+    constructor(address _curveNgPoolFactory, address _twoCryptoFactory, address _triCryptoFactory) {
+        _curveNgPoolFactory.assertNotZeroAddress();
+        _twoCryptoFactory.assertNotZeroAddress();
+        _triCryptoFactory.assertNotZeroAddress();
 
-        for (uint256 i; i < amountsLength;) {
+        curveNgPoolFactory = ICurveNgPoolFactory(_curveNgPoolFactory);
+        twoCryptoFactory = ITwoCryptoPoolFactory(_twoCryptoFactory);
+        triCryptoFactory = ITriCryptoPoolFactory(_triCryptoFactory);
+    }
+
+    function addLiquidityNg(address curvePool, uint256[] calldata amounts, uint256 minMintAmount)
+        external
+        returns (uint256)
+    {
+        address[] memory coins = curveNgPoolFactory.get_coins(curvePool);
+
+        uint256 coinsLength = coins.length;
+        if (coinsLength == 0) revert UnknownCurvePool(curvePool);
+        if (coinsLength != amounts.length) revert WrongInput();
+
+        for (uint256 i; i < coinsLength;) {
             IAdapterCallback(msg.sender).adapterCallback(address(this), coins[i], amounts[i]);
             IERC20(coins[i]).forceApprove(curvePool, amounts[i]);
             unchecked {
@@ -77,6 +96,8 @@ contract CurvePoolAdapter is AdapterBase {
         external
         returns (uint256[] memory)
     {
+        if (curveNgPoolFactory.get_n_coins(curvePool) == 0) revert UnknownCurvePool(curvePool);
+
         IAdapterCallback(msg.sender).adapterCallback(address(this), curvePool, amount);
 
         uint256[] memory amounts = ICurveNgPool(curvePool).remove_liquidity(amount, minAmounts, msg.sender);
@@ -87,10 +108,12 @@ contract CurvePoolAdapter is AdapterBase {
 
     function addLiquidityTwoCrypto(
         address curvePool,
-        address[TWO_CRYPTO_COINS_COUNT] calldata coins,
         uint256[TWO_CRYPTO_COINS_COUNT] calldata amounts,
         uint256 minMintAmount
     ) external returns (uint256) {
+        address[TWO_CRYPTO_COINS_COUNT] memory coins = twoCryptoFactory.get_coins(curvePool);
+        if (coins[0] == address(0)) revert UnknownCurvePool(curvePool);
+
         for (uint256 i; i < TWO_CRYPTO_COINS_COUNT;) {
             IAdapterCallback(msg.sender).adapterCallback(address(this), coins[i], amounts[i]);
             IERC20(coins[i]).forceApprove(curvePool, amounts[i]);
@@ -110,6 +133,9 @@ contract CurvePoolAdapter is AdapterBase {
         uint256 amount,
         uint256[TWO_CRYPTO_COINS_COUNT] calldata minAmounts
     ) external returns (uint256[TWO_CRYPTO_COINS_COUNT] memory) {
+        address[TWO_CRYPTO_COINS_COUNT] memory coins = twoCryptoFactory.get_coins(curvePool);
+        if (coins[0] == address(0)) revert UnknownCurvePool(curvePool);
+
         IAdapterCallback(msg.sender).adapterCallback(address(this), curvePool, amount);
 
         uint256[TWO_CRYPTO_COINS_COUNT] memory amounts =
@@ -121,10 +147,12 @@ contract CurvePoolAdapter is AdapterBase {
 
     function addLiquidityTriCrypto(
         address curvePool,
-        address[TRI_CRYPTO_COINS_COUNT] calldata coins,
         uint256[TRI_CRYPTO_COINS_COUNT] calldata amounts,
         uint256 minMintAmount
     ) external returns (uint256) {
+        address[TRI_CRYPTO_COINS_COUNT] memory coins = triCryptoFactory.get_coins(curvePool);
+        if (coins[0] == address(0)) revert UnknownCurvePool(curvePool);
+
         for (uint256 i; i < TRI_CRYPTO_COINS_COUNT;) {
             IAdapterCallback(msg.sender).adapterCallback(address(this), coins[i], amounts[i]);
             IERC20(coins[i]).forceApprove(curvePool, amounts[i]);
@@ -144,6 +172,9 @@ contract CurvePoolAdapter is AdapterBase {
         uint256 amount,
         uint256[TRI_CRYPTO_COINS_COUNT] calldata minAmounts
     ) external returns (uint256[TRI_CRYPTO_COINS_COUNT] memory) {
+        address[TRI_CRYPTO_COINS_COUNT] memory coins = triCryptoFactory.get_coins(curvePool);
+        if (coins[0] == address(0)) revert UnknownCurvePool(curvePool);
+
         IAdapterCallback(msg.sender).adapterCallback(address(this), curvePool, amount);
 
         uint256[TRI_CRYPTO_COINS_COUNT] memory amounts =

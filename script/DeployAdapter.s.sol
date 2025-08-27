@@ -152,8 +152,13 @@ contract DeployAdapter is DeployHelper, AdapterUtils {
     }
 
     function _deployCurvePool() internal returns (address) {
+        address curveNgPoolFactory = getAddress("CurveNgPoolFactory");
+        address twoCryptoPoolFactory = getAddress("TwoCryptoPoolFactory");
+        address triCryptoPoolFactory = getAddress("TriCryptoPoolFactory");
+
         vm.broadcast();
-        CurvePoolAdapter curvePoolAdapter = new CurvePoolAdapter();
+        CurvePoolAdapter curvePoolAdapter =
+            new CurvePoolAdapter(curveNgPoolFactory, twoCryptoPoolFactory, triCryptoPoolFactory);
         return address(curvePoolAdapter);
     }
 

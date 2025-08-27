@@ -12,8 +12,13 @@ import {EulerRouterMock} from "../mocks/EulerRouterMock.t.sol";
 import {LevvaVaultFactory} from "../../contracts/LevvaVaultFactory.sol";
 import {LevvaVault} from "../../contracts/LevvaVault.sol";
 import {WithdrawalQueue} from "../../contracts/WithdrawalQueue.sol";
+import {Asserts} from "../../contracts/libraries/Asserts.sol";
 
 contract CurvePoolAdapterTest is Test {
+    address private curveNgPoolFactory = 0x6A8cbed756804B16E05E741eDaBd5cB544AE21bf;
+    address private twoCryptoFactory = 0x98EE851a00abeE0d95D08cF4CA2BdCE32aeaAF7F;
+    address private triCryptoFactory = 0x0c0e5f2fF0ff18a3be9b835635039256dC4B4963;
+
     address private weethWethNgPool = 0xDB74dfDD3BB46bE8Ce6C33dC9D82777BCFc3dEd5;
     address private usdcWbtcWethTriCryptoPool = 0x7F86Bf177Dd4F3494b841a37e810A34dD56c829B;
     address private usrRlpTwoCryptoPool = 0xC907ba505C2E1cbc4658c395d4a2c7E6d2c32656;
@@ -36,7 +41,7 @@ contract CurvePoolAdapterTest is Test {
         vm.createSelectFork(vm.rpcUrl(mainnetRpcUrl), 22497400);
         vm.skip(block.chainid != 1, "Only mainnet fork test");
 
-        curvePoolAdapter = new CurvePoolAdapter();
+        curvePoolAdapter = new CurvePoolAdapter(curveNgPoolFactory, twoCryptoFactory, triCryptoFactory);
         vm.deal(OWNER, 1 ether);
 
         EulerRouterMock oracle = new EulerRouterMock();
@@ -78,34 +83,57 @@ contract CurvePoolAdapterTest is Test {
         deal(address(RLP), address(vault), 80_000 * 10 ** 18);
     }
 
+    function testInitialValues() public view {
+        assertEq(address(curvePoolAdapter.curveNgPoolFactory()), curveNgPoolFactory);
+        assertEq(address(curvePoolAdapter.twoCryptoFactory()), twoCryptoFactory);
+        assertEq(address(curvePoolAdapter.triCryptoFactory()), triCryptoFactory);
+    }
+
+    function testDeploymentZeroAddress() public {
+        vm.expectRevert(abi.encodeWithSelector(Asserts.ZeroAddress.selector));
+        new CurvePoolAdapter(address(0), twoCryptoFactory, triCryptoFactory);
+
+        vm.expectRevert(abi.encodeWithSelector(Asserts.ZeroAddress.selector));
+        new CurvePoolAdapter(curveNgPoolFactory, address(0), triCryptoFactory);
+
+        vm.expectRevert(abi.encodeWithSelector(Asserts.ZeroAddress.selector));
+        new CurvePoolAdapter(curveNgPoolFactory, twoCryptoFactory, address(0));
+    }
+
     function testAddLiquidityNgPool() public {
         uint256 lpBalanceBefore = IERC20(weethWethNgPool).balanceOf(address(vault));
         uint256 wethBalanceBefore = WETH.balanceOf(address(vault));
         uint256 weethBalanceBefore = WEETH.balanceOf(address(vault));
 
-        address[] memory coins = new address[](2);
-        coins[0] = address(WETH);
-        coins[1] = address(WEETH);
-
         uint256 weethAmount = 1 ether;
         uint256 wethAmount = 2 ether;
+
         uint256[] memory amounts = new uint256[](2);
         amounts[0] = wethAmount;
         amounts[1] = weethAmount;
 
         vm.prank(address(vault));
-        curvePoolAdapter.addLiquidityNg(weethWethNgPool, coins, amounts, 0);
+        curvePoolAdapter.addLiquidityNg(weethWethNgPool, amounts, 0);
 
         assertGt(IERC20(weethWethNgPool).balanceOf(address(vault)), lpBalanceBefore);
         assertEq(WETH.balanceOf(address(vault)), wethBalanceBefore - wethAmount);
         assertEq(WEETH.balanceOf(address(vault)), weethBalanceBefore - weethAmount);
     }
 
-    function testRemoveLiquidityNgPool() public {
-        address[] memory coins = new address[](2);
-        coins[0] = address(WETH);
-        coins[1] = address(WEETH);
+    function testAddLiquidityNgPoolUnknownCurvePool() public {
+        uint256 weethAmount = 1 ether;
+        uint256 wethAmount = 2 ether;
 
+        uint256[] memory amounts = new uint256[](2);
+        amounts[0] = wethAmount;
+        amounts[1] = weethAmount;
+
+        vm.prank(address(vault));
+        vm.expectRevert(abi.encodeWithSelector(CurvePoolAdapter.UnknownCurvePool.selector, address(1)));
+        curvePoolAdapter.addLiquidityNg(address(1), amounts, 0);
+    }
+
+    function testRemoveLiquidityNgPool() public {
         uint256 wethAmount = 2 ether;
         uint256 weethAmount = 2 ether;
         uint256[] memory amounts = new uint256[](2);
@@ -113,7 +141,7 @@ contract CurvePoolAdapterTest is Test {
         amounts[1] = weethAmount;
 
         vm.prank(address(vault));
-        curvePoolAdapter.addLiquidityNg(weethWethNgPool, coins, amounts, 0);
+        curvePoolAdapter.addLiquidityNg(weethWethNgPool, amounts, 0);
 
         uint256 lpBalanceBefore = IERC20(weethWethNgPool).balanceOf(address(vault));
         uint256 wethBalanceBefore = WETH.balanceOf(address(vault));
@@ -123,8 +151,8 @@ contract CurvePoolAdapterTest is Test {
         uint256 weethMinAmount = 1 ether;
 
         uint256[] memory minAmounts = new uint256[](2);
-        amounts[0] = wethMinAmount;
-        amounts[1] = weethMinAmount;
+        minAmounts[0] = wethMinAmount;
+        minAmounts[1] = weethMinAmount;
 
         uint256 lpAmountToRemove = lpBalanceBefore * 3 / 4;
 
@@ -136,14 +164,23 @@ contract CurvePoolAdapterTest is Test {
         assertGt(WEETH.balanceOf(address(vault)), weethBalanceBefore + weethMinAmount);
     }
 
+    function testRemoveLiquidityNgPoolUnknownCurvePool() public {
+        uint256 wethMinAmount = 1 ether;
+        uint256 weethMinAmount = 1 ether;
+
+        uint256[] memory minAmounts = new uint256[](2);
+        minAmounts[0] = wethMinAmount;
+        minAmounts[1] = weethMinAmount;
+
+        vm.prank(address(vault));
+        vm.expectRevert(abi.encodeWithSelector(CurvePoolAdapter.UnknownCurvePool.selector, address(1)));
+        curvePoolAdapter.removeLiquidityNg(address(1), 1, minAmounts);
+    }
+
     function testAddLiquidityTwoCrypto() public {
         uint256 lpBalanceBefore = IERC20(usrRlpTwoCryptoPool).balanceOf(address(vault));
         uint256 usrBalanceBefore = USR.balanceOf(address(vault));
         uint256 rlpBalanceBefore = RLP.balanceOf(address(vault));
-
-        address[2] memory coins;
-        coins[0] = address(USR);
-        coins[1] = address(RLP);
 
         uint256 usrAmount = 1_000 * 10 ** 18; // 1000 usr
         uint256 rlpAmount = 800 * 10 ** 18; // 800 rlp
@@ -153,18 +190,27 @@ contract CurvePoolAdapterTest is Test {
         amounts[1] = rlpAmount;
 
         vm.prank(address(vault));
-        curvePoolAdapter.addLiquidityTwoCrypto(usrRlpTwoCryptoPool, coins, amounts, 0);
+        curvePoolAdapter.addLiquidityTwoCrypto(usrRlpTwoCryptoPool, amounts, 0);
 
         assertGt(IERC20(usrRlpTwoCryptoPool).balanceOf(address(vault)), lpBalanceBefore);
         assertEq(USR.balanceOf(address(vault)), usrBalanceBefore - usrAmount);
         assertEq(RLP.balanceOf(address(vault)), rlpBalanceBefore - rlpAmount);
     }
 
-    function testRemoveLiquidityTwoCrypto() public {
-        address[2] memory coins;
-        coins[0] = address(USR);
-        coins[1] = address(RLP);
+    function testAddLiquidityTwoCryptoUnknownCurvePool() public {
+        uint256 usrAmount = 1_000 * 10 ** 18; // 1000 usr
+        uint256 rlpAmount = 800 * 10 ** 18; // 800 rlp
 
+        uint256[2] memory amounts;
+        amounts[0] = usrAmount;
+        amounts[1] = rlpAmount;
+
+        vm.prank(address(vault));
+        vm.expectRevert(abi.encodeWithSelector(CurvePoolAdapter.UnknownCurvePool.selector, address(1)));
+        curvePoolAdapter.addLiquidityTwoCrypto(address(1), amounts, 0);
+    }
+
+    function testRemoveLiquidityTwoCrypto() public {
         uint256 usrAmount = 2_000 * 10 ** 18; // 2000 usr
         uint256 rlpAmount = 1_600 * 10 ** 18; // 1600 rlp
 
@@ -173,7 +219,7 @@ contract CurvePoolAdapterTest is Test {
         amounts[1] = rlpAmount;
 
         vm.prank(address(vault));
-        curvePoolAdapter.addLiquidityTwoCrypto(usrRlpTwoCryptoPool, coins, amounts, 0);
+        curvePoolAdapter.addLiquidityTwoCrypto(usrRlpTwoCryptoPool, amounts, 0);
 
         uint256 lpBalanceBefore = IERC20(usrRlpTwoCryptoPool).balanceOf(address(vault));
         uint256 usrBalanceBefore = USR.balanceOf(address(vault));
@@ -183,8 +229,8 @@ contract CurvePoolAdapterTest is Test {
         uint256 rlpMinAmount = 800 * 10 ** 18; // 800 rlp
 
         uint256[2] memory minAmounts;
-        amounts[0] = usrMinAmount;
-        amounts[1] = rlpMinAmount;
+        minAmounts[0] = usrMinAmount;
+        minAmounts[1] = rlpMinAmount;
 
         uint256 lpAmountToRemove = lpBalanceBefore * 3 / 4;
 
@@ -196,26 +242,36 @@ contract CurvePoolAdapterTest is Test {
         assertGt(RLP.balanceOf(address(vault)), rlpBalanceBefore + rlpMinAmount);
     }
 
+    function testRemoveLiquidityTwoCryptoUnknownCurvePool() public {
+        uint256 wethMinAmount = 1 ether;
+        uint256 weethMinAmount = 1 ether;
+
+        uint256[2] memory minAmounts;
+        minAmounts[0] = wethMinAmount;
+        minAmounts[1] = weethMinAmount;
+
+        vm.prank(address(vault));
+        vm.expectRevert(abi.encodeWithSelector(CurvePoolAdapter.UnknownCurvePool.selector, address(1)));
+        curvePoolAdapter.removeLiquidityTwoCrypto(address(1), 1, minAmounts);
+    }
+
     function testAddLiquidityTriCrypto() public {
         uint256 lpBalanceBefore = IERC20(usdcWbtcWethTriCryptoPool).balanceOf(address(vault));
         uint256 usdcBalanceBefore = USDC.balanceOf(address(vault));
         uint256 wbtcBalanceBefore = WBTC.balanceOf(address(vault));
         uint256 wethBalanceBefore = WETH.balanceOf(address(vault));
-        address[3] memory coins;
-        coins[0] = address(USDC);
-        coins[1] = address(WBTC);
-        coins[2] = address(WETH);
 
         uint256 usdcAmount = 4_000 * 10 ** 6; // 4000 usdc
         uint256 wbtcAmount = 4 * 10 ** 6; // 0.04 wbtc
         uint256 wethAmount = 1 ether;
+
         uint256[3] memory amounts;
         amounts[0] = usdcAmount;
         amounts[1] = wbtcAmount;
         amounts[2] = wethAmount;
 
         vm.prank(address(vault));
-        curvePoolAdapter.addLiquidityTriCrypto(usdcWbtcWethTriCryptoPool, coins, amounts, 0);
+        curvePoolAdapter.addLiquidityTriCrypto(usdcWbtcWethTriCryptoPool, amounts, 0);
 
         assertGt(IERC20(usdcWbtcWethTriCryptoPool).balanceOf(address(vault)), lpBalanceBefore);
         assertEq(USDC.balanceOf(address(vault)), usdcBalanceBefore - usdcAmount);
@@ -223,12 +279,22 @@ contract CurvePoolAdapterTest is Test {
         assertEq(WETH.balanceOf(address(vault)), wethBalanceBefore - wethAmount);
     }
 
-    function testRemoveLiquidityTriCrypto() public {
-        address[3] memory coins;
-        coins[0] = address(USDC);
-        coins[1] = address(WBTC);
-        coins[2] = address(WETH);
+    function testAddLiquidityTriCryptoUnknownCurvePool() public {
+        uint256 usdcAmount = 4_000 * 10 ** 6; // 4000 usdc
+        uint256 wbtcAmount = 4 * 10 ** 6; // 0.04 wbtc
+        uint256 wethAmount = 1 ether;
 
+        uint256[3] memory amounts;
+        amounts[0] = usdcAmount;
+        amounts[1] = wbtcAmount;
+        amounts[2] = wethAmount;
+
+        vm.prank(address(vault));
+        vm.expectRevert(abi.encodeWithSelector(CurvePoolAdapter.UnknownCurvePool.selector, address(1)));
+        curvePoolAdapter.addLiquidityTriCrypto(address(1), amounts, 0);
+    }
+
+    function testRemoveLiquidityTriCrypto() public {
         uint256 usdcAmount = 8_000 * 10 ** 6; // 8000 usdc
         uint256 wbtcAmount = 8 * 10 ** 6; // 0.02 wbtc
         uint256 wethAmount = 2 ether;
@@ -238,7 +304,7 @@ contract CurvePoolAdapterTest is Test {
         amounts[2] = wethAmount;
 
         vm.prank(address(vault));
-        curvePoolAdapter.addLiquidityTriCrypto(usdcWbtcWethTriCryptoPool, coins, amounts, 0);
+        curvePoolAdapter.addLiquidityTriCrypto(usdcWbtcWethTriCryptoPool, amounts, 0);
 
         uint256 lpBalanceBefore = IERC20(usdcWbtcWethTriCryptoPool).balanceOf(address(vault));
         uint256 usdcBalanceBefore = USDC.balanceOf(address(vault));
@@ -250,9 +316,9 @@ contract CurvePoolAdapterTest is Test {
         uint256 wethMinAmount = 1 ether;
 
         uint256[3] memory minAmounts;
-        amounts[0] = usdcMinAmount;
-        amounts[1] = wbtcMinAmount;
-        amounts[2] = wethMinAmount;
+        minAmounts[0] = usdcMinAmount;
+        minAmounts[1] = wbtcMinAmount;
+        minAmounts[2] = wethMinAmount;
 
         uint256 lpAmountToRemove = lpBalanceBefore * 3 / 4;
 
@@ -263,5 +329,20 @@ contract CurvePoolAdapterTest is Test {
         assertGt(USDC.balanceOf(address(vault)), usdcBalanceBefore + usdcMinAmount);
         assertGt(WBTC.balanceOf(address(vault)), wbtcBalanceBefore + wbtcMinAmount);
         assertGt(WETH.balanceOf(address(vault)), wethBalanceBefore + wethMinAmount);
+    }
+
+    function testRemoveLiquidityTriCryptoUnknownCurvePool() public {
+        uint256 usdcMinAmount = 4_000 * 10 ** 6; // 4000 usdc
+        uint256 wbtcMinAmount = 4 * 10 ** 6; // 0.04 wbtc
+        uint256 wethMinAmount = 1 ether;
+
+        uint256[3] memory minAmounts;
+        minAmounts[0] = usdcMinAmount;
+        minAmounts[1] = wbtcMinAmount;
+        minAmounts[2] = wethMinAmount;
+
+        vm.prank(address(vault));
+        vm.expectRevert(abi.encodeWithSelector(CurvePoolAdapter.UnknownCurvePool.selector, address(1)));
+        curvePoolAdapter.removeLiquidityTriCrypto(address(1), 1, minAmounts);
     }
 }
