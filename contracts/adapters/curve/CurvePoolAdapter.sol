@@ -57,6 +57,7 @@ contract CurvePoolAdapter is AdapterBase {
 
     error WrongInput();
     error UnknownCurvePool(address);
+    error LessThanMinAmount();
 
     constructor(address _curveNgPoolFactory, address _twoCryptoFactory, address _triCryptoFactory) {
         _curveNgPoolFactory.assertNotZeroAddress();
@@ -238,6 +239,8 @@ contract CurvePoolAdapter is AdapterBase {
         }
 
         uint256 lpAmount = ICurveNgPool(curvePool).add_liquidity(amounts, minMintAmount, msg.sender);
+        if (lpAmount < minMintAmount) revert LessThanMinAmount();
+
         emit NgLiquidityAdded(msg.sender, curvePool, coins, amounts, lpAmount);
 
         return lpAmount;
@@ -261,6 +264,8 @@ contract CurvePoolAdapter is AdapterBase {
         }
 
         uint256 lpAmount = ITwoCryptoPool(curvePool).add_liquidity(amounts, minMintAmount, msg.sender);
+        if (lpAmount < minMintAmount) revert LessThanMinAmount();
+
         emit TwoCryptoLiquidityAdded(msg.sender, curvePool, coins, amounts, lpAmount);
 
         return lpAmount;
@@ -283,6 +288,8 @@ contract CurvePoolAdapter is AdapterBase {
         }
 
         uint256 lpAmount = ITriCryptoPool(curvePool).add_liquidity(amounts, minMintAmount, false, msg.sender);
+        if (lpAmount < minMintAmount) revert LessThanMinAmount();
+
         emit TriCryptoLiquidityAdded(msg.sender, curvePool, coins, amounts, lpAmount);
 
         return lpAmount;

@@ -118,7 +118,7 @@ contract DeployAdapter is DeployHelper, AdapterUtils {
         } else if (adapter == Adapter.UniswapAdapter) {
             deployedAdapter = _deployUniswap();
         } else if (adapter == Adapter.CurvePoolAdapter) {
-            deployedAdapter = _deployUniswap();
+            deployedAdapter = _deployCurvePool();
         }
         if (deployedAdapter == address(0)) {
             revert("Adapter not supported");
