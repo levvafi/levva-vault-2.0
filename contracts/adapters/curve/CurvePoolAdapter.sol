@@ -72,12 +72,160 @@ contract CurvePoolAdapter is AdapterBase {
         external
         returns (uint256)
     {
-        address[] memory coins = curveNgPoolFactory.get_coins(curvePool);
+        address[] memory coins = _getCurveNgPoolCoins(curvePool);
+        return _addLiquidityNgPool(curvePool, coins, amounts, minMintAmount);
+    }
+
+    function addLiquidityNgAllExcept(address curvePool, uint256[] calldata exceptAmounts, uint256 minMintAmount)
+        external
+        returns (uint256)
+    {
+        address[] memory coins = _getCurveNgPoolCoins(curvePool);
 
         uint256 coinsLength = coins.length;
-        if (coinsLength == 0) revert UnknownCurvePool(curvePool);
-        if (coinsLength != amounts.length) revert WrongInput();
+        if (coinsLength != exceptAmounts.length) revert WrongInput();
 
+        uint256[] memory amounts = new uint256[](coinsLength);
+        for (uint256 i; i < coinsLength;) {
+            amounts[i] = IERC20(coins[i]).balanceOf(msg.sender) - exceptAmounts[i];
+            unchecked {
+                ++i;
+            }
+        }
+
+        return _addLiquidityNgPool(curvePool, coins, amounts, minMintAmount);
+    }
+
+    function removeLiquidityNg(address curvePool, uint256 amount, uint256[] calldata minAmounts)
+        external
+        returns (uint256[] memory)
+    {
+        _verifyCurveNgPool(curvePool);
+        return _removeLiquidityNg(curvePool, amount, minAmounts);
+    }
+
+    function removeLiquidityNgAllExcept(address curvePool, uint256 except, uint256[] calldata minAmounts)
+        external
+        returns (uint256[] memory)
+    {
+        _verifyCurveNgPool(curvePool);
+        uint256 amount = IERC20(curvePool).balanceOf(msg.sender) - except;
+        return _removeLiquidityNg(curvePool, amount, minAmounts);
+    }
+
+    function addLiquidityTwoCrypto(
+        address curvePool,
+        uint256[TWO_CRYPTO_COINS_COUNT] calldata amounts,
+        uint256 minMintAmount
+    ) external returns (uint256) {
+        address[TWO_CRYPTO_COINS_COUNT] memory coins = _getTwoCryptoPoolCoins(curvePool);
+        return _addLiquidityTwoCrypto(curvePool, coins, amounts, minMintAmount);
+    }
+
+    function addLiquidityTwoCryptoAllExcept(
+        address curvePool,
+        uint256[TWO_CRYPTO_COINS_COUNT] calldata exceptAmounts,
+        uint256 minMintAmount
+    ) external returns (uint256) {
+        address[TWO_CRYPTO_COINS_COUNT] memory coins = _getTwoCryptoPoolCoins(curvePool);
+
+        uint256[TWO_CRYPTO_COINS_COUNT] memory amounts;
+        for (uint256 i; i < TWO_CRYPTO_COINS_COUNT;) {
+            amounts[i] = IERC20(coins[i]).balanceOf(msg.sender) - exceptAmounts[i];
+            unchecked {
+                ++i;
+            }
+        }
+
+        return _addLiquidityTwoCrypto(curvePool, coins, amounts, minMintAmount);
+    }
+
+    function removeLiquidityTwoCrypto(
+        address curvePool,
+        uint256 amount,
+        uint256[TWO_CRYPTO_COINS_COUNT] calldata minAmounts
+    ) external returns (uint256[TWO_CRYPTO_COINS_COUNT] memory) {
+        _getTwoCryptoPoolCoins(curvePool);
+        return _removeLiquidityTwoCrypto(curvePool, amount, minAmounts);
+    }
+
+    function removeLiquidityTwoCryptoAllExcept(
+        address curvePool,
+        uint256 except,
+        uint256[TWO_CRYPTO_COINS_COUNT] calldata minAmounts
+    ) external returns (uint256[TWO_CRYPTO_COINS_COUNT] memory) {
+        _getTwoCryptoPoolCoins(curvePool);
+        uint256 amount = IERC20(curvePool).balanceOf(msg.sender) - except;
+        return _removeLiquidityTwoCrypto(curvePool, amount, minAmounts);
+    }
+
+    function addLiquidityTriCrypto(
+        address curvePool,
+        uint256[TRI_CRYPTO_COINS_COUNT] calldata amounts,
+        uint256 minMintAmount
+    ) external returns (uint256) {
+        address[TRI_CRYPTO_COINS_COUNT] memory coins = _getTriCryptoPoolCoins(curvePool);
+        return _addLiquidityTriCrypto(curvePool, coins, amounts, minMintAmount);
+    }
+
+    function addLiquidityTriCryptoAllExcept(
+        address curvePool,
+        uint256[TRI_CRYPTO_COINS_COUNT] calldata exceptAmounts,
+        uint256 minMintAmount
+    ) external returns (uint256) {
+        address[TRI_CRYPTO_COINS_COUNT] memory coins = _getTriCryptoPoolCoins(curvePool);
+
+        uint256[TRI_CRYPTO_COINS_COUNT] memory amounts;
+        for (uint256 i; i < TRI_CRYPTO_COINS_COUNT;) {
+            amounts[i] = IERC20(coins[i]).balanceOf(msg.sender) - exceptAmounts[i];
+            unchecked {
+                ++i;
+            }
+        }
+
+        return _addLiquidityTriCrypto(curvePool, coins, amounts, minMintAmount);
+    }
+
+    function removeLiquidityTriCrypto(
+        address curvePool,
+        uint256 amount,
+        uint256[TRI_CRYPTO_COINS_COUNT] calldata minAmounts
+    ) external returns (uint256[TRI_CRYPTO_COINS_COUNT] memory) {
+        _getTriCryptoPoolCoins(curvePool);
+
+        IAdapterCallback(msg.sender).adapterCallback(address(this), curvePool, amount);
+
+        uint256[TRI_CRYPTO_COINS_COUNT] memory amounts =
+            ITriCryptoPool(curvePool).remove_liquidity(amount, minAmounts, false, msg.sender);
+        emit TriCryptoLiquidityRemoved(msg.sender, curvePool, amount, amounts);
+
+        return amounts;
+    }
+
+    function removeLiquidityTriCryptoAllExcept(
+        address curvePool,
+        uint256 except,
+        uint256[TRI_CRYPTO_COINS_COUNT] calldata minAmounts
+    ) external returns (uint256[TRI_CRYPTO_COINS_COUNT] memory) {
+        _getTriCryptoPoolCoins(curvePool);
+
+        uint256 amount = IERC20(curvePool).balanceOf(msg.sender) - except;
+        IAdapterCallback(msg.sender).adapterCallback(address(this), curvePool, amount);
+
+        uint256[TRI_CRYPTO_COINS_COUNT] memory amounts =
+            ITriCryptoPool(curvePool).remove_liquidity(amount, minAmounts, false, msg.sender);
+        emit TriCryptoLiquidityRemoved(msg.sender, curvePool, amount, amounts);
+
+        return amounts;
+    }
+
+    function _addLiquidityNgPool(
+        address curvePool,
+        address[] memory coins,
+        uint256[] memory amounts,
+        uint256 minMintAmount
+    ) private returns (uint256) {
+        uint256 coinsLength = coins.length;
         for (uint256 i; i < coinsLength;) {
             if (amounts[i] != 0) {
                 IAdapterCallback(msg.sender).adapterCallback(address(this), coins[i], amounts[i]);
@@ -95,28 +243,12 @@ contract CurvePoolAdapter is AdapterBase {
         return lpAmount;
     }
 
-    function removeLiquidityNg(address curvePool, uint256 amount, uint256[] calldata minAmounts)
-        external
-        returns (uint256[] memory)
-    {
-        if (curveNgPoolFactory.get_n_coins(curvePool) == 0) revert UnknownCurvePool(curvePool);
-
-        IAdapterCallback(msg.sender).adapterCallback(address(this), curvePool, amount);
-
-        uint256[] memory amounts = ICurveNgPool(curvePool).remove_liquidity(amount, minAmounts, msg.sender);
-        emit NgLiquidityRemoved(msg.sender, curvePool, amount, amounts);
-
-        return amounts;
-    }
-
-    function addLiquidityTwoCrypto(
+    function _addLiquidityTwoCrypto(
         address curvePool,
-        uint256[TWO_CRYPTO_COINS_COUNT] calldata amounts,
+        address[TWO_CRYPTO_COINS_COUNT] memory coins,
+        uint256[TWO_CRYPTO_COINS_COUNT] memory amounts,
         uint256 minMintAmount
-    ) external returns (uint256) {
-        address[TWO_CRYPTO_COINS_COUNT] memory coins = twoCryptoFactory.get_coins(curvePool);
-        if (coins[0] == address(0)) revert UnknownCurvePool(curvePool);
-
+    ) private returns (uint256) {
         for (uint256 i; i < TWO_CRYPTO_COINS_COUNT;) {
             if (amounts[i] != 0) {
                 IAdapterCallback(msg.sender).adapterCallback(address(this), coins[i], amounts[i]);
@@ -134,31 +266,12 @@ contract CurvePoolAdapter is AdapterBase {
         return lpAmount;
     }
 
-    function removeLiquidityTwoCrypto(
+    function _addLiquidityTriCrypto(
         address curvePool,
-        uint256 amount,
-        uint256[TWO_CRYPTO_COINS_COUNT] calldata minAmounts
-    ) external returns (uint256[TWO_CRYPTO_COINS_COUNT] memory) {
-        address[TWO_CRYPTO_COINS_COUNT] memory coins = twoCryptoFactory.get_coins(curvePool);
-        if (coins[0] == address(0)) revert UnknownCurvePool(curvePool);
-
-        IAdapterCallback(msg.sender).adapterCallback(address(this), curvePool, amount);
-
-        uint256[TWO_CRYPTO_COINS_COUNT] memory amounts =
-            ITwoCryptoPool(curvePool).remove_liquidity(amount, minAmounts, msg.sender);
-        emit TwoCryptoLiquidityRemoved(msg.sender, curvePool, amount, amounts);
-
-        return amounts;
-    }
-
-    function addLiquidityTriCrypto(
-        address curvePool,
-        uint256[TRI_CRYPTO_COINS_COUNT] calldata amounts,
+        address[TRI_CRYPTO_COINS_COUNT] memory coins,
+        uint256[TRI_CRYPTO_COINS_COUNT] memory amounts,
         uint256 minMintAmount
-    ) external returns (uint256) {
-        address[TRI_CRYPTO_COINS_COUNT] memory coins = triCryptoFactory.get_coins(curvePool);
-        if (coins[0] == address(0)) revert UnknownCurvePool(curvePool);
-
+    ) private returns (uint256) {
         for (uint256 i; i < TRI_CRYPTO_COINS_COUNT;) {
             if (amounts[i] != 0) {
                 IAdapterCallback(msg.sender).adapterCallback(address(this), coins[i], amounts[i]);
@@ -175,20 +288,56 @@ contract CurvePoolAdapter is AdapterBase {
         return lpAmount;
     }
 
-    function removeLiquidityTriCrypto(
-        address curvePool,
-        uint256 amount,
-        uint256[TRI_CRYPTO_COINS_COUNT] calldata minAmounts
-    ) external returns (uint256[TRI_CRYPTO_COINS_COUNT] memory) {
-        address[TRI_CRYPTO_COINS_COUNT] memory coins = triCryptoFactory.get_coins(curvePool);
-        if (coins[0] == address(0)) revert UnknownCurvePool(curvePool);
-
+    function _removeLiquidityNg(address curvePool, uint256 amount, uint256[] calldata minAmounts)
+        private
+        returns (uint256[] memory)
+    {
         IAdapterCallback(msg.sender).adapterCallback(address(this), curvePool, amount);
 
-        uint256[TRI_CRYPTO_COINS_COUNT] memory amounts =
-            ITriCryptoPool(curvePool).remove_liquidity(amount, minAmounts, false, msg.sender);
-        emit TriCryptoLiquidityRemoved(msg.sender, curvePool, amount, amounts);
+        uint256[] memory amounts = ICurveNgPool(curvePool).remove_liquidity(amount, minAmounts, msg.sender);
+        emit NgLiquidityRemoved(msg.sender, curvePool, amount, amounts);
 
         return amounts;
+    }
+
+    function _removeLiquidityTwoCrypto(
+        address curvePool,
+        uint256 amount,
+        uint256[TWO_CRYPTO_COINS_COUNT] calldata minAmounts
+    ) private returns (uint256[TWO_CRYPTO_COINS_COUNT] memory) {
+        IAdapterCallback(msg.sender).adapterCallback(address(this), curvePool, amount);
+
+        uint256[TWO_CRYPTO_COINS_COUNT] memory amounts =
+            ITwoCryptoPool(curvePool).remove_liquidity(amount, minAmounts, msg.sender);
+        emit TwoCryptoLiquidityRemoved(msg.sender, curvePool, amount, amounts);
+
+        return amounts;
+    }
+
+    function _getCurveNgPoolCoins(address curvePool) private view returns (address[] memory coins) {
+        coins = curveNgPoolFactory.get_coins(curvePool);
+        if (coins.length == 0) revert UnknownCurvePool(curvePool);
+    }
+
+    function _getTwoCryptoPoolCoins(address curvePool)
+        private
+        view
+        returns (address[TWO_CRYPTO_COINS_COUNT] memory coins)
+    {
+        coins = twoCryptoFactory.get_coins(curvePool);
+        if (coins[0] == address(0)) revert UnknownCurvePool(curvePool);
+    }
+
+    function _getTriCryptoPoolCoins(address curvePool)
+        private
+        view
+        returns (address[TRI_CRYPTO_COINS_COUNT] memory coins)
+    {
+        coins = triCryptoFactory.get_coins(curvePool);
+        if (coins[0] == address(0)) revert UnknownCurvePool(curvePool);
+    }
+
+    function _verifyCurveNgPool(address curvePool) private view {
+        if (curveNgPoolFactory.get_n_coins(curvePool) == 0) revert UnknownCurvePool(curvePool);
     }
 }

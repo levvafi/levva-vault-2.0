@@ -146,6 +146,30 @@ contract CurvePoolAdapterTest is Test {
         curvePoolAdapter.addLiquidityNg(address(1), amounts, 0);
     }
 
+    function testAddLiquidityNgPoolAllExcept() public {
+        uint256 lpBalanceBefore = IERC20(weethWethNgPool).balanceOf(address(vault));
+        uint256 wethBalanceBefore = WETH.balanceOf(address(vault));
+        uint256 weethBalanceBefore = WEETH.balanceOf(address(vault));
+
+        uint256 weethAmount = 1 ether;
+        uint256 wethAmount = 2 ether;
+
+        uint256[] memory exceptAmounts = new uint256[](2);
+        exceptAmounts[0] = WETH.balanceOf(address(vault)) - wethAmount;
+        exceptAmounts[1] = WEETH.balanceOf(address(vault)) - weethAmount;
+
+        vm.prank(address(vault));
+        curvePoolAdapter.addLiquidityNgAllExcept(weethWethNgPool, exceptAmounts, 0);
+
+        assertGt(IERC20(weethWethNgPool).balanceOf(address(vault)), lpBalanceBefore);
+        assertEq(WETH.balanceOf(address(vault)), wethBalanceBefore - wethAmount);
+        assertEq(WEETH.balanceOf(address(vault)), weethBalanceBefore - weethAmount);
+
+        assertEq(IERC20(weethWethNgPool).balanceOf(address(curvePoolAdapter)), 0);
+        assertEq(WETH.balanceOf(address(curvePoolAdapter)), 0);
+        assertEq(WEETH.balanceOf(address(curvePoolAdapter)), 0);
+    }
+
     function testRemoveLiquidityNgPool() public {
         uint256 wethAmount = 2 ether;
         uint256 weethAmount = 2 ether;
@@ -194,6 +218,41 @@ contract CurvePoolAdapterTest is Test {
         curvePoolAdapter.removeLiquidityNg(address(1), 1, minAmounts);
     }
 
+    function testRemoveLiquidityNgPoolAllExcept() public {
+        uint256 wethAmount = 2 ether;
+        uint256 weethAmount = 2 ether;
+        uint256[] memory amounts = new uint256[](2);
+        amounts[0] = wethAmount;
+        amounts[1] = weethAmount;
+
+        vm.prank(address(vault));
+        curvePoolAdapter.addLiquidityNg(weethWethNgPool, amounts, 0);
+
+        uint256 lpBalanceBefore = IERC20(weethWethNgPool).balanceOf(address(vault));
+        uint256 wethBalanceBefore = WETH.balanceOf(address(vault));
+        uint256 weethBalanceBefore = WEETH.balanceOf(address(vault));
+
+        uint256 wethMinAmount = 1 ether;
+        uint256 weethMinAmount = 1 ether;
+
+        uint256[] memory minAmounts = new uint256[](2);
+        minAmounts[0] = wethMinAmount;
+        minAmounts[1] = weethMinAmount;
+
+        uint256 lpExceptAmountToRemove = lpBalanceBefore / 4;
+
+        vm.prank(address(vault));
+        curvePoolAdapter.removeLiquidityNgAllExcept(weethWethNgPool, lpExceptAmountToRemove, minAmounts);
+
+        assertEq(IERC20(weethWethNgPool).balanceOf(address(vault)), lpExceptAmountToRemove);
+        assertGt(WETH.balanceOf(address(vault)), wethBalanceBefore + wethMinAmount);
+        assertGt(WEETH.balanceOf(address(vault)), weethBalanceBefore + weethMinAmount);
+
+        assertEq(IERC20(weethWethNgPool).balanceOf(address(curvePoolAdapter)), 0);
+        assertEq(WETH.balanceOf(address(curvePoolAdapter)), 0);
+        assertEq(WEETH.balanceOf(address(curvePoolAdapter)), 0);
+    }
+
     function testAddLiquidityTwoCrypto() public {
         uint256 lpBalanceBefore = IERC20(usrRlpTwoCryptoPool).balanceOf(address(vault));
         uint256 usrBalanceBefore = USR.balanceOf(address(vault));
@@ -238,6 +297,30 @@ contract CurvePoolAdapterTest is Test {
         vm.prank(address(vault));
         vm.expectRevert(abi.encodeWithSelector(CurvePoolAdapter.UnknownCurvePool.selector, address(1)));
         curvePoolAdapter.addLiquidityTwoCrypto(address(1), amounts, 0);
+    }
+
+    function testAddLiquidityTwoCryptoAllExcept() public {
+        uint256 lpBalanceBefore = IERC20(usrRlpTwoCryptoPool).balanceOf(address(vault));
+        uint256 usrBalanceBefore = USR.balanceOf(address(vault));
+        uint256 rlpBalanceBefore = RLP.balanceOf(address(vault));
+
+        uint256 usrAmount = 1_000 * 10 ** 18; // 1000 usr
+        uint256 rlpAmount = 800 * 10 ** 18; // 800 rlp
+
+        uint256[2] memory exceptAmounts;
+        exceptAmounts[0] = USR.balanceOf(address(vault)) - usrAmount;
+        exceptAmounts[1] = RLP.balanceOf(address(vault)) - rlpAmount;
+
+        vm.prank(address(vault));
+        curvePoolAdapter.addLiquidityTwoCryptoAllExcept(usrRlpTwoCryptoPool, exceptAmounts, 0);
+
+        assertGt(IERC20(usrRlpTwoCryptoPool).balanceOf(address(vault)), lpBalanceBefore);
+        assertEq(USR.balanceOf(address(vault)), usrBalanceBefore - usrAmount);
+        assertEq(RLP.balanceOf(address(vault)), rlpBalanceBefore - rlpAmount);
+
+        assertEq(IERC20(usrRlpTwoCryptoPool).balanceOf(address(curvePoolAdapter)), 0);
+        assertEq(USR.balanceOf(address(curvePoolAdapter)), 0);
+        assertEq(RLP.balanceOf(address(curvePoolAdapter)), 0);
     }
 
     function testRemoveLiquidityTwoCrypto() public {
@@ -287,6 +370,42 @@ contract CurvePoolAdapterTest is Test {
         vm.prank(address(vault));
         vm.expectRevert(abi.encodeWithSelector(CurvePoolAdapter.UnknownCurvePool.selector, address(1)));
         curvePoolAdapter.removeLiquidityTwoCrypto(address(1), 1, minAmounts);
+    }
+
+    function testRemoveLiquidityTwoCryptoAllExcept() public {
+        uint256 usrAmount = 2_000 * 10 ** 18; // 2000 usr
+        uint256 rlpAmount = 1_600 * 10 ** 18; // 1600 rlp
+
+        uint256[2] memory amounts;
+        amounts[0] = usrAmount;
+        amounts[1] = rlpAmount;
+
+        vm.prank(address(vault));
+        curvePoolAdapter.addLiquidityTwoCrypto(usrRlpTwoCryptoPool, amounts, 0);
+
+        uint256 lpBalanceBefore = IERC20(usrRlpTwoCryptoPool).balanceOf(address(vault));
+        uint256 usrBalanceBefore = USR.balanceOf(address(vault));
+        uint256 rlpBalanceBefore = RLP.balanceOf(address(vault));
+
+        uint256 usrMinAmount = 1_000 * 10 ** 18; // 1000 usr
+        uint256 rlpMinAmount = 800 * 10 ** 18; // 800 rlp
+
+        uint256[2] memory minAmounts;
+        minAmounts[0] = usrMinAmount;
+        minAmounts[1] = rlpMinAmount;
+
+        uint256 lpExceptAmountToRemove = lpBalanceBefore / 4;
+
+        vm.prank(address(vault));
+        curvePoolAdapter.removeLiquidityTwoCryptoAllExcept(usrRlpTwoCryptoPool, lpExceptAmountToRemove, minAmounts);
+
+        assertEq(IERC20(usrRlpTwoCryptoPool).balanceOf(address(vault)), lpExceptAmountToRemove);
+        assertGt(USR.balanceOf(address(vault)), usrBalanceBefore + usrMinAmount);
+        assertGt(RLP.balanceOf(address(vault)), rlpBalanceBefore + rlpMinAmount);
+
+        assertEq(IERC20(usrRlpTwoCryptoPool).balanceOf(address(curvePoolAdapter)), 0);
+        assertEq(USR.balanceOf(address(curvePoolAdapter)), 0);
+        assertEq(RLP.balanceOf(address(curvePoolAdapter)), 0);
     }
 
     function testAddLiquidityTriCrypto() public {
@@ -341,6 +460,35 @@ contract CurvePoolAdapterTest is Test {
         vm.prank(address(vault));
         vm.expectRevert(abi.encodeWithSelector(CurvePoolAdapter.UnknownCurvePool.selector, address(1)));
         curvePoolAdapter.addLiquidityTriCrypto(address(1), amounts, 0);
+    }
+
+    function testAddLiquidityTriCryptoAllExcept() public {
+        uint256 lpBalanceBefore = IERC20(usdcWbtcWethTriCryptoPool).balanceOf(address(vault));
+        uint256 usdcBalanceBefore = USDC.balanceOf(address(vault));
+        uint256 wbtcBalanceBefore = WBTC.balanceOf(address(vault));
+        uint256 wethBalanceBefore = WETH.balanceOf(address(vault));
+
+        uint256 usdcAmount = 4_000 * 10 ** 6; // 4000 usdc
+        uint256 wbtcAmount = 4 * 10 ** 6; // 0.04 wbtc
+        uint256 wethAmount = 1 ether;
+
+        uint256[3] memory exceptAmounts;
+        exceptAmounts[0] = USDC.balanceOf(address(vault)) - usdcAmount;
+        exceptAmounts[1] = WBTC.balanceOf(address(vault)) - wbtcAmount;
+        exceptAmounts[2] = WETH.balanceOf(address(vault)) - wethAmount;
+
+        vm.prank(address(vault));
+        curvePoolAdapter.addLiquidityTriCryptoAllExcept(usdcWbtcWethTriCryptoPool, exceptAmounts, 0);
+
+        assertGt(IERC20(usdcWbtcWethTriCryptoPool).balanceOf(address(vault)), lpBalanceBefore);
+        assertEq(USDC.balanceOf(address(vault)), usdcBalanceBefore - usdcAmount);
+        assertEq(WBTC.balanceOf(address(vault)), wbtcBalanceBefore - wbtcAmount);
+        assertEq(WETH.balanceOf(address(vault)), wethBalanceBefore - wethAmount);
+
+        assertEq(IERC20(usdcWbtcWethTriCryptoPool).balanceOf(address(curvePoolAdapter)), 0);
+        assertEq(USDC.balanceOf(address(curvePoolAdapter)), 0);
+        assertEq(WBTC.balanceOf(address(curvePoolAdapter)), 0);
+        assertEq(WETH.balanceOf(address(curvePoolAdapter)), 0);
     }
 
     function testRemoveLiquidityTriCrypto() public {
@@ -398,5 +546,49 @@ contract CurvePoolAdapterTest is Test {
         vm.prank(address(vault));
         vm.expectRevert(abi.encodeWithSelector(CurvePoolAdapter.UnknownCurvePool.selector, address(1)));
         curvePoolAdapter.removeLiquidityTriCrypto(address(1), 1, minAmounts);
+    }
+
+    function testRemoveLiquidityTriCryptoAllExcept() public {
+        uint256 usdcAmount = 8_000 * 10 ** 6; // 8000 usdc
+        uint256 wbtcAmount = 8 * 10 ** 6; // 0.02 wbtc
+        uint256 wethAmount = 2 ether;
+        uint256[3] memory amounts;
+        amounts[0] = usdcAmount;
+        amounts[1] = wbtcAmount;
+        amounts[2] = wethAmount;
+
+        vm.prank(address(vault));
+        curvePoolAdapter.addLiquidityTriCrypto(usdcWbtcWethTriCryptoPool, amounts, 0);
+
+        uint256 lpBalanceBefore = IERC20(usdcWbtcWethTriCryptoPool).balanceOf(address(vault));
+        uint256 usdcBalanceBefore = USDC.balanceOf(address(vault));
+        uint256 wbtcBalanceBefore = WBTC.balanceOf(address(vault));
+        uint256 wethBalanceBefore = WETH.balanceOf(address(vault));
+
+        uint256 usdcMinAmount = 4_000 * 10 ** 6; // 4000 usdc
+        uint256 wbtcMinAmount = 4 * 10 ** 6; // 0.04 wbtc
+        uint256 wethMinAmount = 1 ether;
+
+        uint256[3] memory minAmounts;
+        minAmounts[0] = usdcMinAmount;
+        minAmounts[1] = wbtcMinAmount;
+        minAmounts[2] = wethMinAmount;
+
+        uint256 lpExceptAmountToRemove = lpBalanceBefore / 4;
+
+        vm.prank(address(vault));
+        curvePoolAdapter.removeLiquidityTriCryptoAllExcept(
+            usdcWbtcWethTriCryptoPool, lpExceptAmountToRemove, minAmounts
+        );
+
+        assertEq(IERC20(usdcWbtcWethTriCryptoPool).balanceOf(address(vault)), lpExceptAmountToRemove);
+        assertGt(USDC.balanceOf(address(vault)), usdcBalanceBefore + usdcMinAmount);
+        assertGt(WBTC.balanceOf(address(vault)), wbtcBalanceBefore + wbtcMinAmount);
+        assertGt(WETH.balanceOf(address(vault)), wethBalanceBefore + wethMinAmount);
+
+        assertEq(IERC20(usdcWbtcWethTriCryptoPool).balanceOf(address(curvePoolAdapter)), 0);
+        assertEq(USDC.balanceOf(address(curvePoolAdapter)), 0);
+        assertEq(WBTC.balanceOf(address(curvePoolAdapter)), 0);
+        assertEq(WETH.balanceOf(address(curvePoolAdapter)), 0);
     }
 }
