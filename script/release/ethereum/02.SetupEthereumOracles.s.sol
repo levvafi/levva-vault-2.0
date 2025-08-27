@@ -34,7 +34,7 @@ contract SetupEthereumOracles is SetupEulerOracleBase {
         //_setupPrice_OETH_WETH();
         //_setupPrice_PendleLPwOETH_WETH();
         //_setupPrice_USDe_USDC();
-        _setupPrice_PendleLPsUSDe25Sep2025_USDC();
+        //_setupPrice_PendleLPsUSDe25Sep2025_USDC();
         //_setupPrice_PendleLPsUSDe27Nov2025_USDC();
         _setupPrice_PendleLPwstUSR25Sep2025_USDC();
     }
