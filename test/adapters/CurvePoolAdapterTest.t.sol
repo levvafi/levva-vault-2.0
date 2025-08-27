@@ -124,6 +124,15 @@ contract CurvePoolAdapterTest is Test {
         assertEq(WEETH.balanceOf(address(curvePoolAdapter)), 0);
     }
 
+    function testAddLiquidityNgZeroAmount() public {
+        uint256[] memory amounts = new uint256[](2);
+        amounts[0] = 1 ether;
+        amounts[1] = 0;
+
+        vm.prank(address(vault));
+        curvePoolAdapter.addLiquidityNg(weethWethNgPool, amounts, 0);
+    }
+
     function testAddLiquidityNgPoolUnknownCurvePool() public {
         uint256 weethAmount = 1 ether;
         uint256 wethAmount = 2 ether;
@@ -207,6 +216,15 @@ contract CurvePoolAdapterTest is Test {
         assertEq(IERC20(usrRlpTwoCryptoPool).balanceOf(address(curvePoolAdapter)), 0);
         assertEq(USR.balanceOf(address(curvePoolAdapter)), 0);
         assertEq(RLP.balanceOf(address(curvePoolAdapter)), 0);
+    }
+
+    function testAddLiquidityTwoCryptoZeroAmount() public {
+        uint256[2] memory amounts;
+        amounts[0] = 1_000 * 10 ** 18;
+        amounts[1] = 0;
+
+        vm.prank(address(vault));
+        curvePoolAdapter.addLiquidityTwoCrypto(usrRlpTwoCryptoPool, amounts, 0);
     }
 
     function testAddLiquidityTwoCryptoUnknownCurvePool() public {
@@ -297,7 +315,17 @@ contract CurvePoolAdapterTest is Test {
         assertEq(IERC20(usdcWbtcWethTriCryptoPool).balanceOf(address(curvePoolAdapter)), 0);
         assertEq(USDC.balanceOf(address(curvePoolAdapter)), 0);
         assertEq(WBTC.balanceOf(address(curvePoolAdapter)), 0);
-        assertEq(WETH.balanceOf(address(curvePoolAdapter)), 0);  
+        assertEq(WETH.balanceOf(address(curvePoolAdapter)), 0);
+    }
+
+    function testAddLiquidityTriCryptoZeroAmount() public {
+        uint256[3] memory amounts;
+        amounts[0] = 4_000 * 10 ** 6;
+        amounts[1] = 4 * 10 ** 6;
+        amounts[2] = 0;
+
+        vm.prank(address(vault));
+        curvePoolAdapter.addLiquidityTriCrypto(usdcWbtcWethTriCryptoPool, amounts, 0);
     }
 
     function testAddLiquidityTriCryptoUnknownCurvePool() public {
@@ -354,7 +382,7 @@ contract CurvePoolAdapterTest is Test {
         assertEq(IERC20(usdcWbtcWethTriCryptoPool).balanceOf(address(curvePoolAdapter)), 0);
         assertEq(USDC.balanceOf(address(curvePoolAdapter)), 0);
         assertEq(WBTC.balanceOf(address(curvePoolAdapter)), 0);
-        assertEq(WETH.balanceOf(address(curvePoolAdapter)), 0); 
+        assertEq(WETH.balanceOf(address(curvePoolAdapter)), 0);
     }
 
     function testRemoveLiquidityTriCryptoUnknownCurvePool() public {

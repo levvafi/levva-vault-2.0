@@ -79,8 +79,11 @@ contract CurvePoolAdapter is AdapterBase {
         if (coinsLength != amounts.length) revert WrongInput();
 
         for (uint256 i; i < coinsLength;) {
-            IAdapterCallback(msg.sender).adapterCallback(address(this), coins[i], amounts[i]);
-            IERC20(coins[i]).forceApprove(curvePool, amounts[i]);
+            if (amounts[i] != 0) {
+                IAdapterCallback(msg.sender).adapterCallback(address(this), coins[i], amounts[i]);
+                IERC20(coins[i]).forceApprove(curvePool, amounts[i]);
+            }
+
             unchecked {
                 ++i;
             }
@@ -115,8 +118,11 @@ contract CurvePoolAdapter is AdapterBase {
         if (coins[0] == address(0)) revert UnknownCurvePool(curvePool);
 
         for (uint256 i; i < TWO_CRYPTO_COINS_COUNT;) {
-            IAdapterCallback(msg.sender).adapterCallback(address(this), coins[i], amounts[i]);
-            IERC20(coins[i]).forceApprove(curvePool, amounts[i]);
+            if (amounts[i] != 0) {
+                IAdapterCallback(msg.sender).adapterCallback(address(this), coins[i], amounts[i]);
+                IERC20(coins[i]).forceApprove(curvePool, amounts[i]);
+            }
+
             unchecked {
                 ++i;
             }
@@ -154,8 +160,10 @@ contract CurvePoolAdapter is AdapterBase {
         if (coins[0] == address(0)) revert UnknownCurvePool(curvePool);
 
         for (uint256 i; i < TRI_CRYPTO_COINS_COUNT;) {
-            IAdapterCallback(msg.sender).adapterCallback(address(this), coins[i], amounts[i]);
-            IERC20(coins[i]).forceApprove(curvePool, amounts[i]);
+            if (amounts[i] != 0) {
+                IAdapterCallback(msg.sender).adapterCallback(address(this), coins[i], amounts[i]);
+                IERC20(coins[i]).forceApprove(curvePool, amounts[i]);
+            }
             unchecked {
                 ++i;
             }
