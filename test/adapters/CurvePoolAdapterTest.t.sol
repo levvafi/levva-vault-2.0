@@ -118,6 +118,10 @@ contract CurvePoolAdapterTest is Test {
         assertGt(IERC20(weethWethNgPool).balanceOf(address(vault)), lpBalanceBefore);
         assertEq(WETH.balanceOf(address(vault)), wethBalanceBefore - wethAmount);
         assertEq(WEETH.balanceOf(address(vault)), weethBalanceBefore - weethAmount);
+
+        assertEq(IERC20(weethWethNgPool).balanceOf(address(curvePoolAdapter)), 0);
+        assertEq(WETH.balanceOf(address(curvePoolAdapter)), 0);
+        assertEq(WEETH.balanceOf(address(curvePoolAdapter)), 0);
     }
 
     function testAddLiquidityNgPoolUnknownCurvePool() public {
@@ -162,6 +166,10 @@ contract CurvePoolAdapterTest is Test {
         assertEq(IERC20(weethWethNgPool).balanceOf(address(vault)), lpBalanceBefore - lpAmountToRemove);
         assertGt(WETH.balanceOf(address(vault)), wethBalanceBefore + wethMinAmount);
         assertGt(WEETH.balanceOf(address(vault)), weethBalanceBefore + weethMinAmount);
+
+        assertEq(IERC20(weethWethNgPool).balanceOf(address(curvePoolAdapter)), 0);
+        assertEq(WETH.balanceOf(address(curvePoolAdapter)), 0);
+        assertEq(WEETH.balanceOf(address(curvePoolAdapter)), 0);
     }
 
     function testRemoveLiquidityNgPoolUnknownCurvePool() public {
@@ -195,6 +203,10 @@ contract CurvePoolAdapterTest is Test {
         assertGt(IERC20(usrRlpTwoCryptoPool).balanceOf(address(vault)), lpBalanceBefore);
         assertEq(USR.balanceOf(address(vault)), usrBalanceBefore - usrAmount);
         assertEq(RLP.balanceOf(address(vault)), rlpBalanceBefore - rlpAmount);
+
+        assertEq(IERC20(usrRlpTwoCryptoPool).balanceOf(address(curvePoolAdapter)), 0);
+        assertEq(USR.balanceOf(address(curvePoolAdapter)), 0);
+        assertEq(RLP.balanceOf(address(curvePoolAdapter)), 0);
     }
 
     function testAddLiquidityTwoCryptoUnknownCurvePool() public {
@@ -240,6 +252,10 @@ contract CurvePoolAdapterTest is Test {
         assertEq(IERC20(usrRlpTwoCryptoPool).balanceOf(address(vault)), lpBalanceBefore - lpAmountToRemove);
         assertGt(USR.balanceOf(address(vault)), usrBalanceBefore + usrMinAmount);
         assertGt(RLP.balanceOf(address(vault)), rlpBalanceBefore + rlpMinAmount);
+
+        assertEq(IERC20(usrRlpTwoCryptoPool).balanceOf(address(curvePoolAdapter)), 0);
+        assertEq(USR.balanceOf(address(curvePoolAdapter)), 0);
+        assertEq(RLP.balanceOf(address(curvePoolAdapter)), 0);
     }
 
     function testRemoveLiquidityTwoCryptoUnknownCurvePool() public {
@@ -277,6 +293,11 @@ contract CurvePoolAdapterTest is Test {
         assertEq(USDC.balanceOf(address(vault)), usdcBalanceBefore - usdcAmount);
         assertEq(WBTC.balanceOf(address(vault)), wbtcBalanceBefore - wbtcAmount);
         assertEq(WETH.balanceOf(address(vault)), wethBalanceBefore - wethAmount);
+
+        assertEq(IERC20(usdcWbtcWethTriCryptoPool).balanceOf(address(curvePoolAdapter)), 0);
+        assertEq(USDC.balanceOf(address(curvePoolAdapter)), 0);
+        assertEq(WBTC.balanceOf(address(curvePoolAdapter)), 0);
+        assertEq(WETH.balanceOf(address(curvePoolAdapter)), 0);  
     }
 
     function testAddLiquidityTriCryptoUnknownCurvePool() public {
@@ -329,6 +350,11 @@ contract CurvePoolAdapterTest is Test {
         assertGt(USDC.balanceOf(address(vault)), usdcBalanceBefore + usdcMinAmount);
         assertGt(WBTC.balanceOf(address(vault)), wbtcBalanceBefore + wbtcMinAmount);
         assertGt(WETH.balanceOf(address(vault)), wethBalanceBefore + wethMinAmount);
+
+        assertEq(IERC20(usdcWbtcWethTriCryptoPool).balanceOf(address(curvePoolAdapter)), 0);
+        assertEq(USDC.balanceOf(address(curvePoolAdapter)), 0);
+        assertEq(WBTC.balanceOf(address(curvePoolAdapter)), 0);
+        assertEq(WETH.balanceOf(address(curvePoolAdapter)), 0); 
     }
 
     function testRemoveLiquidityTriCryptoUnknownCurvePool() public {
