@@ -13,6 +13,7 @@ import {DeployHelper} from "./helper/DeployHelper.sol";
 import {Adapter, AdapterUtils} from "./helper/AdapterUtils.sol";
 import {AaveAdapter} from "contracts/adapters/aave/AaveAdapter.sol";
 import {CurveRouterAdapter} from "contracts/adapters/curve/CurveRouterAdapter.sol";
+import {CurvePoolAdapter} from "contracts/adapters/curve/CurvePoolAdapter.sol";
 import {EthenaAdapter} from "contracts/adapters/ethena/EthenaAdapter.sol";
 import {EtherfiETHAdapter} from "contracts/adapters/etherfi/EtherfiETHAdapter.sol";
 import {EtherfiBTCAdapter} from "contracts/adapters/etherfi/EtherfiBTCAdapter.sol";
@@ -53,6 +54,7 @@ contract DeployAdapter is DeployHelper, AdapterUtils {
         //deployAdapter(Adapter.PendleAdapter, address(0));
         //deployAdapter(Adapter.UniswapAdapter, address(0));
         //deployAdapter(Adapter.ResolvAdapter, address(0));
+        //deployAdapter(Adapter.CurvePoolAdapter, address(0));
     }
 
     function getDeployedAdapter(Adapter adapter, address vault) public view returns (address) {
@@ -88,7 +90,7 @@ contract DeployAdapter is DeployHelper, AdapterUtils {
         if (adapter == Adapter.AaveAdapter) {
             deployedAdapter = _deployAave();
         } else if (adapter == Adapter.CurveRouterAdapter) {
-            deployedAdapter = _deployCurve();
+            deployedAdapter = _deployCurveRouter();
         } else if (adapter == Adapter.EthenaAdapter) {
             deployedAdapter = _deployEthena(levvaVault);
         } else if (adapter == Adapter.EtherfiETH) {
@@ -115,6 +117,8 @@ contract DeployAdapter is DeployHelper, AdapterUtils {
             deployedAdapter = _deployResolv();
         } else if (adapter == Adapter.UniswapAdapter) {
             deployedAdapter = _deployUniswap();
+        } else if (adapter == Adapter.CurvePoolAdapter) {
+            deployedAdapter = _deployUniswap();
         }
         if (deployedAdapter == address(0)) {
             revert("Adapter not supported");
@@ -139,20 +143,26 @@ contract DeployAdapter is DeployHelper, AdapterUtils {
         return address(resolvAdapter);
     }
 
-    function _deployCurve() internal returns (address) {
+    function _deployCurveRouter() internal returns (address) {
         address curveRouter = getAddress("CurveRouterV1_2");
 
         vm.broadcast();
-        CurveRouterAdapter curveAdapter = new CurveRouterAdapter(curveRouter);
-        return address(curveAdapter);
+        CurveRouterAdapter curveRouterAdapter = new CurveRouterAdapter(curveRouter);
+        return address(curveRouterAdapter);
+    }
+
+    function _deployCurvePool() internal returns (address) {
+        vm.broadcast();
+        CurvePoolAdapter curvePoolAdapter = new CurvePoolAdapter();
+        return address(curvePoolAdapter);
     }
 
     function _deployEthena(address levvaVault) internal returns (address) {
         address sUsde = getAddress("sUSDE");
 
         vm.broadcast();
-        EthenaAdapter curveAdapter = new EthenaAdapter(levvaVault, sUsde);
-        return address(curveAdapter);
+        EthenaAdapter ethenaAdapter = new EthenaAdapter(levvaVault, sUsde);
+        return address(ethenaAdapter);
     }
 
     function _deployEtherfiETH() internal returns (address) {
