@@ -57,7 +57,7 @@ contract DeploySafeUSDCVault is LevvaVaultDeployer {
 
             configs = new VaultConfig[](1);
             configs[0] = config;
-             return configs;
+            return configs;
         }
 
         revert("Config not found for chainId");
