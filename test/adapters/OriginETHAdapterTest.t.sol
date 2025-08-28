@@ -148,8 +148,8 @@ contract OriginETHAdapterTest is Test {
         vm.prank(address(levvaVault));
         (uint256 requestId, uint256 oETHAmount) = adapter.requestWithdrawal(wrappedOETHAmount);
 
-        // IWithdrawRequestNFTAdmin nft = IWithdrawRequestNFTAdmin(ETHERFI_LIQUIDITY_POOL.withdrawRequestNFT());
-        // assertEq(requestId, nft.nextRequestId() - 1);
+        (,,, uint256 nextWithdrawalId) = OETH_VAULT.withdrawalQueueMetadata();
+        assertEq(requestId, nextWithdrawalId - 1);
 
         assertEq(wethBalanceBefore - WETH.balanceOf(address(levvaVault)), depositAmount);
         assertEq(OETH.balanceOf(address(levvaVault)), 0);
@@ -159,12 +159,12 @@ contract OriginETHAdapterTest is Test {
         assertEq(OETH.balanceOf(address(adapter)), 0);
         assertEq(W_OETH.balanceOf(address(adapter)), 0);
 
-        // vm.prank(address(levvaVault));
-        // (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets();
-        // assertEq(assets.length, 1);
-        // assertEq(amounts.length, 1);
-        // assertEq(assets[0], address(WETH));
-        // assertApproxEqAbs(amounts[0], depositAmount, 2);
+        vm.prank(address(levvaVault));
+        (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets();
+        assertEq(assets.length, 1);
+        assertEq(amounts.length, 1);
+        assertEq(assets[0], address(WETH));
+        assertEq(amounts[0], oETHAmount);
 
         _assertNoDebtAssets();
     }
@@ -173,16 +173,16 @@ contract OriginETHAdapterTest is Test {
         uint256 wethBalanceBefore = WETH.balanceOf(address(levvaVault));
         uint256 depositAmount = 4 ether;
         vm.prank(address(levvaVault));
-        uint256 wrappedOETHAmount = adapter.deposit(depositAmount, 0);
+        adapter.deposit(depositAmount, 0);
 
         uint256 except = 1 ether;
         vm.prank(address(levvaVault));
-        (uint256 requestId, uint256 oETHAmount)  = adapter.requestWithdrawalAllExcept(except);
+        (uint256 requestId, uint256 oETHAmount) = adapter.requestWithdrawalAllExcept(except);
 
-        // IWithdrawRequestNFTAdmin nft = IWithdrawRequestNFTAdmin(ETHERFI_LIQUIDITY_POOL.withdrawRequestNFT());
-        // assertEq(requestId, nft.nextRequestId() - 1);
+        (,,, uint256 nextWithdrawalId) = OETH_VAULT.withdrawalQueueMetadata();
+        assertEq(requestId, nextWithdrawalId - 1);
 
-        assertEq(wethBalanceBefore - WETH.balanceOf(address(levvaVault)), depositAmount);
+        assertEq(WETH.balanceOf(address(levvaVault)), wethBalanceBefore - depositAmount);
         assertEq(OETH.balanceOf(address(levvaVault)), 0);
         assertEq(W_OETH.balanceOf(address(levvaVault)), except);
 
@@ -190,71 +190,64 @@ contract OriginETHAdapterTest is Test {
         assertEq(OETH.balanceOf(address(adapter)), 0);
         assertEq(W_OETH.balanceOf(address(adapter)), 0);
 
-        // vm.prank(address(levvaVault));
-        // (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets();
-        // assertEq(assets.length, 1);
-        // assertEq(amounts.length, 1);
-        // assertEq(assets[0], address(WETH));
-        // assertApproxEqAbs(amounts[0], IweETH(address(WEETH)).getEETHByWeETH(weethAmount - except), 2);
+        vm.prank(address(levvaVault));
+        (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets();
+        assertEq(assets.length, 1);
+        assertEq(amounts.length, 1);
+        assertEq(assets[0], address(WETH));
+        assertEq(amounts[0], oETHAmount);
 
         _assertNoDebtAssets();
     }
 
-    // function testClaimWithdrawEth() public {
-    //     uint256 wethBalanceBefore = WETH.balanceOf(address(levvaVault));
-    //     uint256 depositAmount = 1 ether;
-    //     vm.prank(address(levvaVault));
-    //     uint256 weethAmount = adapter.deposit(depositAmount);
+    function testClaimWithdrawal() public {
+        uint256 wethBalanceBefore = WETH.balanceOf(address(levvaVault));
+        uint256 depositAmount = 1 ether;
+        vm.prank(address(levvaVault));
+        uint256 wrappedOETHAmount = adapter.deposit(depositAmount, 0);
 
-    //     vm.prank(address(levvaVault));
-    //     adapter.requestWithdraw(weethAmount);
-    //     assert(!adapter.claimPossible(address(levvaVault)));
+        vm.prank(address(levvaVault));
+        (, uint256 oETHAmount) = adapter.requestWithdrawal(wrappedOETHAmount);
 
-    //     IWithdrawRequestNFTAdmin nft = IWithdrawRequestNFTAdmin(ETHERFI_LIQUIDITY_POOL.withdrawRequestNFT());
-    //     uint256 lastRequest = nft.nextRequestId() - 1;
-    //     vm.prank(ETHERFI_ADMIN);
-    //     nft.finalizeRequests(lastRequest);
+        assert(!adapter.claimPossible(address(levvaVault)));
+        skip(OETH_VAULT.withdrawalClaimDelay());
 
-    //     assert(adapter.claimPossible(address(levvaVault)));
+        vm.expectRevert("Queue pending liquidity");
+        vm.prank(address(levvaVault));
+        adapter.claimWithdrawal();
+        assert(!adapter.claimPossible(address(levvaVault)));
 
-    //     vm.prank(address(levvaVault));
-    //     adapter.claimWithdraw();
+        _dealWethForClaim();
+        assert(adapter.claimPossible(address(levvaVault)));
 
-    //     assert(!adapter.claimPossible(address(levvaVault)));
+        vm.prank(address(levvaVault));
+        adapter.claimWithdrawal();
 
-    //     assertApproxEqAbs(WETH.balanceOf(address(levvaVault)), wethBalanceBefore, 2);
-    //     assertEq(eETH.balanceOf(address(levvaVault)), 0);
-    //     assertEq(WETH.balanceOf(address(adapter)), 0);
-    //     assertEq(eETH.balanceOf(address(adapter)), 0);
+        assert(!adapter.claimPossible(address(levvaVault)));
 
-    //     vm.prank(address(levvaVault));
-    //     (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets();
-    //     assertEq(assets.length, 1);
-    //     assertEq(amounts.length, 1);
-    //     assertEq(assets[0], address(WETH));
-    //     assertEq(amounts[0], 0);
+        assertEq(WETH.balanceOf(address(levvaVault)), wethBalanceBefore - depositAmount + oETHAmount);
+        assertEq(OETH.balanceOf(address(levvaVault)), 0);
+        assertEq(W_OETH.balanceOf(address(levvaVault)), 0);
 
-    //     (assets, amounts) = adapter.getManagedAssets(address(levvaVault));
-    //     assertEq(assets.length, 1);
-    //     assertEq(amounts.length, 1);
-    //     assertEq(assets[0], address(WETH));
-    //     assertEq(amounts[0], 0);
+        assertEq(WETH.balanceOf(address(adapter)), 0);
+        assertEq(OETH.balanceOf(address(adapter)), 0);
+        assertEq(W_OETH.balanceOf(address(adapter)), 0);
 
-    //     _assertNoDebtAssets();
-    // }
+        vm.prank(address(levvaVault));
+        (address[] memory assets, uint256[] memory amounts) = adapter.getManagedAssets();
+        assertEq(assets.length, 1);
+        assertEq(amounts.length, 1);
+        assertEq(assets[0], address(WETH));
+        assertEq(amounts[0], 0);
 
-    // function testClaimWithdrawEthNotFinalized() public {
-    //     uint256 depositAmount = 1 ether;
-    //     vm.prank(address(levvaVault));
-    //     uint256 weethAmount = adapter.deposit(depositAmount);
+        (assets, amounts) = adapter.getManagedAssets(address(levvaVault));
+        assertEq(assets.length, 1);
+        assertEq(amounts.length, 1);
+        assertEq(assets[0], address(WETH));
+        assertEq(amounts[0], 0);
 
-    //     vm.prank(address(levvaVault));
-    //     adapter.requestWithdraw(weethAmount);
-
-    //     vm.prank(address(levvaVault));
-    //     vm.expectRevert("Request is not finalized");
-    //     adapter.claimWithdraw();
-    // }
+        _assertNoDebtAssets();
+    }
 
     function testClaimNoRequests() public {
         vm.prank(address(levvaVault));
@@ -267,5 +260,21 @@ contract OriginETHAdapterTest is Test {
         (address[] memory assets, uint256[] memory amounts) = adapter.getDebtAssets();
         assertEq(assets.length, 0);
         assertEq(amounts.length, 0);
+    }
+
+    function _dealWethForClaim() private {
+        (uint256 queued,, uint256 claimed,) = OETH_VAULT.withdrawalQueueMetadata();
+        // Dealing weth to avoid this error:
+        // https://github.com/OriginProtocol/origin-dollar/blob/a8be73bf0077a9d489a87ec9353280d1bbb59e3b/contracts/contracts/vault/OETHVaultCore.sol#L342
+        // Math based on:
+        // https://github.com/OriginProtocol/origin-dollar/blob/a8be73bf0077a9d489a87ec9353280d1bbb59e3b/contracts/contracts/vault/OETHVaultCore.sol#L393
+        // request.queued = queue.claimable + addedClaimable => addedClaimable = request.queued - request.claimable
+        // addedClaimable = min(queueShortfall, unallocatedWeth)
+        // Our goal is to achieve 'queueShortfall = unallocatedWeth'
+        // queueShortfall = queue.queued - queue.claimable
+        // unallocatedWeth = wethBalance - allocatedWeth = wethBalance - (queue.claimable - queue.claimed)
+        // queue.queued - queue.claimable = wethBalance - (queue.claimable - queue.claimed)
+        // wethBalance = queue.queued - queue.claimed
+        deal(address(WETH), address(OETH_VAULT), queued - claimed);
     }
 }
