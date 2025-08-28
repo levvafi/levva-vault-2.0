@@ -1,7 +1,5 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
-
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 interface IOETHVault {
     struct WithdrawalRequest {
@@ -26,4 +24,6 @@ interface IOETHVault {
         returns (uint128 queued, uint128 claimable, uint128 claimed, uint128 nextWithdrawalIndex);
 
     function withdrawalRequests(uint256 requestId) external view returns (WithdrawalRequest memory);
+
+    function weth() external view returns (address);
 }

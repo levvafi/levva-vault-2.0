@@ -60,7 +60,7 @@ contract OriginETHAdapterTest is Test {
         levvaVault.setMaxExternalPositionAdapters(type(uint8).max);
         levvaVault.setMaxTrackedAssets(type(uint8).max);
 
-        adapter = new OriginETHAdapter(address(WETH), address(OETH_VAULT), address(OETH), address(W_OETH));
+        adapter = new OriginETHAdapter(address(W_OETH));
         levvaVault.addAdapter(address(adapter));
         assertNotEq(levvaVault.externalPositionAdapterPosition(address(adapter)), 0);
 

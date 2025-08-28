@@ -11,12 +11,13 @@ import {IWETH9} from "../../interfaces/IWETH9.sol";
 import {Asserts} from "../../libraries/Asserts.sol";
 import {AdapterBase} from "../AdapterBase.sol";
 import {IOETHVault} from "./interfaces/IOETHVault.sol";
+import {IOETH} from "./interfaces/IOETH.sol";
 
 contract OriginETHAdapter is AdapterBase, IExternalPositionAdapter {
     using Asserts for address;
     using SafeERC20 for IWETH9;
     using SafeERC20 for IERC4626;
-    using SafeERC20 for IERC20;
+    using SafeERC20 for IOETH;
 
     struct WithdrawalRequest {
         uint256 amount;
@@ -37,21 +38,22 @@ contract OriginETHAdapter is AdapterBase, IExternalPositionAdapter {
 
     IWETH9 public immutable weth;
     IOETHVault public immutable oETHVault;
-    IERC20 public immutable oETH;
+    IOETH public immutable oETH;
     IERC4626 public immutable wrappedOETH;
 
     mapping(address vault => WithdrawalQueue) queues;
 
-    constructor(address _weth, address _oETHVault, address _oETH, address _wrappedOETH) {
-        _weth.assertNotZeroAddress();
-        _oETHVault.assertNotZeroAddress();
-        _oETH.assertNotZeroAddress();
+    constructor(address _wrappedOETH) {
         _wrappedOETH.assertNotZeroAddress();
-
-        weth = IWETH9(_weth);
-        oETHVault = IOETHVault(_oETHVault);
-        oETH = IERC20(_oETH);
         wrappedOETH = IERC4626(_wrappedOETH);
+
+        IOETH _oETH = IOETH(IERC4626(wrappedOETH).asset());
+        oETH = _oETH;
+
+        IOETHVault _oETHVault = IOETHVault(_oETH.vaultAddress());
+        oETHVault = _oETHVault;
+
+        weth = IWETH9(_oETHVault.weth());
     }
 
     function deposit(uint256 wethAmount, uint256 minWrappedOETHAmount) external returns (uint256) {
