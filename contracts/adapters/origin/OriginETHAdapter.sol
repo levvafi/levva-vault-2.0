@@ -31,6 +31,9 @@ contract OriginETHAdapter is AdapterBase, IExternalPositionAdapter {
         mapping(uint256 index => WithdrawalRequest) requests;
     }
 
+    event OriginETHRequestWithdrawal(address indexed vault, uint256 indexed requestId, uint256 withdrawn);
+    event OriginETHClaimWithdrawal(address indexed vault, uint256 indexed requestId, uint256 withdrawn);
+
     error LessThanMinAmount();
     error NoWithdrawRequestInQueue();
 
@@ -80,6 +83,8 @@ contract OriginETHAdapter is AdapterBase, IExternalPositionAdapter {
         uint256 requestId = _dequeueWithdrawalRequest();
         withdrawn = oETHVault.claimWithdrawal(requestId);
         weth.safeTransfer(msg.sender, withdrawn);
+
+        emit OriginETHClaimWithdrawal(msg.sender, requestId, withdrawn);
     }
 
     function claimPossible(address vault) external view returns (bool) {
@@ -131,6 +136,8 @@ contract OriginETHAdapter is AdapterBase, IExternalPositionAdapter {
         oETH.forceApprove(address(_wrappedOETH), wethAmount);
         wrappedOETHAmount = _wrappedOETH.deposit(wethAmount, msg.sender);
         if (wrappedOETHAmount < minWrappedOETHAmount) revert LessThanMinAmount();
+
+        emit Swap(msg.sender, address(_weth), wethAmount, address(_wrappedOETH), wrappedOETHAmount);
     }
 
     function _requestWithdrawal(IERC4626 _wrappedOETH, uint256 wrappedOETHAmount)
@@ -144,6 +151,8 @@ contract OriginETHAdapter is AdapterBase, IExternalPositionAdapter {
         oETH.forceApprove(address(_oETHVault), oETHAmount);
         (requestId,) = _oETHVault.requestWithdrawal(oETHAmount);
         _enqueueWithdrawalRequest(requestId, oETHAmount);
+
+        emit OriginETHRequestWithdrawal(msg.sender, requestId, wrappedOETHAmount);
     }
 
     function _enqueueWithdrawalRequest(uint256 requestId, uint256 amount) private {
