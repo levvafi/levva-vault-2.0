@@ -15,6 +15,6 @@ build :; forge build --sizes
 
 test :; forge test -vvv
 
-coverage :; forge coverage --no-match-coverage test
+coverage :; forge coverage --no-match-coverage "^(test|script)/"
 
-coverageReport :; forge coverage --no-match-coverage test --report debug > coverage.info
+coverageReport :; forge coverage --no-match-coverage "^(test|script)/" --report debug > coverage.info

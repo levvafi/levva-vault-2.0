@@ -9,6 +9,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {LevvaVaultFactory} from "../../contracts/LevvaVaultFactory.sol";
 import {LevvaVault} from "../../contracts/LevvaVault.sol";
+import {Asserts} from "../../contracts/libraries/Asserts.sol";
 import {WithdrawalQueue} from "../../contracts/WithdrawalQueue.sol";
 import {OriginETHAdapter} from "../../contracts/adapters/origin/OriginETHAdapter.sol";
 import {AdapterBase} from "../../contracts/adapters/AdapterBase.sol";
@@ -76,6 +77,11 @@ contract OriginETHAdapterTest is Test {
         assertEq(address(adapter.wrappedOETH()), address(W_OETH));
     }
 
+    function testAddressZeroRevert() public {
+        vm.expectRevert(abi.encodeWithSelector(Asserts.ZeroAddress.selector));
+        new OriginETHAdapter(address(0));
+    }
+
     function testDeposit() public {
         uint256 wethBalanceBefore = WETH.balanceOf(address(levvaVault));
 
@@ -105,6 +111,13 @@ contract OriginETHAdapterTest is Test {
         assertEq(amounts[0], 0);
 
         _assertNoDebtAssets();
+    }
+
+    function testDepositLessThanMinAmount() public {
+        uint256 depositAmount = 1 ether;
+        vm.expectRevert(abi.encodeWithSelector(OriginETHAdapter.LessThanMinAmount.selector));
+        vm.prank(address(levvaVault));
+        adapter.deposit(depositAmount, type(uint256).max);
     }
 
     function testDepositAllExcept() public {
@@ -137,6 +150,12 @@ contract OriginETHAdapterTest is Test {
         assertEq(amounts[0], 0);
 
         _assertNoDebtAssets();
+    }
+
+    function testDepositAllExceptLessThanMinAmount() public {
+        vm.expectRevert(abi.encodeWithSelector(OriginETHAdapter.LessThanMinAmount.selector));
+        vm.prank(address(levvaVault));
+        adapter.depositAllExcept(0, type(uint256).max);
     }
 
     function testRequestWithdrawal() public {
