@@ -55,8 +55,8 @@ contract DeployAdapter is DeployHelper, AdapterUtils {
         //deployAdapter(Adapter.PendleAdapter, address(0));
         //deployAdapter(Adapter.UniswapAdapter, address(0));
         //deployAdapter(Adapter.ResolvAdapter, address(0));
-        deployAdapter(Adapter.CurvePoolAdapter, address(0));
-        deployAdapter(Adapter.OriginETHAdapter, address(0));
+        //deployAdapter(Adapter.CurvePoolAdapter, address(0));
+        //deployAdapter(Adapter.OriginETHAdapter, address(0));
     }
 
     function getDeployedAdapter(Adapter adapter, address vault) public view returns (address) {
