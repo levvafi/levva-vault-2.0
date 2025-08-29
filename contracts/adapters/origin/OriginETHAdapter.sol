@@ -31,8 +31,10 @@ contract OriginETHAdapter is AdapterBase, IExternalPositionAdapter {
         mapping(uint256 index => WithdrawalRequest) requests;
     }
 
-    event OriginETHRequestWithdrawal(address indexed vault, uint256 indexed requestId, uint256 withdrawn);
-    event OriginETHClaimWithdrawal(address indexed vault, uint256 indexed requestId, uint256 withdrawn);
+    event OriginETHRequestWithdrawal(
+        address indexed vault, uint256 indexed requestId, uint256 wrappedOETHAmount, uint256 expectedOETHAmount
+    );
+    event OriginETHClaimWithdrawal(address indexed vault, uint256 indexed requestId, uint256 withdrawnETHAmount);
 
     error LessThanMinAmount();
     error NoWithdrawRequestInQueue();
@@ -152,7 +154,7 @@ contract OriginETHAdapter is AdapterBase, IExternalPositionAdapter {
         (requestId,) = _oETHVault.requestWithdrawal(oETHAmount);
         _enqueueWithdrawalRequest(requestId, oETHAmount);
 
-        emit OriginETHRequestWithdrawal(msg.sender, requestId, wrappedOETHAmount);
+        emit OriginETHRequestWithdrawal(msg.sender, requestId, wrappedOETHAmount, oETHAmount);
     }
 
     function _enqueueWithdrawalRequest(uint256 requestId, uint256 amount) private {
