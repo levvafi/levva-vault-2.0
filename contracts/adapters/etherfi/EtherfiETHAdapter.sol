@@ -85,7 +85,7 @@ contract EtherfiETHAdapter is AdapterBase, ERC721Holder, IExternalPositionAdapte
         _weth.deposit{value: withdrawn}();
         _weth.safeTransfer(msg.sender, withdrawn);
 
-        emit EtherfiETHRequestWithdraw(msg.sender, requestId, withdrawn);
+        emit EtherfiETHClaimWithdraw(msg.sender, requestId, withdrawn);
     }
 
     function claimPossible(address vault) external view returns (bool) {

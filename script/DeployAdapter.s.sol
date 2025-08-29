@@ -27,6 +27,7 @@ import {MorphoAdapterV1_1} from "contracts/adapters/morpho/MorphoAdapterV1_1.sol
 import {UniswapAdapter} from "contracts/adapters/uniswap/UniswapAdapter.sol";
 import {PendleAdapter} from "contracts/adapters/pendle/PendleAdapter.sol";
 import {ResolvAdapter} from "contracts/adapters/resolv/ResolvAdapter.sol";
+import {OriginETHAdapter} from "contracts/adapters/origin/OriginETHAdapter.sol";
 import {DeployLevvaVaultFactory} from "./DeployLevvaVaultFactory.s.sol";
 
 /**
@@ -55,6 +56,7 @@ contract DeployAdapter is DeployHelper, AdapterUtils {
         //deployAdapter(Adapter.UniswapAdapter, address(0));
         //deployAdapter(Adapter.ResolvAdapter, address(0));
         //deployAdapter(Adapter.CurvePoolAdapter, address(0));
+        //deployAdapter(Adapter.OriginETHAdapter, address(0));
     }
 
     function getDeployedAdapter(Adapter adapter, address vault) public view returns (address) {
@@ -119,6 +121,8 @@ contract DeployAdapter is DeployHelper, AdapterUtils {
             deployedAdapter = _deployUniswap();
         } else if (adapter == Adapter.CurvePoolAdapter) {
             deployedAdapter = _deployCurvePool();
+        } else if (adapter == Adapter.CurvePoolAdapter) {
+            deployedAdapter = _deployOriginETH();
         }
         if (deployedAdapter == address(0)) {
             revert("Adapter not supported");
@@ -263,6 +267,14 @@ contract DeployAdapter is DeployHelper, AdapterUtils {
         vm.broadcast();
         UniswapAdapter uniswapAdapter = new UniswapAdapter(uniswapV3Router, universalRouter, permit2);
         return address(uniswapAdapter);
+    }
+
+    function _deployOriginETH() internal returns (address) {
+        address wrappedOETH = getAddress("WrappedOETH");
+
+        vm.broadcast();
+        OriginETHAdapter originETHAdapter = new OriginETHAdapter(wrappedOETH);
+        return address(originETHAdapter);
     }
 
     function _saveDeployment(Adapter adapter, address adapterAddress, address levvaVault) internal {
