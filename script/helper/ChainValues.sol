@@ -29,6 +29,7 @@ contract ChainValues {
         _addLocalhost();
         _addEthHoodie();
         _addArbitrum();
+        _addBase();
     }
 
     function getChainName() public view returns (string memory) {
@@ -238,5 +239,51 @@ contract ChainValues {
         s_values["arbitrum"]["ChainlinkFeed_WETH_USD"] = 0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612.toBytes32();
         s_values["arbitrum"]["ChainlinkFeed_WBTC_USD"] = 0xd0C7101eACbB49F3deCcCc166d238410D6D46d57.toBytes32();
         s_values["arbitrum"]["ChainlinkFeed_USDC_USD"] = 0x50834F3163758fcC1Df9973b6e91f0F0F0434aD3.toBytes32();
+    }
+
+    function _addBase() private {
+        s_values["base"]["LevvaVaultFactory"] = 0x8506934ed8c1154Da93610012524b07A972BAcca.toBytes32();
+        s_values["base"]["EulerOracle"] = 0x9931D4850a10Cc9BcCF44A16CFdaF657CCBbc5a1.toBytes32();
+        s_values["base"]["FeeCollector"] = 0xAD70a0ab951780fF3397882fc5372db83dEb0606.toBytes32();
+        s_values["base"]["VaultManager"] = 0xAD70a0ab951780fF3397882fc5372db83dEb0606.toBytes32();
+        s_values["base"]["WithdrawalQueueFinalizer"] = 0xAD70a0ab951780fF3397882fc5372db83dEb0606.toBytes32();
+
+        /* =========== TOKENS ==================== */
+        s_values["base"]["USDC"] = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913.toBytes32();
+        s_values["base"]["aUSDC"] = 0x4e65fE4DbA92790696d040ac24Aa414708F5c0AB.toBytes32();
+        s_values["base"]["lpCurveUSDCscrvUSD"] = 0x5aB01ee6208596f2204B85bDFA39d34c2aDD98F6.toBytes32();
+        s_values["base"]["sUSDS"] = 0x5875eEE11Cf8398102FdAd704C9E96607675467a.toBytes32();
+        s_values["base"]["sparkUSDC"] = 0x3128a0F7f0ea68E7B7c9B00AFa7E41045828e858.toBytes32();
+        s_values["base"]["WETH"] = 0x4200000000000000000000000000000000000006.toBytes32();
+        s_values["base"]["wrappedSuperOETHb"] = 0x7FcD174E80f264448ebeE8c88a7C4476AAF58Ea6.toBytes32();
+        s_values["base"]["cbBTC"] = 0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf.toBytes32();
+
+        /* ============== AAVE ================ */
+        s_values["base"]["AavePoolAddressProvider"] = 0xe20fCBdBfFC4Dd138cE8b2E6FBb6CB49777ad64D.toBytes32();
+
+        /* ============== CURVE ================ */
+        s_values["base"]["CurveRouterV1_2"] = 0x4f37A9d177470499A2dD084621020b023fcffc1F.toBytes32();
+
+        /* ============== MORPHO ================ */
+        // s_values["base"]["MetaMorphoFactoryV1_1"] = 0x878988f5f561081deEa117717052164ea1Ef0c82.toBytes32();
+
+        /* ============== PENDLE =============== */
+        s_values["base"]["PendleRouter"] = 0x888888888889758F76e7103c6CbF23ABbF58F946.toBytes32();
+
+        /* ============== UNISWAP =============== */
+        s_values["base"]["UniswapV3Router"] = 0x2626664c2603336E57B271c5C0b26F421741e481.toBytes32();
+        s_values["base"]["UniversalRouter"] = 0x6fF5693b99212Da76ad316178A184AB56D299b43.toBytes32();
+        s_values["base"]["UniswapPermit2"] = 0x000000000022D473030F116dDEE9F6B43aC78BA3.toBytes32();
+
+        /* ============= PRICE ORACLES ============ */
+        s_values["base"]["EulerOracleFactory"] = 0xA9287853987B107969f181Cce5e25e0D09c1c116.toBytes32();
+        s_values["base"]["EulerOracleGovernor"] = 0xAD70a0ab951780fF3397882fc5372db83dEb0606.toBytes32();
+        s_values["base"]["PendleOracle"] = 0x9a9Fa8338dd5E5B2188006f1Cd2Ef26d921650C2.toBytes32();
+
+        /* ============= CHAINLINK DATA FEEDS =======================*/
+        s_values["base"]["ChainlinkFeed_ETH_USD"] = 0x71041dddad3595F9CEd3DcCFBe3D1F4b0a16Bb70.toBytes32();
+        s_values["base"]["ChainlinkFeed_cbBTC_USD"] = 0x07DA0E54543a844a80ABE69c8A12F22B3aA59f9D.toBytes32();
+        s_values["base"]["ChainlinkFeed_USDC_USD"] = 0x50834F3163758fcC1Df9973b6e91f0F0F0434aD3.toBytes32();
+        s_values["base"]["ChainlinkFeed_SUPEROETHB_ETH"] = 0x39C6E14CdE46D4FFD9F04Ff159e7ce8eC20E10B4.toBytes32();
     }
 }
