@@ -86,7 +86,6 @@
         "from": "0x0562f16415fcf6fb5acaf433e4796f8f328b7c7d",
         "to": "0x41761684acf90bbf7e58e3a7a14d48f778cbb9d5",
         "gas": "0x109cb",
-        "gas": "0x109cb",
         "value": "0x0",
         "input": "0x06c570c100000000000000000000000009fa04aac9c6d1c6131352ee950cd67ecc6d4fb9000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb480000000000000000000000003981e3477941a543691e7d9d76782ea8c37037a9",
         "nonce": "0x2df",
@@ -94,7 +93,9 @@
       },
       "additionalContracts": [],
       "isFixedGasLimit": false
-    },
+    }
+  ],
+  "receipts": [
     {
       "status": "0x1",
       "cumulativeGasUsed": "0x221feb6",
@@ -194,7 +195,6 @@
       "contractAddress": null
     }
   ],
-  "receipts": [],
   "libraries": [],
   "pending": [],
   "returns": {},
