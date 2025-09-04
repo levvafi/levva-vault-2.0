@@ -111,15 +111,17 @@ abstract contract LevvaVaultDeployer is DeployHelper, AdapterUtils {
             vm.stopBroadcast();
         }
 
-        // if (config.managementFee != 0) {
-        //     vm.broadcast();
-        //     vault.setManagementFeeIR(config.managementFee);
-        // }
+        if (config.managementFee != 0) {
+            vm.startBroadcast();
+            vault.setManagementFeeIR(config.managementFee);
+            vm.stopBroadcast();
+        }
 
-        // if (config.performanceFee != 0) {
-        //     vm.broadcast();
-        //     vault.setPerformanceFeeRatio(config.performanceFee);
-        // }
+        if (config.performanceFee != 0) {
+            vm.startBroadcast();
+            vault.setPerformanceFeeRatio(config.performanceFee);
+            vm.stopBroadcast();
+        }
 
         WithdrawalQueue withdrawalQueue = WithdrawalQueue(vault.withdrawalQueue());
         if (!withdrawalQueue.isFinalizer(config.withdrawQueueFinalizer)) {
