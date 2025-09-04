@@ -11,6 +11,7 @@ contract ChainValues {
 
     uint256 public constant ETHEREUM = 1;
     uint256 public constant ARBITRUM = 42161;
+    uint256 public constant BASE = 8453;
     uint256 public constant LOCALHOST = 31337;
     uint256 public constant ETH_HOODIE = 560048;
 
@@ -35,6 +36,8 @@ contract ChainValues {
             return "ethereum";
         } else if (block.chainid == ARBITRUM) {
             return "arbitrum";
+        } else if (block.chainid == BASE) {
+            return "base";
         }
         /*  Test chains */
         else if (block.chainid == LOCALHOST) {
