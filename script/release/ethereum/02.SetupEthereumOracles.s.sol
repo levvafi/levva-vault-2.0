@@ -31,12 +31,8 @@ contract SetupEthereumOracles is SetupEulerOracleBase {
         // _setupPrice_wstETH_WETH();
         // _setupPrice_WBTC_USDC();
         // _setupPrice_WETH_USDC();
-        //_setupPrice_OETH_WETH();
-        //_setupPrice_PendleLPwOETH_WETH();
-        //_setupPrice_USDe_USDC();
-        //_setupPrice_PendleLPsUSDe25Sep2025_USDC();
-        //_setupPrice_PendleLPsUSDe27Nov2025_USDC();
-        _setupPrice_PendleLPwstUSR25Sep2025_USDC();
+        _setupPrice_OETH_WETH();
+        _setupPrice_PendleLPwOETH_WETH();
     }
 
     function _setupPrice_OETH_WETH() private {
@@ -67,57 +63,6 @@ contract SetupEthereumOracles is SetupEulerOracleBase {
         address OETH_WETH_oracle = _deployCurveEmaOracle(CurvePoolOETH_WETH, WETH, OETH, 0);
 
         _deployCrossOracle(PendleLPwOETH25Dec2025, OETH, WETH, PendleLPwOETH_OETH_oracle, OETH_WETH_oracle);
-    }
-
-    function _setupPrice_PendleLPsUSDe25Sep2025_USDC() private {
-        //0xa36b60a14a1a5247912584768c6e53e1a269a9f7
-        // underlying 0x4c9EDD5852cd905f086C759E8383e09bff1E68B3
-        address PendleLPsUSDe25Sep2025 = getAddress("PendleMarket_sUSDE_25sep2025");
-        address USDC = getAddress("USDC");
-        address USDE = getAddress("USDE");
-        uint32 twapWindow = 900; // 15 minutes
-
-        address PendleLPsUSDe25Sep2025_USDE_oracle =
-            _deployPendleUniversalOracle(PendleLPsUSDe25Sep2025, PendleLPsUSDe25Sep2025, USDE, twapWindow);
-
-        address USDE_USD_oracle = getAddress("Chainlink_USDE_USD_oracle");
-        address USDC_USD_oracle = getAddress("Chainlink_USDC_USD_oracle");
-        address USDE_USDC_oracle = _deployCrossOracle(USDE, USD, USDC, USDE_USD_oracle, USDC_USD_oracle);
-
-        _deployCrossOracle(PendleLPsUSDe25Sep2025, USDE, USDC, PendleLPsUSDe25Sep2025_USDE_oracle, USDE_USDC_oracle);
-    }
-
-    function _setupPrice_PendleLPsUSDe27Nov2025_USDC() private {
-        address PendleLPsUSDe27Nov2025 = getAddress("PendleMarket_sUSDE_27nov2025");
-        address USDE = getAddress("USDE");
-        address USDC = getAddress("USDC");
-        uint32 twapWindow = 900; // 15 minutes
-
-        address PendleLPsUSDe27Nov2025_USDE_oracle =
-            _deployPendleUniversalOracle(PendleLPsUSDe27Nov2025, PendleLPsUSDe27Nov2025, USDE, twapWindow);
-
-        address USDE_USD_oracle = getAddress("Chainlink_USDE_USD_oracle");
-        address USDC_USD_oracle = getAddress("Chainlink_USDC_USD_oracle");
-        address USDE_USDC_oracle = _deployCrossOracle(USDE, USD, USDC, USDE_USD_oracle, USDC_USD_oracle);
-
-        _deployCrossOracle(PendleLPsUSDe27Nov2025, USDE, USDC, PendleLPsUSDe27Nov2025_USDE_oracle, USDE_USDC_oracle);
-    }
-
-    function _setupPrice_PendleLPwstUSR25Sep2025_USDC() private {
-        //0x09fa04aac9c6d1c6131352ee950cd67ecc6d4fb9
-        address PendleLPwstUSR25Sep2025 = getAddress("PendleMarket_wstUSR_25sep2025");
-        address USR = getAddress("USR");
-        address USDC = getAddress("USDC");
-        uint32 twapWindow = 900; // 15 minutes
-
-        address PendleLPwstUSR25Sep2025_USR_oracle =
-            _deployPendleUniversalOracle(PendleLPwstUSR25Sep2025, PendleLPwstUSR25Sep2025, USR, twapWindow);
-
-        address USR_USD_oracle = _addChainlink_USR__USD();
-        address USDC_USD_oracle = getAddress("Chainlink_USDC_USD_oracle");
-        address USR_USDC_oracle = _deployCrossOracle(USR, USD, USDC, USR_USD_oracle, USDC_USD_oracle);
-
-        _deployCrossOracle(PendleLPwstUSR25Sep2025, USR, USDC, PendleLPwstUSR25Sep2025_USR_oracle, USR_USDC_oracle);
     }
 
     function _setupPrice_sUSDe_USDC() private {

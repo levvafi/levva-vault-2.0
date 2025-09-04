@@ -16,7 +16,9 @@ enum Adapter {
     MorphoV1_1,
     PendleAdapter,
     ResolvAdapter,
-    UniswapAdapter
+    UniswapAdapter,
+    CurvePoolAdapter,
+    OriginETHAdapter
 }
 
 abstract contract AdapterUtils {
@@ -55,6 +57,10 @@ abstract contract AdapterUtils {
             return "ResolvAdapter";
         } else if (adapter == Adapter.UniswapAdapter) {
             return "UniswapAdapter";
+        } else if (adapter == Adapter.CurvePoolAdapter) {
+            return "CurvePoolAdapter";
+        } else if (adapter == Adapter.OriginETHAdapter) {
+            return "OriginETHAdapter";
         }
 
         revert("Adapter not supported");
