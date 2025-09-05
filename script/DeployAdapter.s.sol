@@ -121,7 +121,7 @@ contract DeployAdapter is DeployHelper, AdapterUtils {
             deployedAdapter = _deployUniswap();
         } else if (adapter == Adapter.CurvePoolAdapter) {
             deployedAdapter = _deployCurvePool();
-        } else if (adapter == Adapter.CurvePoolAdapter) {
+        } else if (adapter == Adapter.OriginETHAdapter) {
             deployedAdapter = _deployOriginETH();
         }
         if (deployedAdapter == address(0)) {
@@ -270,7 +270,12 @@ contract DeployAdapter is DeployHelper, AdapterUtils {
     }
 
     function _deployOriginETH() internal returns (address) {
-        address wrappedOETH = getAddress("WrappedOETH");
+        address wrappedOETH;
+        if (block.chainid == ETHEREUM) {
+            wrappedOETH = getAddress("WrappedOETH");
+        } else {
+            wrappedOETH = getAddress("wrappedSuperOETHb");
+        }
 
         vm.broadcast();
         OriginETHAdapter originETHAdapter = new OriginETHAdapter(wrappedOETH);

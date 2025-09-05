@@ -1,0 +1,33 @@
+{
+  "transactions": [
+    {
+      "hash": null,
+      "transactionType": "CALL",
+      "contractName": null,
+      "contractAddress": "0xc6a3e17e8cf859607654500a2c5ba1807fc7724e",
+      "function": "govSetResolvedVault(address,bool)",
+      "arguments": [
+        "0x3128a0F7f0ea68E7B7c9B00AFa7E41045828e858",
+        "true"
+      ],
+      "transaction": {
+        "from": "0x0562f16415fcf6fb5acaf433e4796f8f328b7c7d",
+        "to": "0xc6a3e17e8cf859607654500a2c5ba1807fc7724e",
+        "gas": "0x14088",
+        "value": "0x0",
+        "input": "0xd6c029260000000000000000000000003128a0f7f0ea68e7b7c9b00afa7e41045828e8580000000000000000000000000000000000000000000000000000000000000001",
+        "nonce": "0x22",
+        "chainId": "0x2105"
+      },
+      "additionalContracts": [],
+      "isFixedGasLimit": false
+    }
+  ],
+  "receipts": [],
+  "libraries": [],
+  "pending": [],
+  "returns": {},
+  "timestamp": 1757000960659,
+  "chain": 8453,
+  "commit": "683cbec"
+}

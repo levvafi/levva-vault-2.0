@@ -1,0 +1,6 @@
+{
+  "FactoryImplementation": "0xa2cE6ebee216b23edE8a6744769266e8ffC79e23",
+  "FactoryProxy": "0x391685807Cf005848A0711Deb9Db74209E59662f",
+  "LevvaVaultImplementation": "0x0d9091FcbA9263F5EeA19883f061085E940e5FAc",
+  "WithdrawalQueueImplementation": "0x30f3901E5B0625F1a702d06E823126D63B35EA6A"
+}

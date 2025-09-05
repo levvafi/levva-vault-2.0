@@ -11,6 +11,7 @@ contract ChainValues {
 
     uint256 public constant ETHEREUM = 1;
     uint256 public constant ARBITRUM = 42161;
+    uint256 public constant BASE = 8453;
     uint256 public constant LOCALHOST = 31337;
     uint256 public constant ETH_HOODIE = 560048;
 
@@ -28,6 +29,7 @@ contract ChainValues {
         _addLocalhost();
         _addEthHoodie();
         _addArbitrum();
+        _addBase();
     }
 
     function getChainName() public view returns (string memory) {
@@ -35,6 +37,8 @@ contract ChainValues {
             return "ethereum";
         } else if (block.chainid == ARBITRUM) {
             return "arbitrum";
+        } else if (block.chainid == BASE) {
+            return "base";
         }
         /*  Test chains */
         else if (block.chainid == LOCALHOST) {
@@ -235,5 +239,49 @@ contract ChainValues {
         s_values["arbitrum"]["ChainlinkFeed_WETH_USD"] = 0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612.toBytes32();
         s_values["arbitrum"]["ChainlinkFeed_WBTC_USD"] = 0xd0C7101eACbB49F3deCcCc166d238410D6D46d57.toBytes32();
         s_values["arbitrum"]["ChainlinkFeed_USDC_USD"] = 0x50834F3163758fcC1Df9973b6e91f0F0F0434aD3.toBytes32();
+    }
+
+    function _addBase() private {
+        s_values["base"]["LevvaVaultFactory"] = 0x391685807Cf005848A0711Deb9Db74209E59662f.toBytes32();
+        s_values["base"]["EulerOracle"] = 0xC6a3e17E8cf859607654500A2c5Ba1807FC7724E.toBytes32();
+        s_values["base"]["FeeCollector"] = 0xD20092A19e0488E1283E488e11583B43ba7EA849.toBytes32();
+        s_values["base"]["VaultManager"] = 0x3a57D60a6866c41365E91b9cAbFA66F8Dd17F210.toBytes32();
+        s_values["base"]["WithdrawalQueueFinalizer"] = 0x3a57D60a6866c41365E91b9cAbFA66F8Dd17F210.toBytes32();
+
+        /* =========== TOKENS ==================== */
+        s_values["base"]["USDC"] = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913.toBytes32();
+        s_values["base"]["aUSDC"] = 0x4e65fE4DbA92790696d040ac24Aa414708F5c0AB.toBytes32();
+        s_values["base"]["lpCurveUSDCscrvUSD"] = 0x5aB01ee6208596f2204B85bDFA39d34c2aDD98F6.toBytes32();
+        s_values["base"]["sparkUSDC"] = 0x3128a0F7f0ea68E7B7c9B00AFa7E41045828e858.toBytes32();
+        s_values["base"]["WETH"] = 0x4200000000000000000000000000000000000006.toBytes32();
+        s_values["base"]["wrappedSuperOETHb"] = 0x7FcD174E80f264448ebeE8c88a7C4476AAF58Ea6.toBytes32();
+        s_values["base"]["superOETHb"] = 0xDBFeFD2e8460a6Ee4955A68582F85708BAEA60A3.toBytes32();
+        s_values["base"]["cbBTC"] = 0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf.toBytes32();
+
+        /* ============== AAVE ================ */
+        s_values["base"]["AavePoolAddressProvider"] = 0xe20fCBdBfFC4Dd138cE8b2E6FBb6CB49777ad64D.toBytes32();
+
+        /* ============== CURVE ================ */
+        s_values["base"]["CurveRouterV1_2"] = 0x4f37A9d177470499A2dD084621020b023fcffc1F.toBytes32();
+        s_values["base"]["CurvePool_superOETHb_WETH"] = 0x302A94E3C28c290EAF2a4605FC52e11Eb915f378.toBytes32();
+
+        /* ============== PENDLE =============== */
+        s_values["base"]["PendleRouter"] = 0x888888888889758F76e7103c6CbF23ABbF58F946.toBytes32();
+
+        /* ============== UNISWAP =============== */
+        s_values["base"]["UniswapV3Router"] = 0x2626664c2603336E57B271c5C0b26F421741e481.toBytes32();
+        s_values["base"]["UniversalRouter"] = 0x6fF5693b99212Da76ad316178A184AB56D299b43.toBytes32();
+        s_values["base"]["UniswapPermit2"] = 0x000000000022D473030F116dDEE9F6B43aC78BA3.toBytes32();
+
+        /* ============= PRICE ORACLES ============ */
+        s_values["base"]["EulerOracleFactory"] = 0xA9287853987B107969f181Cce5e25e0D09c1c116.toBytes32();
+        s_values["base"]["EulerOracleGovernor"] = 0x0562F16415fCf6fb5ACAF433e4796f8f328b7C7d.toBytes32();
+        s_values["base"]["PendleOracle"] = 0x9a9Fa8338dd5E5B2188006f1Cd2Ef26d921650C2.toBytes32();
+        s_values["base"]["CrossOracle_WETH__USDC"] = 0x2f5FACEAA8A06BDa66439E5EB9CB87f3ed7FB83a.toBytes32();
+
+        /* ============= DEPLOYED EULER ORACLES ========== */
+        s_values["base"]["Chainlink_USDC_USD_oracle"] = 0x5C9d3504d64B401BE0E6fDA1b7970e2f5FF75485.toBytes32();
+        s_values["base"]["Chainlink_WETH_USD_oracle"] = 0xeCa05CC73e67c344d5B146311B13ddB75F7fE4E4.toBytes32();
+        s_values["base"]["Chainlink_cbBTC_USD_oracle"] = 0x27208F64626b294542d1aCBA6bB56950cfDa15B7.toBytes32();
     }
 }

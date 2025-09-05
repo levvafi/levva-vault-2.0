@@ -132,10 +132,11 @@ abstract contract LevvaVaultDeployer is DeployHelper, AdapterUtils {
 
         //initial deposit
         if (config.initialDeposit != 0 && vault.totalAssets() == 0) {
+            address vaultManager = getAddress("VaultManager");
             vm.startBroadcast();
             IERC20(config.asset).approve(address(vault), config.initialDeposit);
-            vm.broadcast();
-            vault.deposit(config.initialDeposit, msg.sender);
+            vault.deposit(config.initialDeposit, vaultManager);
+            require(vault.balanceOf(vaultManager) != 0);
             vm.stopBroadcast();
         }
 
@@ -171,8 +172,9 @@ abstract contract LevvaVaultDeployer is DeployHelper, AdapterUtils {
 
             address adapterAddress = adapterDeployer.getOrDeployAdapter(adapter, address(vault));
 
-            vm.broadcast();
+            vm.startBroadcast();
             vault.addAdapter(adapterAddress);
+            vm.stopBroadcast();
         }
     }
 
