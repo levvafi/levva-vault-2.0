@@ -27,6 +27,7 @@ contract SetupBaseOracles is SetupEulerOracleBase {
         _setupPrice_WETH__USDC();
         _setupPrice_sparkUSDC__USDC();
         _setupPrice_wrappedSuperOETHb__USDC();
+        _setupPrice_morphoSparkUSDC__USDC();
     }
 
     function _setupPrice_aUSDC__USDC() private {
@@ -61,6 +62,12 @@ contract SetupBaseOracles is SetupEulerOracleBase {
         address SPARK_USDC = getAddress("sparkUSDC");
         _addResolvedVault(SPARK_USDC);
         _checkOraclePrice(SPARK_USDC, getAddress("USDC"));
+    }
+
+    function _setupPrice_morphoSparkUSDC__USDC() private {
+        address MORPHO_SPARK_USDC = getAddress("MorphoSparkUSDC");
+        _addResolvedVault(MORPHO_SPARK_USDC);
+        _checkOraclePrice(MORPHO_SPARK_USDC, getAddress("USDC"));
     }
 
     function _setupPrice_wrappedSuperOETHb__USDC() private {

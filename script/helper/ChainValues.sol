@@ -253,6 +253,7 @@ contract ChainValues {
         s_values["base"]["aUSDC"] = 0x4e65fE4DbA92790696d040ac24Aa414708F5c0AB.toBytes32();
         s_values["base"]["lpCurveUSDCscrvUSD"] = 0x5aB01ee6208596f2204B85bDFA39d34c2aDD98F6.toBytes32();
         s_values["base"]["sparkUSDC"] = 0x3128a0F7f0ea68E7B7c9B00AFa7E41045828e858.toBytes32();
+        s_values["base"]["MorphoSparkUSDC"] = 0x7BfA7C4f149E7415b73bdeDfe609237e29CBF34A.toBytes32();
         s_values["base"]["WETH"] = 0x4200000000000000000000000000000000000006.toBytes32();
         s_values["base"]["wrappedSuperOETHb"] = 0x7FcD174E80f264448ebeE8c88a7C4476AAF58Ea6.toBytes32();
         s_values["base"]["superOETHb"] = 0xDBFeFD2e8460a6Ee4955A68582F85708BAEA60A3.toBytes32();
@@ -264,6 +265,9 @@ contract ChainValues {
         /* ============== CURVE ================ */
         s_values["base"]["CurveRouterV1_2"] = 0x4f37A9d177470499A2dD084621020b023fcffc1F.toBytes32();
         s_values["base"]["CurvePool_superOETHb_WETH"] = 0x302A94E3C28c290EAF2a4605FC52e11Eb915f378.toBytes32();
+
+        /* ============== MORPHO ================ */
+        s_values["base"]["MetaMorphoFactoryV1_1"] = 0xFf62A7c278C62eD665133147129245053Bbf5918.toBytes32();
 
         /* ============== PENDLE =============== */
         s_values["base"]["PendleRouter"] = 0x888888888889758F76e7103c6CbF23ABbF58F946.toBytes32();
