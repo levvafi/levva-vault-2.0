@@ -28,6 +28,7 @@ import {UniswapAdapter} from "contracts/adapters/uniswap/UniswapAdapter.sol";
 import {PendleAdapter} from "contracts/adapters/pendle/PendleAdapter.sol";
 import {ResolvAdapter} from "contracts/adapters/resolv/ResolvAdapter.sol";
 import {OriginETHAdapter} from "contracts/adapters/origin/OriginETHAdapter.sol";
+import {SparkUSDCAdapter} from "contracts/adapters/spark/SparkUSDCAdapter.sol";
 import {DeployLevvaVaultFactory} from "./DeployLevvaVaultFactory.s.sol";
 
 /**
@@ -57,6 +58,7 @@ contract DeployAdapter is DeployHelper, AdapterUtils {
         //deployAdapter(Adapter.ResolvAdapter, address(0));
         //deployAdapter(Adapter.CurvePoolAdapter, address(0));
         //deployAdapter(Adapter.OriginETHAdapter, address(0));
+        deployAdapter(Adapter.SparkUSDCAdapter, address(0));
     }
 
     function getDeployedAdapter(Adapter adapter, address vault) public view returns (address) {
@@ -123,6 +125,8 @@ contract DeployAdapter is DeployHelper, AdapterUtils {
             deployedAdapter = _deployCurvePool();
         } else if (adapter == Adapter.OriginETHAdapter) {
             deployedAdapter = _deployOriginETH();
+        } else if (adapter == Adapter.SparkUSDCAdapter) {
+            deployedAdapter = _deploySparkUSDC();
         }
         if (deployedAdapter == address(0)) {
             revert("Adapter not supported");
@@ -280,6 +284,14 @@ contract DeployAdapter is DeployHelper, AdapterUtils {
         vm.broadcast();
         OriginETHAdapter originETHAdapter = new OriginETHAdapter(wrappedOETH);
         return address(originETHAdapter);
+    }
+
+    function _deploySparkUSDC() internal returns (address) {
+        address sparkUSDC = getAddress("sparkUSDC");
+
+        vm.broadcast();
+        SparkUSDCAdapter sparkUSDCAdapter = new SparkUSDCAdapter(sparkUSDC);
+        return address(sparkUSDCAdapter);
     }
 
     function _saveDeployment(Adapter adapter, address adapterAddress, address levvaVault) internal {
