@@ -242,7 +242,7 @@ contract ChainValues {
     }
 
     function _addBase() private {
-        s_values["base"]["LevvaVaultFactory"] = 0x8506934ed8c1154Da93610012524b07A972BAcca.toBytes32();
+        s_values["base"]["LevvaVaultFactory"] = 0x391685807Cf005848A0711Deb9Db74209E59662f.toBytes32();
         s_values["base"]["EulerOracle"] = 0xC6a3e17E8cf859607654500A2c5Ba1807FC7724E.toBytes32();
         s_values["base"]["FeeCollector"] = 0xD20092A19e0488E1283E488e11583B43ba7EA849.toBytes32();
         s_values["base"]["VaultManager"] = 0x3a57D60a6866c41365E91b9cAbFA66F8Dd17F210.toBytes32();
