@@ -18,7 +18,8 @@ enum Adapter {
     ResolvAdapter,
     UniswapAdapter,
     CurvePoolAdapter,
-    OriginETHAdapter
+    OriginETHAdapter,
+    SparkUSDCAdapter
 }
 
 abstract contract AdapterUtils {
@@ -61,6 +62,8 @@ abstract contract AdapterUtils {
             return "CurvePoolAdapter";
         } else if (adapter == Adapter.OriginETHAdapter) {
             return "OriginETHAdapter";
+        } else if (adapter == Adapter.SparkUSDCAdapter) {
+            return "SparkUSDCAdapter";
         }
 
         revert("Adapter not supported");
