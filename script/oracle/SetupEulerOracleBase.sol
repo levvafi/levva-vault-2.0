@@ -8,6 +8,7 @@ import {EulerRouter} from "euler-price-oracle/EulerRouter.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 import {PendleUniversalOracle} from "euler-price-oracle/adapter/pendle/PendleUniversalOracle.sol";
+// import {PendleUnifiedOracle} from "euler-price-oracle/adapter/pendle/PendleUnifiedOracle.sol";
 import {FixedRateOracle} from "euler-price-oracle/adapter/fixed/FixedRateOracle.sol";
 import {CrossAdapter} from "euler-price-oracle/adapter/CrossAdapter.sol";
 import {CurveEMAOracle} from "euler-price-oracle/adapter/curve/CurveEMAOracle.sol";
@@ -18,6 +19,8 @@ import {IPPrincipalToken} from "@pendle/core-v2/interfaces/IPPrincipalToken.sol"
 
 abstract contract SetupEulerOracleBase is Script, DeployHelper {
     using stdJson for string;
+
+    string public constant DEPLOYMENT_FILE = "price-oracle.json";
 
     EulerRouter internal eulerRouter;
 
@@ -53,6 +56,41 @@ abstract contract SetupEulerOracleBase is Script, DeployHelper {
 
         return address(pendleUniversalOracle);
     }
+
+    function _addPendleUnifiedOraclePair(address /*pendleMarket*/, address /*base*/, address /*quote*/, uint32 /*twapWindow*/)
+        internal
+        pure
+        returns (address)
+    {
+        // address deployedOracle = _getOracleConfig(base, quote);
+        // if (deployedOracle != address(0)) {
+        //     return deployedOracle;
+        // }
+
+        // PendleUnifiedOracle pendleUnifiedOracle = PendleUnifiedOracle(_getDeployedAddress("PendleUnifiedOracle"));
+        // if (address(pendleUnifiedOracle) == address(0)) {
+        //     pendleUnifiedOracle = _deployPendleUnifiedOracle();
+        // }
+
+        // vm.startBroadcast();
+        // pendleUnifiedOracle.addPair(pendleMarket, base, quote, twapWindow);
+        // vm.stopBroadcast();
+
+        // return address(pendleUnifiedOracle);
+
+        return address(0); // TODO: fix openzeppelin version collision
+    }
+
+    // function _deployPendleUnifiedOracle() internal returns (PendleUnifiedOracle) {
+    //     address pendleOracle = getAddress("PendleOracle");
+
+    //     vm.startBroadcast();
+    //     PendleUnifiedOracle pendleUnifiedOracle = new PendleUnifiedOracle(pendleOracle);
+    //     vm.stopBroadcast();
+    //     _saveDeployment("PendleUnifiedOracle", address(pendleUnifiedOracle));
+
+    //     return pendleUnifiedOracle;
+    // }
 
     function _deployFixedRateOracle(address base, address quote, uint256 rate) internal returns (address) {
         address deployedOracle = _getOracleConfig(base, quote);
@@ -186,5 +224,18 @@ abstract contract SetupEulerOracleBase is Script, DeployHelper {
         } else {
             return tokenContract.symbol();
         }
+    }
+
+    function _getDeployedAddress(string memory deploymentId) internal view returns (address) {
+        return _readAddressFromDeployment(DEPLOYMENT_FILE, deploymentId);
+    }
+
+    function _saveDeployment(string memory deploymentId, address oracleAdapter) internal {
+        string memory path = _getDeploymentPath(DEPLOYMENT_FILE);
+        if (!vm.exists(path)) {
+            _createEmptyDeploymentFile(path);
+        }
+
+        _saveInDeploymentFile(path, deploymentId, oracleAdapter);
     }
 }

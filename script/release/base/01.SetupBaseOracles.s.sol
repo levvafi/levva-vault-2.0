@@ -22,12 +22,13 @@ contract SetupBaseOracles is SetupEulerOracleBase {
     function run() external {
         eulerRouter = EulerRouter(getAddress("EulerOracle"));
 
-        _setupPrice_aUSDC__USDC();
-        _setupPrice_cbBTC__USDC();
-        _setupPrice_WETH__USDC();
-        _setupPrice_sparkUSDC__USDC();
-        _setupPrice_wrappedSuperOETHb__USDC();
-        _setupPrice_morphoSparkUSDC__USDC();
+        // _setupPrice_aUSDC__USDC();
+        // _setupPrice_cbBTC__USDC();
+        // _setupPrice_WETH__USDC();
+        // _setupPrice_sparkUSDC__USDC();
+        // _setupPrice_wrappedSuperOETHb__USDC();
+        // _setupPrice_morphoSparkUSDC__USDC();
+        _setupPrice_PendleLPwrappedSuperOETHb__WETH();
     }
 
     function _setupPrice_aUSDC__USDC() private {
@@ -87,6 +88,28 @@ contract SetupBaseOracles is SetupEulerOracleBase {
         address USDC = getAddress("USDC");
         _deployCrossOracle(SUPER_OETH_B, WETH, USDC, oEthWethOracle, wethUsdcOracle);
         _checkOraclePrice(WRAPPED_SUPER_OETH_B, USDC);
+    }
+
+    function _setupPrice_PendleLPwrappedSuperOETHb__WETH() private {
+        address PendleLPwrappedSuperOETHb25Jun2026 = getAddress("PendleLPwrappedSuperOETHb25Jun2026");
+        address SUPER_OETH_B = getAddress("superOETHb");
+        address WETH = getAddress("WETH");
+        uint32 twapWindow = 900; // 15 minutes
+
+        address PendleLPwrappedSuperOETHb_superOETHb_oracle = _addPendleUnifiedOraclePair(
+            PendleLPwrappedSuperOETHb25Jun2026, PendleLPwrappedSuperOETHb25Jun2026, SUPER_OETH_B, twapWindow
+        );
+
+        address curveEmaOracleSuperOEthBWeth = getAddress("CurveEMAOracle_superOETHb__WETH");
+        _deployCrossOracle(
+            PendleLPwrappedSuperOETHb25Jun2026,
+            SUPER_OETH_B,
+            WETH,
+            PendleLPwrappedSuperOETHb_superOETHb_oracle,
+            curveEmaOracleSuperOEthBWeth
+        );
+
+        _checkOraclePrice(PendleLPwrappedSuperOETHb25Jun2026, WETH);
     }
 
     function _addAave_aUsdc_USDC_price() private returns (address) {

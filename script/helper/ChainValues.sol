@@ -271,6 +271,7 @@ contract ChainValues {
 
         /* ============== PENDLE =============== */
         s_values["base"]["PendleRouter"] = 0x888888888889758F76e7103c6CbF23ABbF58F946.toBytes32();
+        s_values["base"]["PendleLPwrappedSuperOETHb25Jun2026"] = 0x9621342D8fb87359abE8Ab2270f402f202F87b67.toBytes32();
 
         /* ============== UNISWAP =============== */
         s_values["base"]["UniswapV3Router"] = 0x2626664c2603336E57B271c5C0b26F421741e481.toBytes32();
@@ -282,6 +283,7 @@ contract ChainValues {
         s_values["base"]["EulerOracleGovernor"] = 0x0562F16415fCf6fb5ACAF433e4796f8f328b7C7d.toBytes32();
         s_values["base"]["PendleOracle"] = 0x9a9Fa8338dd5E5B2188006f1Cd2Ef26d921650C2.toBytes32();
         s_values["base"]["CrossOracle_WETH__USDC"] = 0x2f5FACEAA8A06BDa66439E5EB9CB87f3ed7FB83a.toBytes32();
+        s_values["base"]["CurveEMAOracle_superOETHb__WETH"] = 0x917E579f27CBD19c1e97e6A03501198D6740c6A8.toBytes32();
 
         /* ============= DEPLOYED EULER ORACLES ========== */
         s_values["base"]["Chainlink_USDC_USD_oracle"] = 0x5C9d3504d64B401BE0E6fDA1b7970e2f5FF75485.toBytes32();
