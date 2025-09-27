@@ -59,6 +59,7 @@ contract DeployAdapter is DeployHelper, AdapterUtils {
         //deployAdapter(Adapter.CurvePoolAdapter, address(0));
         //deployAdapter(Adapter.OriginETHAdapter, address(0));
         //deployAdapter(Adapter.SparkUSDCAdapter, address(0));
+        deployAdapter(Adapter.OriginETHAdapter, address(0));
     }
 
     function getDeployedAdapter(Adapter adapter, address vault) public view returns (address) {
@@ -276,7 +277,7 @@ contract DeployAdapter is DeployHelper, AdapterUtils {
     function _deployOriginETH() internal returns (address) {
         address wrappedOETH;
         if (block.chainid == ETHEREUM) {
-            wrappedOETH = getAddress("WrappedOETH");
+            wrappedOETH = getAddress("wOETH");
         } else {
             wrappedOETH = getAddress("wrappedSuperOETHb");
         }

@@ -31,8 +31,9 @@ contract SetupEthereumOracles is SetupEulerOracleBase {
         // _setupPrice_wstETH_WETH();
         // _setupPrice_WBTC_USDC();
         // _setupPrice_WETH_USDC();
-        _setupPrice_OETH_WETH();
-        _setupPrice_PendleLPwOETH_WETH();
+        //_setupPrice_OETH_WETH();
+        //_setupPrice_PendleLPwOETH_WETH();
+        _setupPrice_wOETH_WETH();
     }
 
     function _setupPrice_OETH_WETH() private {
@@ -44,6 +45,17 @@ contract SetupEthereumOracles is SetupEulerOracleBase {
          *  oracle WETH/OETH
          */
         _deployCurveEmaOracle(CurvePoolOETH_WETH, WETH, OETH, 0);
+    }
+
+    function _setupPrice_wOETH_WETH() private {
+        address wOETH = getAddress("wOETH");
+        address WETH = getAddress("WETH");
+        address OETH = getAddress("OETH");
+
+        address wOETH_OETH_oracle = _addResolvedVault(wOETH);
+        address wOETH_WETH_oracle = _deployCurveEmaOracle(wOETH, WETH, OETH, 0);
+
+        _deployCrossOracle(wOETH, OETH, WETH, wOETH_OETH_oracle, wOETH_WETH_oracle);
     }
 
     function _setupPrice_PendleLPwOETH_WETH() private {
