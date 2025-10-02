@@ -453,7 +453,7 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
         view
         returns (FP96.FixedPoint memory)
     {
-        FP96.FixedPoint memory systemLeverage = FP96.FixedPoint({inner: pool.systemLeverage().longX96});
+        FP96.FixedPoint memory systemLeverage = FP96.FixedPoint({inner: pool.longLeverageX96()});
         return _estimateAccruedInterestFactor(pool, secondsPassed, systemLeverage);
     }
 
@@ -462,7 +462,7 @@ contract LevvaPoolAdapter is AdapterBase, IExternalPositionAdapter {
         view
         returns (FP96.FixedPoint memory)
     {
-        FP96.FixedPoint memory systemLeverage = FP96.FixedPoint({inner: pool.systemLeverage().shortX96});
+        FP96.FixedPoint memory systemLeverage = FP96.FixedPoint({inner: pool.shortLeverageX96()});
         return _estimateAccruedInterestFactor(pool, secondsPassed, systemLeverage);
     }
 
