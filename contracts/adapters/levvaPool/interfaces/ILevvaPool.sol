@@ -66,14 +66,9 @@ interface ILevvaPool {
         uint184 quoteLimit;
     }
 
-    struct Leverage {
-        /// @dev This is a leverage of all long positions in the system
-        uint128 shortX96;
-        /// @dev This is a leverage of all short positions in the system
-        uint128 longX96;
-    }
+    function longLeverageX96() external view returns (uint256);
 
-    function systemLeverage() external view returns (Leverage memory);
+    function shortLeverageX96() external view returns (uint256);
 
     function quoteToken() external view returns (address);
 
