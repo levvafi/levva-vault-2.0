@@ -39,7 +39,7 @@ interface IAtomicSolver {
 contract EtherfiBTCAdapterTest is Test {
     using Math for uint256;
 
-    uint256 public constant FORK_BLOCK = 22515980;
+    uint256 public constant FORK_BLOCK = 23532800;
 
     IERC20 private constant USDC = IERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
     IERC20 private constant WBTC = IERC20(0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599);
@@ -102,10 +102,10 @@ contract EtherfiBTCAdapterTest is Test {
         uint256 wbtcBalanceBefore = WBTC.balanceOf(address(levvaVault));
         uint256 depositAmount = 10 ** 8;
         vm.prank(address(levvaVault));
-        adapter.deposit(depositAmount, 0);
+        uint256 shares = adapter.deposit(depositAmount, 0);
 
         assertEq(wbtcBalanceBefore - WBTC.balanceOf(address(levvaVault)), depositAmount);
-        assertApproxEqAbs(EBTC.balanceOf(address(levvaVault)), depositAmount, 1);
+        assertEq(EBTC.balanceOf(address(levvaVault)), shares);
         assertEq(WBTC.balanceOf(address(adapter)), 0);
         assertEq(EBTC.balanceOf(address(adapter)), 0);
 
@@ -113,14 +113,12 @@ contract EtherfiBTCAdapterTest is Test {
     }
 
     function testDepositBtcAllExcept() public {
-        uint256 wbtcBalanceBefore = WBTC.balanceOf(address(levvaVault));
         uint256 exceptAmount = 9 * 10 ** 8;
-        uint256 depositAmount = wbtcBalanceBefore - exceptAmount;
         vm.prank(address(levvaVault));
-        adapter.depositAllExcept(exceptAmount, 0);
+        uint256 shares = adapter.depositAllExcept(exceptAmount, 0);
 
         assertEq(WBTC.balanceOf(address(levvaVault)), exceptAmount);
-        assertApproxEqAbs(EBTC.balanceOf(address(levvaVault)), depositAmount, 1);
+        assertEq(EBTC.balanceOf(address(levvaVault)), shares);
         assertEq(WBTC.balanceOf(address(adapter)), 0);
         assertEq(EBTC.balanceOf(address(adapter)), 0);
 
@@ -137,11 +135,11 @@ contract EtherfiBTCAdapterTest is Test {
     function testRequestWithdrawBtc() public {
         uint256 depositAmount = 2 * 10 ** 8;
         vm.prank(address(levvaVault));
-        adapter.deposit(depositAmount, 0);
+        uint256 shares = adapter.deposit(depositAmount, 0);
 
         uint88 price = 10 ** 8;
         uint64 deadline = type(uint64).max;
-        uint256 withdrawAmount = depositAmount;
+        uint256 withdrawAmount = shares;
 
         vm.prank(address(levvaVault));
         adapter.requestWithdraw(uint96(withdrawAmount), price, deadline);
@@ -151,26 +149,26 @@ contract EtherfiBTCAdapterTest is Test {
 
         assertEq(request.deadline, deadline);
         assertEq(request.atomicPrice, price);
-        assertEq(request.offerAmount, depositAmount);
+        assertEq(request.offerAmount, withdrawAmount);
         assert(!request.inSolve);
 
         assertEq(WBTC.balanceOf(address(adapter)), 0);
-        assertEq(EBTC.balanceOf(address(adapter)), depositAmount);
+        assertEq(EBTC.balanceOf(address(adapter)), shares);
 
-        _assertAdapterAssets(0, depositAmount);
+        _assertAdapterAssets(0, withdrawAmount);
     }
 
     function testRequestWithdrawBtcAllExcept() public {
         uint256 depositAmount = 2 * 10 ** 8;
         vm.prank(address(levvaVault));
-        adapter.deposit(depositAmount, 0);
+        uint256 shares = adapter.deposit(depositAmount, 0);
 
         uint88 price = 10 ** 8;
         uint64 deadline = type(uint64).max;
 
         vm.prank(address(levvaVault));
         uint96 except = uint96(1 * 10 ** 8);
-        uint256 withdrawAmount = depositAmount - except;
+        uint256 withdrawAmount = shares - except;
         adapter.requestWithdrawAllExcept(except, price, deadline);
 
         IAtomicQueue.AtomicRequest memory request =
@@ -184,7 +182,7 @@ contract EtherfiBTCAdapterTest is Test {
         assertEq(WBTC.balanceOf(address(adapter)), 0);
         assertEq(EBTC.balanceOf(address(adapter)), withdrawAmount);
 
-        _assertAdapterAssets(0, except);
+        _assertAdapterAssets(0, withdrawAmount);
     }
 
     function testRequestWithdrawBtcNoAccess() public {
@@ -197,11 +195,11 @@ contract EtherfiBTCAdapterTest is Test {
     function testClaimWithdrawBtc() public {
         uint256 depositAmount = 2 * 10 ** 8;
         vm.prank(address(levvaVault));
-        adapter.deposit(depositAmount, 0);
+        uint256 shares = adapter.deposit(depositAmount, 0);
 
         uint88 price = 10 ** 8;
         uint64 deadline = type(uint64).max;
-        uint256 withdrawAmount = depositAmount;
+        uint256 withdrawAmount = shares;
 
         vm.prank(address(levvaVault));
         adapter.requestWithdraw(uint96(withdrawAmount), price, deadline);
@@ -233,13 +231,13 @@ contract EtherfiBTCAdapterTest is Test {
     function testCancelWithdrawBtc() public {
         uint256 depositAmount = 10 ** 8;
         vm.prank(address(levvaVault));
-        adapter.deposit(depositAmount, 0);
+        uint256 shares = adapter.deposit(depositAmount, 0);
 
         vm.prank(address(levvaVault));
-        adapter.requestWithdraw(uint96(depositAmount), 10 ** 8, type(uint64).max);
+        adapter.requestWithdraw(uint96(shares), 10 ** 8, type(uint64).max);
 
         assertEq(WBTC.balanceOf(address(adapter)), 0);
-        assertEq(EBTC.balanceOf(address(adapter)), depositAmount);
+        assertEq(EBTC.balanceOf(address(adapter)), shares);
 
         vm.prank(address(levvaVault));
         adapter.cancelWithdrawRequest();
