@@ -145,9 +145,9 @@ contract EtherfiBTCAdapter is AdapterBase, IExternalPositionAdapter {
         _wBTC.forceApprove(address(_eBTC), amount);
 
         shares = teller.deposit(_wBTC, amount, minShare);
-        _eBTC.safeTransfer(msg.sender, amount);
+        _eBTC.safeTransfer(msg.sender, shares);
 
-        emit Swap(msg.sender, address(_wBTC), amount, address(_eBTC), amount);
+        emit Swap(msg.sender, address(_wBTC), amount, address(_eBTC), shares);
     }
 
     function _requestWithdraw(IERC20 _eBTC, uint96 amount, uint88 atomicPrice, uint64 deadline) private onlyVault {
