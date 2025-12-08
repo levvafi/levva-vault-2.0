@@ -29,7 +29,8 @@ import {PendleAdapter} from "contracts/adapters/pendle/PendleAdapter.sol";
 import {ResolvAdapter} from "contracts/adapters/resolv/ResolvAdapter.sol";
 import {OriginETHAdapter} from "contracts/adapters/origin/OriginETHAdapter.sol";
 import {SparkUSDCAdapter} from "contracts/adapters/spark/SparkUSDCAdapter.sol";
-import {TokemakAdapter} from "contracts/adapters/tokemak/TokemakAdapter.sol";
+import {AutoUSDAdapter} from "contracts/adapters/tokemak/AutoUSDAdapter.sol";
+import {AutoETHAdapter} from "contracts/adapters/tokemak/AutoETHAdapter.sol";
 import {DeployLevvaVaultFactory} from "./DeployLevvaVaultFactory.s.sol";
 
 /**
@@ -60,8 +61,8 @@ contract DeployAdapter is DeployHelper, AdapterUtils {
         //deployAdapter(Adapter.CurvePoolAdapter, address(0));
         //deployAdapter(Adapter.OriginETHAdapter, address(0));
         //deployAdapter(Adapter.SparkUSDCAdapter, address(0));
-        //deployAdapter(Adapter.TokemakAutoUSDAdapter, address(0));
-        //deployAdapter(Adapter.TokemakAutoETHAdapter, address(0));
+        deployAdapter(Adapter.TokemakAutoUSDAdapter, address(0));
+        deployAdapter(Adapter.TokemakAutoETHAdapter, address(0));
     }
 
     function getDeployedAdapter(Adapter adapter, address vault) public view returns (address) {
@@ -130,6 +131,10 @@ contract DeployAdapter is DeployHelper, AdapterUtils {
             deployedAdapter = _deployOriginETH();
         } else if (adapter == Adapter.SparkUSDCAdapter) {
             deployedAdapter = _deploySparkUSDC();
+        } else if (adapter == Adapter.TokemakAutoETHAdapter) {
+            deployedAdapter = _deployTokemakAutoETH();
+        } else if (adapter == Adapter.TokemakAutoUSDAdapter) {
+            deployedAdapter = _deployTokemakAutoUSD();
         }
         if (deployedAdapter == address(0)) {
             revert("Adapter not supported");
@@ -301,7 +306,7 @@ contract DeployAdapter is DeployHelper, AdapterUtils {
         address autoUSD = getAddress("autoUSD");
 
         vm.broadcast();
-        TokemakAdapter tokemakAutoUSDAdapter = new TokemakAdapter(autoUSD);
+        AutoUSDAdapter tokemakAutoUSDAdapter = new AutoUSDAdapter(autoUSD);
         return address(tokemakAutoUSDAdapter);
     }
 
@@ -309,7 +314,7 @@ contract DeployAdapter is DeployHelper, AdapterUtils {
         address autoETH = getAddress("autoETH");
 
         vm.broadcast();
-        TokemakAdapter tokemakAutoETHAdapter = new TokemakAdapter(autoETH);
+        AutoETHAdapter tokemakAutoETHAdapter = new AutoETHAdapter(autoETH);
         return address(tokemakAutoETHAdapter);
     }
 
