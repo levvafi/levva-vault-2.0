@@ -19,7 +19,9 @@ enum Adapter {
     UniswapAdapter,
     CurvePoolAdapter,
     OriginETHAdapter,
-    SparkUSDCAdapter
+    SparkUSDCAdapter,
+    TokemakAutoUSDAdapter,
+    TokemakAutoETHAdapter
 }
 
 abstract contract AdapterUtils {
@@ -64,6 +66,10 @@ abstract contract AdapterUtils {
             return "OriginETHAdapter";
         } else if (adapter == Adapter.SparkUSDCAdapter) {
             return "SparkUSDCAdapter";
+        } else if (adapter == Adapter.TokemakAutoUSDAdapter) {
+            return "TokemakAutoUSDAdapter";
+        } else if (adapter == Adapter.TokemakAutoETHAdapter) {
+            return "TokemakAutoETHAdapter";
         }
 
         revert("Adapter not supported");

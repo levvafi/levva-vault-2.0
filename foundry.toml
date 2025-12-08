@@ -5,10 +5,11 @@ libs = ['lib']
 test = 'test'
 cache_path = 'cache_forge'
 
-solc-version = "0.8.28"
+solc = "0.8.28"
 optimizer = true
 optimizer-runs = 10_000_000
 via_ir = true
+dynamic_test_linking = true
 
 remappings = [
     "forge-std/=lib/forge-std/src/",
