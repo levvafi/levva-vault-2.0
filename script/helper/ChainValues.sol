@@ -128,6 +128,7 @@ contract ChainValues {
         s_values["ethereum"]["OETH"] = 0x856c4Efb76C1D1AE02e20CEB03A2A6a08b0b8dC3.toBytes32();
         s_values["ethereum"]["wOETH"] = 0xDcEe70654261AF21C44c093C300eD3Bb97b78192.toBytes32();
         s_values["ethereum"]["autoUSD"] = 0xa7569A44f348d3D70d8ad5889e50F78E33d80D35.toBytes32();
+        s_values["ethereum"]["autoETH"] = 0x0A2b94F6871c1D7A32Fe58E1ab5e6deA2f114E56.toBytes32();
 
         /* ============== AAVE ================ */
         s_values["ethereum"]["AavePoolAddressProvider"] = 0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e.toBytes32();

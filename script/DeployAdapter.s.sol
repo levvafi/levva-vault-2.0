@@ -61,6 +61,7 @@ contract DeployAdapter is DeployHelper, AdapterUtils {
         //deployAdapter(Adapter.OriginETHAdapter, address(0));
         //deployAdapter(Adapter.SparkUSDCAdapter, address(0));
         //deployAdapter(Adapter.TokemakAutoUSDAdapter, address(0));
+        //deployAdapter(Adapter.TokemakAutoETHAdapter, address(0));
     }
 
     function getDeployedAdapter(Adapter adapter, address vault) public view returns (address) {
@@ -296,12 +297,20 @@ contract DeployAdapter is DeployHelper, AdapterUtils {
         return address(sparkUSDCAdapter);
     }
 
-     function _deployTokemakAutoUSDC() internal returns (address) {
+    function _deployTokemakAutoUSD() internal returns (address) {
         address autoUSD = getAddress("autoUSD");
 
         vm.broadcast();
         TokemakAdapter tokemakAutoUSDAdapter = new TokemakAdapter(autoUSD);
         return address(tokemakAutoUSDAdapter);
+    }
+
+    function _deployTokemakAutoETH() internal returns (address) {
+        address autoETH = getAddress("autoETH");
+
+        vm.broadcast();
+        TokemakAdapter tokemakAutoETHAdapter = new TokemakAdapter(autoETH);
+        return address(tokemakAutoETHAdapter);
     }
 
     function _saveDeployment(Adapter adapter, address adapterAddress, address levvaVault) internal {
