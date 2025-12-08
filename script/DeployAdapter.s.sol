@@ -29,6 +29,7 @@ import {PendleAdapter} from "contracts/adapters/pendle/PendleAdapter.sol";
 import {ResolvAdapter} from "contracts/adapters/resolv/ResolvAdapter.sol";
 import {OriginETHAdapter} from "contracts/adapters/origin/OriginETHAdapter.sol";
 import {SparkUSDCAdapter} from "contracts/adapters/spark/SparkUSDCAdapter.sol";
+import {TokemakAdapter} from "contracts/adapters/tokemak/TokemakAdapter.sol";
 import {DeployLevvaVaultFactory} from "./DeployLevvaVaultFactory.s.sol";
 
 /**
@@ -59,6 +60,7 @@ contract DeployAdapter is DeployHelper, AdapterUtils {
         //deployAdapter(Adapter.CurvePoolAdapter, address(0));
         //deployAdapter(Adapter.OriginETHAdapter, address(0));
         //deployAdapter(Adapter.SparkUSDCAdapter, address(0));
+        //deployAdapter(Adapter.TokemakAutoUSDAdapter, address(0));
     }
 
     function getDeployedAdapter(Adapter adapter, address vault) public view returns (address) {
@@ -292,6 +294,14 @@ contract DeployAdapter is DeployHelper, AdapterUtils {
         vm.broadcast();
         SparkUSDCAdapter sparkUSDCAdapter = new SparkUSDCAdapter(sparkUSDC);
         return address(sparkUSDCAdapter);
+    }
+
+     function _deployTokemakAutoUSDC() internal returns (address) {
+        address autoUSD = getAddress("autoUSD");
+
+        vm.broadcast();
+        TokemakAdapter tokemakAutoUSDAdapter = new TokemakAdapter(autoUSD);
+        return address(tokemakAutoUSDAdapter);
     }
 
     function _saveDeployment(Adapter adapter, address adapterAddress, address levvaVault) internal {
