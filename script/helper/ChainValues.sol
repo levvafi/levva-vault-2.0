@@ -260,6 +260,8 @@ contract ChainValues {
         s_values["base"]["wrappedSuperOETHb"] = 0x7FcD174E80f264448ebeE8c88a7C4476AAF58Ea6.toBytes32();
         s_values["base"]["superOETHb"] = 0xDBFeFD2e8460a6Ee4955A68582F85708BAEA60A3.toBytes32();
         s_values["base"]["cbBTC"] = 0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf.toBytes32();
+        s_values["base"]["autoUSD"] = 0x9c6864105AEC23388C89600046213a44C384c831.toBytes32();
+        s_values["base"]["autoETH"] = 0xAADf01DD90aE0A6Bb9Eb908294658037096E0404.toBytes32();
 
         /* ============== AAVE ================ */
         s_values["base"]["AavePoolAddressProvider"] = 0xe20fCBdBfFC4Dd138cE8b2E6FBb6CB49777ad64D.toBytes32();
@@ -269,6 +271,7 @@ contract ChainValues {
         s_values["base"]["CurvePool_superOETHb_WETH"] = 0x302A94E3C28c290EAF2a4605FC52e11Eb915f378.toBytes32();
 
         /* ============== MORPHO ================ */
+        s_values["base"]["MetaMorphoFactory"] = 0xA9c3D3a366466Fa809d1Ae982Fb2c46E5fC41101.toBytes32();
         s_values["base"]["MetaMorphoFactoryV1_1"] = 0xFf62A7c278C62eD665133147129245053Bbf5918.toBytes32();
 
         /* ============== PENDLE =============== */

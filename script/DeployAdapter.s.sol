@@ -53,7 +53,7 @@ contract DeployAdapter is DeployHelper, AdapterUtils {
         //deployAdapter(Adapter.LidoAdapter, address(0));
         //deployAdapter(Adapter.MakerDaoDaiAdapter, address(0));
         //deployAdapter(Adapter.MakerDaoUsdsAdapter, address(0));
-        //deployAdapter(Adapter.MorphoAdapter, address(0));
+        deployAdapter(Adapter.Morpho, address(0));
         //deployAdapter(Adapter.MorphoAdapterV1_1, address(0));
         //deployAdapter(Adapter.PendleAdapter, address(0));
         //deployAdapter(Adapter.UniswapAdapter, address(0));
