@@ -86,7 +86,7 @@ contract OriginETHTechAdapterTest is Test {
 
         uint256 unwrapAmount = 1 ether;
         vm.prank(address(levvaVault));
-        (uint256 oETHAmount) = adapter.unwrap(unwrapAmount);
+        uint256 oETHAmount = adapter.unwrap(unwrapAmount);
 
 
         assertEq(wOEthBalanceBefore - W_OETH.balanceOf(address(levvaVault)), unwrapAmount);
@@ -98,7 +98,7 @@ contract OriginETHTechAdapterTest is Test {
 
         uint256 unwrapExceptAmount = 1 ether;
         vm.prank(address(levvaVault));
-        (uint256 oETHAmount) = adapter.unwrapAllExcept(unwrapExceptAmount);
+        uint256 oETHAmount = adapter.unwrapAllExcept(unwrapExceptAmount);
 
 
         assertEq(W_OETH.balanceOf(address(levvaVault)), unwrapExceptAmount);
