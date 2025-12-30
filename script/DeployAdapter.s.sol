@@ -54,7 +54,7 @@ contract DeployAdapter is DeployHelper, AdapterUtils {
         //deployAdapter(Adapter.LidoAdapter, address(0));
         //deployAdapter(Adapter.MakerDaoDaiAdapter, address(0));
         //deployAdapter(Adapter.MakerDaoUsdsAdapter, address(0));
-        deployAdapter(Adapter.Morpho, address(0));
+        //deployAdapter(Adapter.Morpho, address(0));
         //deployAdapter(Adapter.MorphoAdapterV1_1, address(0));
         //deployAdapter(Adapter.PendleAdapter, address(0));
         //deployAdapter(Adapter.UniswapAdapter, address(0));
@@ -62,8 +62,9 @@ contract DeployAdapter is DeployHelper, AdapterUtils {
         //deployAdapter(Adapter.CurvePoolAdapter, address(0));
         //deployAdapter(Adapter.OriginETHAdapter, address(0));
         //deployAdapter(Adapter.SparkUSDCAdapter, address(0));
-        deployAdapter(Adapter.TokemakAutoUSDAdapter, address(0));
-        deployAdapter(Adapter.TokemakAutoETHAdapter, address(0));
+        //deployAdapter(Adapter.TokemakAutoUSDAdapter, address(0));
+        //deployAdapter(Adapter.TokemakAutoETHAdapter, address(0));
+        //deployAdapter(Adapter.OriginETHTechAdapter, address(0));
     }
 
     function getDeployedAdapter(Adapter adapter, address vault) public view returns (address) {
