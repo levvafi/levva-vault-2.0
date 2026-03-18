@@ -89,18 +89,14 @@ contract OriginETHAdapter is AdapterBase, IExternalPositionAdapter {
         emit OriginETHClaimWithdrawal(msg.sender, requestId, withdrawn);
     }
 
-    function claimPossible(address vault) external view returns (bool) {
-        WithdrawalQueue storage queue = queues[vault];
-        WithdrawalRequest storage request = queue.requests[queue.start];
+    function unwrap(uint256 wrappedOETHAmount) external returns (uint256) {
+        return _unwrap(wrappedOETH, wrappedOETHAmount);
+    }
 
-        uint256 requestId = request.id;
-        if (requestId == 0) return false;
-
-        IOETHVault _oETHVault = oETHVault;
-        IOETHVault.WithdrawalRequest memory withdrawalRequest = _oETHVault.withdrawalRequests(requestId);
-
-        return block.timestamp >= withdrawalRequest.timestamp + _oETHVault.withdrawalClaimDelay()
-            && _claimableAmount(_oETHVault) >= withdrawalRequest.queued;
+    function unwrapAllExcept(uint256 wrappedOETHExceptAmount) external returns (uint256) {
+        IERC4626 _wrappedOETH = wrappedOETH;
+        uint256 wrappedOETHAmount = _wrappedOETH.balanceOf(msg.sender) - wrappedOETHExceptAmount;
+        return _unwrap(_wrappedOETH, wrappedOETHAmount);
     }
 
     function supportsInterface(bytes4 interfaceId) public pure override returns (bool) {
@@ -123,6 +119,25 @@ contract OriginETHAdapter is AdapterBase, IExternalPositionAdapter {
     /// @inheritdoc IExternalPositionAdapter
     /// @dev there is no debt assets
     function getDebtAssets() external view returns (address[] memory assets, uint256[] memory amounts) {}
+
+    function claimable(address vault) external view returns (address asset, uint256 claimableAmount) {
+        WithdrawalQueue storage queue = queues[vault];
+        WithdrawalRequest storage request = queue.requests[queue.start];
+
+        uint256 requestId = request.id;
+        if (requestId == 0) return (address(0), 0);
+
+        IOETHVault _oETHVault = oETHVault;
+        IOETHVault.WithdrawalRequest memory withdrawalRequest = _oETHVault.withdrawalRequests(requestId);
+
+        if (block.timestamp < withdrawalRequest.timestamp + _oETHVault.withdrawalClaimDelay()) {
+            return (address(0), 0);
+        }
+
+        if (_claimableAmount(_oETHVault) >= withdrawalRequest.queued) {
+            return (address(weth), request.amount);
+        }
+    }
 
     function _deposit(IWETH9 _weth, uint256 wethAmount, uint256 minWrappedOETHAmount)
         private
@@ -155,6 +170,13 @@ contract OriginETHAdapter is AdapterBase, IExternalPositionAdapter {
         _enqueueWithdrawalRequest(requestId, oETHAmount);
 
         emit OriginETHRequestWithdrawal(msg.sender, requestId, wrappedOETHAmount, oETHAmount);
+    }
+
+    function _unwrap(IERC4626 _wrappedOETH, uint256 wrappedOETHAmount) private returns (uint256 oETHAmount) {
+        IAdapterCallback(msg.sender).adapterCallback(address(this), address(_wrappedOETH), wrappedOETHAmount);
+        oETHAmount = _wrappedOETH.redeem(wrappedOETHAmount, msg.sender, address(this));
+
+        emit Swap(msg.sender, address(_wrappedOETH), wrappedOETHAmount, address(oETH), oETHAmount);
     }
 
     function _enqueueWithdrawalRequest(uint256 requestId, uint256 amount) private {
@@ -198,22 +220,22 @@ contract OriginETHAdapter is AdapterBase, IExternalPositionAdapter {
     /// @dev based on
     /// https://github.com/OriginProtocol/origin-dollar/blob/a8be73bf0077a9d489a87ec9353280d1bbb59e3b/contracts/contracts/vault/OETHVaultCore.sol#L365
     function _claimableAmount(IOETHVault _oETHVault) private view returns (uint256) {
-        (uint256 queued, uint256 claimable, uint256 claimed,) = _oETHVault.withdrawalQueueMetadata();
+        (uint256 queued, uint256 _claimable, uint256 claimed,) = _oETHVault.withdrawalQueueMetadata();
 
-        uint256 queueShortfall = queued - claimable;
+        uint256 queueShortfall = queued - _claimable;
         if (queueShortfall == 0) {
-            return claimable;
+            return _claimable;
         }
 
         uint256 wethBalance = weth.balanceOf(address(_oETHVault));
-        uint256 allocatedWeth = claimable - claimed;
+        uint256 allocatedWeth = _claimable - claimed;
 
         if (wethBalance <= allocatedWeth) {
-            return claimable;
+            return _claimable;
         }
 
         uint256 unallocatedWeth = wethBalance - allocatedWeth;
         uint256 addedClaimable = queueShortfall < unallocatedWeth ? queueShortfall : unallocatedWeth;
-        return claimable + addedClaimable;
+        return _claimable + addedClaimable;
     }
 }

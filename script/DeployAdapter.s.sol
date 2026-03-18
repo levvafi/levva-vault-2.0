@@ -28,7 +28,6 @@ import {UniswapAdapter} from "contracts/adapters/uniswap/UniswapAdapter.sol";
 import {PendleAdapter} from "contracts/adapters/pendle/PendleAdapter.sol";
 import {ResolvAdapter} from "contracts/adapters/resolv/ResolvAdapter.sol";
 import {OriginETHAdapter} from "contracts/adapters/origin/OriginETHAdapter.sol";
-import {OriginETHTechAdapter} from "contracts/adapters/origin/OriginETHTechAdapter.sol";
 import {SparkUSDCAdapter} from "contracts/adapters/spark/SparkUSDCAdapter.sol";
 import {AutoUSDAdapter} from "contracts/adapters/tokemak/AutoUSDAdapter.sol";
 import {AutoETHAdapter} from "contracts/adapters/tokemak/AutoETHAdapter.sol";
@@ -64,7 +63,6 @@ contract DeployAdapter is DeployHelper, AdapterUtils {
         //deployAdapter(Adapter.SparkUSDCAdapter, address(0));
         //deployAdapter(Adapter.TokemakAutoUSDAdapter, address(0));
         //deployAdapter(Adapter.TokemakAutoETHAdapter, address(0));
-        //deployAdapter(Adapter.OriginETHTechAdapter, address(0));
     }
 
     function getDeployedAdapter(Adapter adapter, address vault) public view returns (address) {
@@ -137,8 +135,6 @@ contract DeployAdapter is DeployHelper, AdapterUtils {
             deployedAdapter = _deployTokemakAutoETH();
         } else if (adapter == Adapter.TokemakAutoUSDAdapter) {
             deployedAdapter = _deployTokemakAutoUSD();
-        } else if (adapter == Adapter.OriginETHTechAdapter) {
-            deployedAdapter = _deployOriginETHTech();
         }
         if (deployedAdapter == address(0)) {
             revert("Adapter not supported");
@@ -296,19 +292,6 @@ contract DeployAdapter is DeployHelper, AdapterUtils {
         vm.broadcast();
         OriginETHAdapter originETHAdapter = new OriginETHAdapter(wrappedOETH);
         return address(originETHAdapter);
-    }
-
-    function _deployOriginETHTech() internal returns (address) {
-        address wrappedOETH;
-        if (block.chainid == ETHEREUM) {
-            wrappedOETH = getAddress("WrappedOETH");
-        } else {
-            wrappedOETH = getAddress("wrappedSuperOETHb");
-        }
-
-        vm.broadcast();
-        OriginETHTechAdapter originETHTechAdapter = new OriginETHTechAdapter(wrappedOETH);
-        return address(originETHTechAdapter);
     }
 
     function _deploySparkUSDC() internal returns (address) {
