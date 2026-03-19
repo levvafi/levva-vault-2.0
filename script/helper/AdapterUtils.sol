@@ -16,7 +16,9 @@ enum Adapter {
     MorphoV1_1,
     PendleAdapter,
     ResolvAdapter,
-    UniswapAdapter,
+    UniswapV3Adapter,
+    UniswapV3_02Adapter,
+    UniswapV4Adapter,
     CurvePoolAdapter,
     OriginETHAdapter,
     SparkUSDCAdapter,
@@ -58,8 +60,12 @@ abstract contract AdapterUtils {
             return "PendleAdapter";
         } else if (adapter == Adapter.ResolvAdapter) {
             return "ResolvAdapter";
-        } else if (adapter == Adapter.UniswapAdapter) {
-            return "UniswapAdapter";
+        } else if (adapter == Adapter.UniswapV3Adapter) {
+            return "UniswapV3Adapter";
+        } else if (adapter == Adapter.UniswapV3_02Adapter) {
+            return "UniswapV3_02Adapter";
+        } else if (adapter == Adapter.UniswapV4Adapter) {
+            return "UniswapV4Adapter";
         } else if (adapter == Adapter.CurvePoolAdapter) {
             return "CurvePoolAdapter";
         } else if (adapter == Adapter.OriginETHAdapter) {

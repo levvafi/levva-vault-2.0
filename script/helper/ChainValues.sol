@@ -278,7 +278,7 @@ contract ChainValues {
         s_values["base"]["PendleRouter"] = 0x888888888889758F76e7103c6CbF23ABbF58F946.toBytes32();
 
         /* ============== UNISWAP =============== */
-        s_values["base"]["UniswapV3Router"] = 0x2626664c2603336E57B271c5C0b26F421741e481.toBytes32();
+        s_values["base"]["UniswapV3_02Router"] = 0x2626664c2603336E57B271c5C0b26F421741e481.toBytes32();
         s_values["base"]["UniversalRouter"] = 0x6fF5693b99212Da76ad316178A184AB56D299b43.toBytes32();
         s_values["base"]["UniswapPermit2"] = 0x000000000022D473030F116dDEE9F6B43aC78BA3.toBytes32();
 

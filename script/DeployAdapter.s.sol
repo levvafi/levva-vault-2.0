@@ -24,7 +24,9 @@ import {MakerDaoDaiAdapter} from "contracts/adapters/makerDao/MakerDaoDaiAdapter
 import {MakerDaoUsdsAdapter} from "contracts/adapters/makerDao/MakerDaoUsdsAdapter.sol";
 import {MorphoAdapter} from "contracts/adapters/morpho/MorphoAdapter.sol";
 import {MorphoAdapterV1_1} from "contracts/adapters/morpho/MorphoAdapterV1_1.sol";
-import {UniswapAdapter} from "contracts/adapters/uniswap/UniswapAdapter.sol";
+import {UniswapV3Adapter} from "contracts/adapters/uniswap/UniswapV3Adapter.sol";
+import {UniswapV3_02Adapter} from "contracts/adapters/uniswap/UniswapV3_02Adapter.sol";
+import {UniswapV4Adapter} from "contracts/adapters/uniswap/UniswapV4Adapter.sol";
 import {PendleAdapter} from "contracts/adapters/pendle/PendleAdapter.sol";
 import {ResolvAdapter} from "contracts/adapters/resolv/ResolvAdapter.sol";
 import {OriginETHAdapter} from "contracts/adapters/origin/OriginETHAdapter.sol";
@@ -56,7 +58,8 @@ contract DeployAdapter is DeployHelper, AdapterUtils {
         //deployAdapter(Adapter.Morpho, address(0));
         //deployAdapter(Adapter.MorphoAdapterV1_1, address(0));
         //deployAdapter(Adapter.PendleAdapter, address(0));
-        //deployAdapter(Adapter.UniswapAdapter, address(0));
+        //deployAdapter(Adapter.UniswapV3_02Adapter, address(0));
+        //deployAdapter(Adapter.UniswapV4Adapter, address(0));
         //deployAdapter(Adapter.ResolvAdapter, address(0));
         //deployAdapter(Adapter.CurvePoolAdapter, address(0));
         //deployAdapter(Adapter.OriginETHAdapter, address(0));
@@ -123,8 +126,12 @@ contract DeployAdapter is DeployHelper, AdapterUtils {
             deployedAdapter = _deployPendle();
         } else if (adapter == Adapter.ResolvAdapter) {
             deployedAdapter = _deployResolv();
-        } else if (adapter == Adapter.UniswapAdapter) {
-            deployedAdapter = _deployUniswap();
+        } else if (adapter == Adapter.UniswapV3Adapter) {
+            deployedAdapter = _deployUniswapV3();
+        } else if (adapter == Adapter.UniswapV3_02Adapter) {
+            deployedAdapter = _deployUniswapV3_02();
+        } else if (adapter == Adapter.UniswapV4Adapter) {
+            deployedAdapter = _deployUniswapV4();
         } else if (adapter == Adapter.CurvePoolAdapter) {
             deployedAdapter = _deployCurvePool();
         } else if (adapter == Adapter.OriginETHAdapter) {
@@ -271,13 +278,28 @@ contract DeployAdapter is DeployHelper, AdapterUtils {
         return address(pendleAdapter);
     }
 
-    function _deployUniswap() internal returns (address) {
+    function _deployUniswapV3() internal returns (address) {
         address uniswapV3Router = getAddress("UniswapV3Router");
+
+        vm.broadcast();
+        UniswapV3Adapter uniswapAdapter = new UniswapV3Adapter(uniswapV3Router);
+        return address(uniswapAdapter);
+    }
+
+    function _deployUniswapV3_02() internal returns (address) {
+        address uniswapV3Router = getAddress("UniswapV3_02Router");
+
+        vm.broadcast();
+        UniswapV3_02Adapter uniswapAdapter = new UniswapV3_02Adapter(uniswapV3Router);
+        return address(uniswapAdapter);
+    }
+
+    function _deployUniswapV4() internal returns (address) {
         address universalRouter = getAddress("UniversalRouter");
         address permit2 = getAddress("UniswapPermit2");
 
         vm.broadcast();
-        UniswapAdapter uniswapAdapter = new UniswapAdapter(uniswapV3Router, universalRouter, permit2);
+        UniswapV4Adapter uniswapAdapter = new UniswapV4Adapter(universalRouter, permit2);
         return address(uniswapAdapter);
     }
 
