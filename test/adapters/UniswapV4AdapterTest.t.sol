@@ -18,7 +18,7 @@ import {UniswapV4Adapter} from "../../contracts/adapters/uniswap/UniswapV4Adapte
 import {AdapterBase} from "../../contracts/adapters/AdapterBase.sol";
 import {EulerRouterMock} from "../mocks/EulerRouterMock.t.sol";
 
-contract UniswapAdapterTest is Test {
+contract UniswapV4AdapterTest is Test {
     using Math for uint256;
 
     uint256 public constant FORK_BLOCK = 22515980;
