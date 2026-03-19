@@ -9,9 +9,11 @@ import {Asserts} from "../../libraries/Asserts.sol";
 import {IAdapterCallback} from "../../interfaces/IAdapterCallback.sol";
 import {AdapterBase} from "../AdapterBase.sol";
 
-abstract contract AbstractUniswapV3Adapter is AdapterBase {
+contract UniswapV3Adapter is AdapterBase {
     using Asserts for address;
     using SafeERC20 for IERC20;
+
+    bytes4 public constant getAdapterId = bytes4(keccak256("UniswapV3Adapter"));
 
     ISwapRouter public immutable uniswapV3Router;
 
