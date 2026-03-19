@@ -21,8 +21,7 @@ enum Adapter {
     OriginETHAdapter,
     SparkUSDCAdapter,
     TokemakAutoUSDAdapter,
-    TokemakAutoETHAdapter,
-    OriginETHTechAdapter
+    TokemakAutoETHAdapter
 }
 
 abstract contract AdapterUtils {
@@ -71,8 +70,6 @@ abstract contract AdapterUtils {
             return "TokemakAutoUSDAdapter";
         } else if (adapter == Adapter.TokemakAutoETHAdapter) {
             return "TokemakAutoETHAdapter";
-        } else if (adapter == Adapter.OriginETHTechAdapter) {
-            return "OriginETHTechAdapter";
         }
 
         revert("Adapter not supported");

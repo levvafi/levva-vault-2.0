@@ -25,5 +25,5 @@ interface IOETHVault {
 
     function withdrawalRequests(uint256 requestId) external view returns (WithdrawalRequest memory);
 
-    function weth() external view returns (address);
+    function asset() external view returns (address);
 }

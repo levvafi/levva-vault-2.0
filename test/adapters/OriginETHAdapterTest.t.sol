@@ -228,21 +228,32 @@ contract OriginETHAdapterTest is Test {
         vm.prank(address(levvaVault));
         (, uint256 oETHAmount) = adapter.requestWithdrawal(wrappedOETHAmount);
 
-        assert(!adapter.claimPossible(address(levvaVault)));
+        (address token, uint256 claimableAmount) = adapter.claimable(address(levvaVault));
+        assertEq(token, address(0));
+        assertEq(claimableAmount, 0);
+
         skip(OETH_VAULT.withdrawalClaimDelay());
 
         vm.expectRevert("Queue pending liquidity");
         vm.prank(address(levvaVault));
         adapter.claimWithdrawal();
-        assert(!adapter.claimPossible(address(levvaVault)));
+    
+        (token, claimableAmount) = adapter.claimable(address(levvaVault));
+        assertEq(token, address(0));
+        assertEq(claimableAmount, 0);
 
         _dealWethForClaim();
-        assert(adapter.claimPossible(address(levvaVault)));
+        
+        (token, claimableAmount) = adapter.claimable(address(levvaVault));
+        assertEq(token, address(WETH));
+        assertEq(claimableAmount, oETHAmount);
 
         vm.prank(address(levvaVault));
         adapter.claimWithdrawal();
 
-        assert(!adapter.claimPossible(address(levvaVault)));
+        (token, claimableAmount) = adapter.claimable(address(levvaVault));
+        assertEq(token, address(0));
+        assertEq(claimableAmount, 0);
 
         assertEq(WETH.balanceOf(address(levvaVault)), wethBalanceBefore - depositAmount + oETHAmount);
         assertEq(OETH.balanceOf(address(levvaVault)), 0);
@@ -272,6 +283,33 @@ contract OriginETHAdapterTest is Test {
         vm.prank(address(levvaVault));
         vm.expectRevert(abi.encodeWithSelector(OriginETHAdapter.NoWithdrawRequestInQueue.selector));
         adapter.claimWithdrawal();
+    }
+
+    function testUnwrap() public {
+        uint256 oEthBalanceBefore = OETH.balanceOf(address(levvaVault));
+        uint256 unwrapAmount = 1 ether;
+
+        deal(address(W_OETH), address(levvaVault), unwrapAmount);
+
+        vm.prank(address(levvaVault));
+        uint256 oETHAmount = adapter.unwrap(unwrapAmount);
+
+        assertEq(W_OETH.balanceOf(address(levvaVault)), 0);
+        assertEq(OETH.balanceOf(address(levvaVault)), oEthBalanceBefore + oETHAmount);
+    }
+
+    function testUnwrapAllExcept() public {
+        uint256 oEthBalanceBefore = OETH.balanceOf(address(levvaVault));
+        
+        uint256 unwrapExceptAmount = 1 ether;
+        uint256 balance = 3 * unwrapExceptAmount / 2;
+        deal(address(W_OETH), address(levvaVault), balance);
+
+        vm.prank(address(levvaVault));
+        uint256 oETHAmount = adapter.unwrapAllExcept(unwrapExceptAmount);
+
+        assertEq(W_OETH.balanceOf(address(levvaVault)), unwrapExceptAmount);
+        assertEq(OETH.balanceOf(address(levvaVault)), oEthBalanceBefore + oETHAmount);
     }
 
     function _assertNoDebtAssets() private {
