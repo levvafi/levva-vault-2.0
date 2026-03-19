@@ -58,7 +58,7 @@ contract OriginETHAdapter is AdapterBase, IExternalPositionAdapter {
         IOETHVault _oETHVault = IOETHVault(_oETH.vaultAddress());
         oETHVault = _oETHVault;
 
-        weth = IWETH9(_oETHVault.weth());
+        weth = IWETH9(_oETHVault.asset());
     }
 
     function deposit(uint256 wethAmount, uint256 minWrappedOETHAmount) external returns (uint256) {
