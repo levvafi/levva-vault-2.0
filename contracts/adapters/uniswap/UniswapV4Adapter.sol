@@ -14,9 +14,11 @@ import {Asserts} from "../../libraries/Asserts.sol";
 import {IAdapterCallback} from "../../interfaces/IAdapterCallback.sol";
 import {AdapterBase} from "../AdapterBase.sol";
 
-abstract contract AbstractUniswapV4Adapter is AdapterBase {
+contract UniswapV4Adapter is AdapterBase {
     using SafeERC20 for IERC20;
     using Asserts for address;
+
+    bytes4 public constant getAdapterId = bytes4(keccak256("UniswapV4Adapter"));
 
     IUniversalRouter public immutable universalRouter;
     IAllowanceTransfer public immutable permit2;

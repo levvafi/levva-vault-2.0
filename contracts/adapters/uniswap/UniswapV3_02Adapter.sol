@@ -1,34 +1,36 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.28;
 
-import {ISwapRouter} from "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import {Asserts} from "../../libraries/Asserts.sol";
 import {IAdapterCallback} from "../../interfaces/IAdapterCallback.sol";
 import {AdapterBase} from "../AdapterBase.sol";
+import {ISwapRouter02} from "./interfaces/ISwapRouter02.sol";
 
-abstract contract AbstractUniswapV3Adapter is AdapterBase {
+contract UniswapV3_02Adapter is AdapterBase {
     using Asserts for address;
     using SafeERC20 for IERC20;
 
-    ISwapRouter public immutable uniswapV3Router;
+    bytes4 public constant getAdapterId = bytes4(keccak256("UniswapV3_02Adapter"));
+
+    ISwapRouter02 public immutable uniswapV3Router;
 
     error WrongRecipient(address vault, address recipient);
 
     constructor(address _router) {
         _router.assertNotZeroAddress();
-        uniswapV3Router = ISwapRouter(_router);
+        uniswapV3Router = ISwapRouter02(_router);
     }
 
-    function swapExactInputV3(ISwapRouter.ExactInputParams memory params) public returns (uint256 amountOut) {
+    function swapExactInputV3(ISwapRouter02.ExactInputParams memory params) public returns (uint256 amountOut) {
         if (params.recipient != msg.sender) revert WrongRecipient(msg.sender, params.recipient);
 
         (address inputToken, address outputToken) = decodeTokens(params.path);
 
         IAdapterCallback(msg.sender).adapterCallback(address(this), inputToken, params.amountIn);
-        ISwapRouter _uniswapV3Router = uniswapV3Router;
+        ISwapRouter02 _uniswapV3Router = uniswapV3Router;
         IERC20(inputToken).forceApprove(address(_uniswapV3Router), params.amountIn);
         amountOut = _uniswapV3Router.exactInput(params);
 
@@ -36,7 +38,7 @@ abstract contract AbstractUniswapV3Adapter is AdapterBase {
     }
 
     /// @dev Swap all tokenIn, except params.amountIn
-    function swapExactInputV3AllExcept(ISwapRouter.ExactInputParams memory params)
+    function swapExactInputV3AllExcept(ISwapRouter02.ExactInputParams memory params)
         external
         returns (uint256 amountOut)
     {
@@ -45,14 +47,14 @@ abstract contract AbstractUniswapV3Adapter is AdapterBase {
         amountOut = swapExactInputV3(params);
     }
 
-    function swapExactOutputV3(ISwapRouter.ExactOutputParams calldata params) external returns (uint256 amountIn) {
+    function swapExactOutputV3(ISwapRouter02.ExactOutputParams calldata params) external returns (uint256 amountIn) {
         if (params.recipient != msg.sender) revert WrongRecipient(msg.sender, params.recipient);
 
         (address outputToken, address inputToken) = decodeTokens(params.path);
 
         IAdapterCallback(msg.sender).adapterCallback(address(this), inputToken, params.amountInMaximum);
 
-        ISwapRouter _uniswapV3Router = uniswapV3Router;
+        ISwapRouter02 _uniswapV3Router = uniswapV3Router;
         IERC20(inputToken).forceApprove(address(_uniswapV3Router), params.amountInMaximum);
         amountIn = _uniswapV3Router.exactOutput(params);
 
